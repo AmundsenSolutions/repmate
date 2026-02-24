@@ -135,10 +135,52 @@ struct StrengthStatsSection: View {
             }
         }
         .onAppear {
-            if selectedExerciseId == nil, let first = store.exerciseLibrary.first {
-                selectedExerciseId = first.id
+            if selectedExerciseId == nil {
+                selectedExerciseId = getMostFrequentExerciseId()
             }
         }
+        .onChange(of: days) { _, _ in
+            // When user changes the filter (7d, 30d, 1y), we keep the currently selected exercise.
+            // But if they haven't manually selected one, we could optionally recalculate the top one.
+        }
+    }
+    
+    // MARK: - Logic
+    
+    private func getMostFrequentExerciseId() -> UUID? {
+        let calendar = Calendar.current
+        let startDate = calendar.date(byAdding: .day, value: -days, to: store.currentDate) ?? Date.distantPast
+        
+        // Count frequencies of exercises in the active timeframe
+        var counts: [UUID: Int] = [:]
+        
+        for session in store.workoutSessions where (session.endedAt ?? session.date) > startDate {
+            let uniqueExercises = Set(session.sets.map { $0.exerciseId })
+            for exerciseId in uniqueExercises {
+                counts[exerciseId, default: 0] += 1
+            }
+        }
+        
+        // Find the one with the highest count
+        if let topExerciseId = counts.max(by: { $0.value < $1.value })?.key {
+            return topExerciseId
+        }
+        
+        // Fallback to absolute most frequent of all time if nothing in timeframe
+        var allTimeCounts: [UUID: Int] = [:]
+        for session in store.workoutSessions {
+            let uniqueExercises = Set(session.sets.map { $0.exerciseId })
+            for exerciseId in uniqueExercises {
+                allTimeCounts[exerciseId, default: 0] += 1
+            }
+        }
+        
+        if let topAllTimeId = allTimeCounts.max(by: { $0.value < $1.value })?.key {
+            return topAllTimeId
+        }
+        
+        // Absolute fallback to first in library
+        return store.exerciseLibrary.first?.id
     }
     
     // MARK: - Subviews
