@@ -52,21 +52,18 @@ struct SmartInsightsRow: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("SMART INSIGHTS")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(insights, id: \.title) { insight in
-                        InsightCard(data: insight)
+        GlassSection(title: "Smart Insights") {
+            VStack(alignment: .leading, spacing: 16) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(insights, id: \.title) { insight in
+                            InsightCard(data: insight)
+                        }
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
+            .padding(.vertical, Theme.Spacing.standard)
         }
     }
 }

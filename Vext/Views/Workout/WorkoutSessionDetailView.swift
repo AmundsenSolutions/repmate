@@ -167,32 +167,31 @@ struct WorkoutSessionDetailView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
-                
-                
-                // Footer - Save Button
-                HStack {
-                    Spacer()
-                    Button {
-                        saveWorkout()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "square.and.arrow.down.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Save Workout")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(
-                            Capsule()
-                                .fill(isDirty ? themeManager.palette.accent : Color.gray.opacity(0.3))
-                        )
-                        .foregroundColor(isDirty ? .black : .gray)
+            }
+            
+            // Floating Save Button
+            VStack {
+                Spacer()
+                Button {
+                    saveWorkout()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.down.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Save Workout")
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                    .disabled(!isDirty)
-                    Spacer()
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule()
+                            .fill(isDirty ? themeManager.palette.accent : Color.gray.opacity(0.3))
+                    )
+                    .foregroundColor(isDirty ? .black : .gray)
                 }
-                .padding(.vertical, 16)
+                .buttonStyle(PlainButtonStyle())
+                .disabled(!isDirty)
+                .padding(.bottom, 24)
             }
         }
 

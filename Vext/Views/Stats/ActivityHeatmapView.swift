@@ -48,71 +48,67 @@ struct ActivityHeatmapView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("ACTIVITY & HABITS")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("\(totalWorkouts) workouts \(periodText)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            // Highlight Cards
-            HStack(spacing: 8) {
-                StatCard(title: "Avg / Week", value: String(format: "%.1f", avgWorkouts), icon: "calendar", color: Theme.Colors.accent)
-                StatCard(title: "Longest Streak", value: "\(longestStreak) days", icon: "flame.fill", color: .orange)
-                 
-                if storeManager.isPro {
-                    StatCard(title: "Perfect Days", value: "\(perfectDays)", icon: "star.fill", color: Theme.Colors.cyberGold)
-                } else {
-                    Button(action: {
-                        showPaywall = true
-                        HapticManager.shared.lightImpact()
-                    }) {
-                        StatCard(title: "Perfect Days", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
-                    }
+        GlassSection(title: "Activity & Habits") {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Spacer()
+                    Text("\(totalWorkouts) workouts \(periodText)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
-            }
-            .padding(.bottom, 4)
-            
-            // Adaptive Content
-            Group {
-                if days == 7 {
-                    weeklyView
-                } else if days == 30 {
-                    monthlyView
-                } else {
-                    yearlyView
-                }
-            }
-            .padding(12)
-            .background(Color(uiColor: .tertiarySystemFill))
-            .cornerRadius(12)
-            
-            // Legend (only for grids)
-            if days > 7 {
+                
+                // Highlight Cards
                 HStack(spacing: 8) {
-                    Text("Less")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                    
-                    ForEach([0.1, 0.3, 0.6, 1.0], id: \.self) { opacity in
-                        Rectangle()
-                            .fill(Theme.Colors.heatmapHigh.opacity(opacity))
-                            .frame(width: 12, height: 12)
-                            .cornerRadius(2)
+                    StatCard(title: "Avg / Week", value: String(format: "%.1f", avgWorkouts), icon: "calendar", color: Theme.Colors.accent)
+                    StatCard(title: "Longest Streak", value: "\(longestStreak) days", icon: "flame.fill", color: .orange)
+                     
+                    if storeManager.isPro {
+                        StatCard(title: "Perfect Days", value: "\(perfectDays)", icon: "star.fill", color: Theme.Colors.cyberGold)
+                    } else {
+                        Button(action: {
+                            showPaywall = true
+                            HapticManager.shared.lightImpact()
+                        }) {
+                            StatCard(title: "Perfect Days", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                        }
                     }
-                    
-                    Text("More")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
+                }
+                
+                // Adaptive Content
+                Group {
+                    if days == 7 {
+                        weeklyView
+                    } else if days == 30 {
+                        monthlyView
+                    } else {
+                        yearlyView
+                    }
+                }
+                .padding(12)
+                .background(Color(uiColor: .tertiarySystemFill))
+                .cornerRadius(12)
+                
+                // Legend (only for grids)
+                if days > 7 {
+                    HStack(spacing: 8) {
+                        Text("Less")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        
+                        ForEach([0.1, 0.3, 0.6, 1.0], id: \.self) { opacity in
+                            Rectangle()
+                                .fill(Theme.Colors.heatmapHigh.opacity(opacity))
+                                .frame(width: 12, height: 12)
+                                .cornerRadius(2)
+                        }
+                        
+                        Text("More")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
+            .padding(Theme.Spacing.standard)
         }
     }
     

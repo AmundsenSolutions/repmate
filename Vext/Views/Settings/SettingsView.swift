@@ -11,6 +11,10 @@ struct SettingsView: View {
     @EnvironmentObject var storeManager: StoreManager
     @State private var showPaywall = false
     
+    // Analytics & Crash Reporting
+    @AppStorage("shareAnalytics") private var shareAnalytics = true
+    @AppStorage("sendCrashReports") private var sendCrashReports = true
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -312,6 +316,73 @@ struct SettingsView: View {
                             }
                         }
                         
+                        // MARK: - About & Support
+                        GlassSection(title: "About & Support") {
+                            // Send Feedback
+                            Link(destination: URL(string: "mailto:support@vextapp.com")!) {
+                                HStack {
+                                    Label("Send Feedback", systemImage: "envelope.fill")
+                                        .font(Theme.Fonts.body)
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right")
+                                        .foregroundColor(Theme.Colors.textDim)
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .frame(height: 44)
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            // Privacy Policy
+                            Link(destination: URL(string: "https://vextapp.com/privacy")!) {
+                                HStack {
+                                    Label("Privacy Policy", systemImage: "hand.raised.fill")
+                                        .font(Theme.Fonts.body)
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right")
+                                        .foregroundColor(Theme.Colors.textDim)
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .frame(height: 44)
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            // Terms of Service
+                            Link(destination: URL(string: "https://vextapp.com/terms")!) {
+                                HStack {
+                                    Label("Terms of Service", systemImage: "doc.text.fill")
+                                        .font(Theme.Fonts.body)
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right")
+                                        .foregroundColor(Theme.Colors.textDim)
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .frame(height: 44)
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            Toggle(isOn: $shareAnalytics) {
+                                Label("Share Anonymous Analytics", systemImage: "chart.pie.fill")
+                                    .font(Theme.Fonts.body)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                            }
+                            .tint(themeManager.palette.accent)
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            Toggle(isOn: $sendCrashReports) {
+                                Label("Send Crash Reports", systemImage: "ladybug.fill")
+                                    .font(Theme.Fonts.body)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                            }
+                            .tint(themeManager.palette.accent)
+                        }
+                        
                         // MARK: - Advanced
                         GlassSection(title: "Advanced") {
                             Button(action: {
@@ -478,34 +549,6 @@ struct SettingsView: View {
     
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-}
-
-// MARK: - Glass Section Component
-
-/// A settings section card with glass aesthetic.
-struct GlassSection<Content: View>: View {
-    let title: String
-    let content: Content
-    
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .padding(.leading, 4)
-            
-            VStack(spacing: 0) {
-                content
-            }
-            .oledCard()
-        }
     }
 }
 

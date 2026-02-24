@@ -29,61 +29,58 @@ struct NutritionStatsSection: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("NUTRITION")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            // Stats Cards Row
-            HStack(spacing: 8) {
-                StatCard(
-                    title: "Avg Protein",
-                    value: String(format: "%.0fg", dailyAverage),
-                    icon: "fork.knife",
-                    color: themeManager.palette.accent
-                )
+        GlassSection(title: "Nutrition") {
+            VStack(alignment: .leading, spacing: 16) {
+                // Stats Cards Row
+                HStack(spacing: 8) {
+                    StatCard(
+                        title: "Avg Protein",
+                        value: String(format: "%.0fg", dailyAverage),
+                        icon: "fork.knife",
+                        color: themeManager.palette.accent
+                    )
+                    
+                    if storeManager.isPro {
+                        StatCard(
+                            title: "Streak",
+                            value: "\(streak)d",
+                            icon: "flame.fill",
+                            color: .orange
+                        )
+                        
+                        StatCard(
+                            title: "Adherence",
+                            value: String(format: "%.0f%%", adherenceRate),
+                            icon: "bolt.fill",
+                            color: adherenceRate >= 70 ? .green : (adherenceRate >= 50 ? .yellow : Theme.Colors.cyberRed)
+                        )
+                    } else {
+                        Button(action: {
+                            showPaywall = true
+                            HapticManager.shared.lightImpact()
+                        }) {
+                            StatCard(title: "Streak", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                        }
+                        
+                        Button(action: {
+                            showPaywall = true
+                            HapticManager.shared.lightImpact()
+                        }) {
+                            StatCard(title: "Adherence", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                        }
+                    }
+                }
                 
+                // Chart Area
                 if storeManager.isPro {
-                    StatCard(
-                        title: "Streak",
-                        value: "\(streak)d",
-                        icon: "flame.fill",
-                        color: .orange
-                    )
-                    
-                    StatCard(
-                        title: "Adherence",
-                        value: String(format: "%.0f%%", adherenceRate),
-                        icon: "bolt.fill",
-                        color: adherenceRate >= 70 ? .green : (adherenceRate >= 50 ? .yellow : Theme.Colors.cyberRed)
-                    )
+                    trainingVsRestChart
                 } else {
-                    Button(action: {
-                        showPaywall = true
-                        HapticManager.shared.lightImpact()
-                    }) {
-                        StatCard(title: "Streak", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
-                    }
-                    
-                    Button(action: {
-                        showPaywall = true
-                        HapticManager.shared.lightImpact()
-                    }) {
-                        StatCard(title: "Adherence", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                    ProLockedOverlay(isPro: false, paywallAction: { showPaywall = true }) {
+                        blurredChartPreview
                     }
                 }
             }
-            .padding(.bottom, 4)
-            
-            // Chart Area
-            if storeManager.isPro {
-                trainingVsRestChart
-            } else {
-                ProLockedOverlay(isPro: false, paywallAction: { showPaywall = true }) {
-                    blurredChartPreview
-                }
-            }
+            .padding(Theme.Spacing.standard)
         }
     }
     

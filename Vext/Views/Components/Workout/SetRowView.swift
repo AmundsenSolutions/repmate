@@ -75,7 +75,7 @@ struct SetRowView: View {
                         .cornerRadius(4)
                 }
             }
-            .frame(width: isPR && isCompleted ? 44 : 24)
+            .frame(width: 42, alignment: .leading)
             
             // Weight
             BufferedInputView(

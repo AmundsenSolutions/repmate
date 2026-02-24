@@ -47,88 +47,85 @@ struct StrengthStatsSection: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("STRENGTH & PR")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            // Exercise Selector
-            Button {
-                showingExercisePicker = true
-            } label: {
-                HStack {
-                    if let exercise = selectedExercise {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Exercise")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text(exercise.name)
+        GlassSection(title: "Strength & PR") {
+            VStack(alignment: .leading, spacing: 16) {
+                // Exercise Selector
+                Button {
+                    showingExercisePicker = true
+                } label: {
+                    HStack {
+                        if let exercise = selectedExercise {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Exercise")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Text(exercise.name)
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                            }
+                        } else {
+                            Text("Select Exercise")
                                 .font(.headline)
                                 .foregroundColor(.white)
                         }
-                    } else {
-                        Text("Select Exercise")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.gray)
+                    .padding()
+                    .background(Theme.Colors.cardBackground)
+                    .cornerRadius(Theme.Spacing.compact)
                 }
-                .padding()
-                .background(Theme.Colors.cardBackground)
-                .cornerRadius(Theme.Spacing.compact)
-            }
-            
-            // PR Card Row
-            HStack(spacing: 8) {
-                StatCard(
-                    title: "Top Lift (\(days)d)",
-                    value: topLift > 0 ? String(format: "%.1f kg", topLift) : "—",
-                    icon: "arrow.up.right.circle.fill",
-                    color: themeManager.palette.accent
-                )
                 
-                StatCard(
-                    title: "New PRs",
-                    value: "\(newPRsCount)",
-                    icon: "medal.fill",
-                    color: .yellow
-                )
-                
-                if storeManager.isPro {
+                // PR Card Row
+                HStack(spacing: 8) {
                     StatCard(
-                        title: "Consistency",
-                        value: "\(consistencyScore)",
-                        icon: "target",
-                        color: Theme.Colors.cyberGold
+                        title: "Top Lift (\(days)d)",
+                        value: topLift > 0 ? String(format: "%.1f kg", topLift) : "—",
+                        icon: "arrow.up.right.circle.fill",
+                        color: themeManager.palette.accent
                     )
+                    
+                    StatCard(
+                        title: "New PRs",
+                        value: "\(newPRsCount)",
+                        icon: "medal.fill",
+                        color: .yellow
+                    )
+                    
+                    if storeManager.isPro {
+                        StatCard(
+                            title: "Consistency",
+                            value: "\(consistencyScore)",
+                            icon: "target",
+                            color: Theme.Colors.cyberGold
+                        )
+                    } else {
+                        Button(action: {
+                            showPaywall = true
+                            HapticManager.shared.lightImpact()
+                        }) {
+                            StatCard(title: "Consistency", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                        }
+                    }
+                }
+                
+                // 1RM Trend Chart
+                if storeManager.isPro {
+                    if !prProgression.isEmpty {
+                        buildLineChart(title: "Est. 1RM Trend (kg)", data: prProgression.map { ($0.date, $0.est1RM) }, yLabel: "Est. 1RM")
+                    } else {
+                        emptyChartState
+                    }
                 } else {
-                    Button(action: {
-                        showPaywall = true
-                        HapticManager.shared.lightImpact()
-                    }) {
-                        StatCard(title: "Consistency", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                    ProLockedOverlay(isPro: false, paywallAction: { showPaywall = true }) {
+                        blurredChartPreview
                     }
                 }
             }
-            .padding(.bottom, 4)
-            
-            // 1RM Trend Chart
-            if storeManager.isPro {
-                if !prProgression.isEmpty {
-                    buildLineChart(title: "Est. 1RM Trend (kg)", data: prProgression.map { ($0.date, $0.est1RM) }, yLabel: "Est. 1RM")
-                } else {
-                    emptyChartState
-                }
-            } else {
-                ProLockedOverlay(isPro: false, paywallAction: { showPaywall = true }) {
-                    blurredChartPreview
-                }
-            }
+            .padding(Theme.Spacing.standard)
         }
         .sheet(isPresented: $showingExercisePicker) {
             NavigationStack {
@@ -218,7 +215,6 @@ struct StrengthStatsSection: View {
     }
     
     private var blurredChartPreview: some View {
-        // Just a dummy static chart for the blur effect
         VStack(alignment: .leading, spacing: 8) {
             Text("Pro Insight")
                 .font(.subheadline)
@@ -252,53 +248,48 @@ struct OneRMCalculatorCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("1RM CALCULATOR")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Weight")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    TextField("kg", text: $weight)
-                        .keyboardType(.decimalPad)
-                        .padding(10)
-                        .background(Theme.Colors.cardBackground)
-                        .cornerRadius(Theme.Spacing.tight) // 8
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Reps")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    TextField("reps", text: $reps)
-                        .keyboardType(.numberPad)
-                        .padding(10)
-                        .background(Theme.Colors.cardBackground)
-                        .cornerRadius(Theme.Spacing.tight) // 8
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Est. 1RM")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text(estimated1RM != nil ? String(format: "%.1f kg", estimated1RM!) : "—")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.cyberGold)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(10)
-                        .background(Theme.Colors.cardBackground)
-                        .cornerRadius(Theme.Spacing.tight) // 8
+        GlassSection(title: "1RM Calculator") {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Weight")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        TextField("kg", text: $weight)
+                            .keyboardType(.decimalPad)
+                            .padding(10)
+                            .background(Theme.Colors.cardBackground)
+                            .cornerRadius(Theme.Spacing.tight)
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Reps")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        TextField("reps", text: $reps)
+                            .keyboardType(.numberPad)
+                            .padding(10)
+                            .background(Theme.Colors.cardBackground)
+                            .cornerRadius(Theme.Spacing.tight)
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Est. 1RM")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text(estimated1RM != nil ? String(format: "%.1f kg", estimated1RM!) : "—")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.cyberGold)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(10)
+                            .background(Theme.Colors.cardBackground)
+                            .cornerRadius(Theme.Spacing.tight)
+                    }
                 }
             }
+            .padding(Theme.Spacing.standard)
         }
-        .padding()
-        .background(Theme.Colors.cardBackground.opacity(0.5))
-        .cornerRadius(Theme.Spacing.cornerRadius) // 20
     }
 }

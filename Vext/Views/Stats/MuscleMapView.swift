@@ -43,57 +43,54 @@ struct MuscleMapView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("RECOVERY & MUSCLE FOCUS")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Button {
-                    showingEditMuscles = true
-                } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+        GlassSection(title: "Recovery & Muscle Focus") {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Spacer()
+                    Button {
+                        showingEditMuscles = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
-            }
-            HStack(spacing: 8) {
-                StatCard(
-                    title: "Most Trained",
-                    value: mostTrained,
-                    icon: "flame.fill",
-                    color: .orange
-                )
                 
-                if storeManager.isPro {
+                HStack(spacing: 8) {
                     StatCard(
-                        title: "Focus Area",
-                        value: mostNeglected,
-                        icon: "target",
-                        color: Theme.Colors.cyberGold
+                        title: "Most Trained",
+                        value: mostTrained,
+                        icon: "flame.fill",
+                        color: .orange
                     )
+                    
+                    if storeManager.isPro {
+                        StatCard(
+                            title: "Focus Area",
+                            value: mostNeglected,
+                            icon: "target",
+                            color: Theme.Colors.cyberGold
+                        )
+                    } else {
+                        Button(action: {
+                            showPaywall = true
+                            HapticManager.shared.lightImpact()
+                        }) {
+                            StatCard(title: "Focus Area", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                        }
+                    }
+                }
+                
+                // Recovery Grid
+                if storeManager.isPro {
+                    recoveryGrid
                 } else {
-                    Button(action: {
-                        showPaywall = true
-                        HapticManager.shared.lightImpact()
-                    }) {
-                        StatCard(title: "Focus Area", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                    ProLockedOverlay(isPro: false, paywallAction: { showPaywall = true }) {
+                        blurredGridPreview
                     }
                 }
             }
-            .padding(.bottom, 4)
-            
-            // Recovery Grid
-            if storeManager.isPro {
-                recoveryGrid
-            } else {
-                ProLockedOverlay(isPro: false, paywallAction: { showPaywall = true }) {
-                    blurredGridPreview
-                }
-            }
+            .padding(Theme.Spacing.standard)
         }
         .sheet(isPresented: $showingEditMuscles) {
             EditNeglectedMusclesView()

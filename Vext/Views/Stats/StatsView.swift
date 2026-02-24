@@ -60,23 +60,18 @@ struct StatsView: View {
                         
                         // 2. Activity / Consistency
                         ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
-                            .padding(.horizontal)
                         
                         // 3. Strength & PR
                         StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
-                            .padding(.horizontal)
                         
                         // 4. 1RM Calculator (Free)
                         OneRMCalculatorCard()
-                            .padding(.horizontal)
                         
                         // 5. Muscle Map (Mixed Free/Pro)
                         MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
-                            .padding(.horizontal)
                         
                         // 6. Nutrition Stats
                         NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
-                            .padding(.horizontal)
                             
                         // 7. Smart Insights (Pro Locked)
                         ProLockedOverlay(isPro: storeManager.isPro, paywallAction: { showPaywall = true }) {
@@ -86,7 +81,7 @@ struct StatsView: View {
                         // Bottom Spacing
                         Spacer(minLength: 100)
                     }
-                    .padding(.top, 16)
+                    .padding(Theme.Spacing.standard)
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
