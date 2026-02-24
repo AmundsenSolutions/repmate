@@ -178,6 +178,7 @@ struct ActiveWorkoutView: View {
                             showDeleteConfirmation = true
                         } label: {
                             Label("Delete Workout", systemImage: "trash")
+                                .foregroundColor(.red)
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")

@@ -28,6 +28,28 @@ struct ExerciseLibraryView: View {
                 categoryFilters
                 exerciseList
             }
+            
+            // Floating Action Button for Multi-Select
+            if onMultiSelect != nil && !multiSelectedIds.isEmpty {
+                VStack {
+                    Spacer()
+                    Button(action: {
+                        onMultiSelect?(multiSelectedIds)
+                        dismiss()
+                    }) {
+                        Text("Add to Workout (\(multiSelectedIds.count))")
+                            .font(.headline)
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(themeManager.palette.accent)
+                            .cornerRadius(16)
+                            .shadow(color: themeManager.palette.accent.opacity(0.4), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
+                }
+            }
         }
         .navigationTitle(selectionTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -132,6 +154,7 @@ struct ExerciseLibraryView: View {
             } label: {
                 Label("Delete Category", systemImage: "trash")
             }
+            .tint(.red)
         }
     }
     
@@ -204,23 +227,12 @@ struct ExerciseLibraryView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
-            HStack {
-                if onMultiSelect != nil {
-                    Button("Add to Workout (\(multiSelectedIds.count))") {
-                        onMultiSelect?(multiSelectedIds)
-                        dismiss()
-                    }
-                    .disabled(multiSelectedIds.isEmpty)
-                    .font(.headline)
-                }
-                
-                Button {
-                    showingAddExercise = true
-                } label: {
-                    Text("Create New")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Theme.Colors.accent)
-                }
+            Button {
+                showingAddExercise = true
+            } label: {
+                Text("Create New")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Theme.Colors.accent)
             }
         }
     }

@@ -350,7 +350,7 @@ struct HomeView: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
-                            .tint(Theme.Colors.error)
+                            .tint(.red)
                         }
                 }
             }
@@ -405,6 +405,7 @@ struct HomeView: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(.red)
         }
     }
     

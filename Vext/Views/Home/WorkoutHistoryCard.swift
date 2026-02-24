@@ -32,6 +32,7 @@ struct WorkoutHistoryCard: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .tint(.red)
                         }
                 }
             }

@@ -1,7 +1,7 @@
 import Foundation
 
 struct DefaultData {
-    static let categories = ["Chest", "Back", "Legs", "Shoulders", "Biceps", "Triceps", "Core", "Other"]
+    static let categories = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Other"]
     
     static let workoutCategories = ["Full Body", "Upper", "Lower", "Push", "Pull", "Cardio", "Other"]
     
@@ -20,12 +20,12 @@ struct DefaultData {
         Exercise(id: UUID(), name: "Deadlift", category: "Back", setupTime: .slow),
         Exercise(id: UUID(), name: "T-Bar Row", category: "Back", setupTime: .slow),
 
-        // Legs
-        Exercise(id: UUID(), name: "Squats", category: "Legs", setupTime: .slow),
-        Exercise(id: UUID(), name: "Leg Press", category: "Legs", setupTime: .medium),
-        Exercise(id: UUID(), name: "Romanian Deadlift", category: "Legs", setupTime: .slow),
-        Exercise(id: UUID(), name: "Leg Curls", category: "Legs", setupTime: .fast),
-        Exercise(id: UUID(), name: "Calf Raises", category: "Legs", setupTime: .fast),
+        // Quads, Hamstrings, Glutes, Calves
+        Exercise(id: UUID(), name: "Squats", category: "Quads", setupTime: .slow),
+        Exercise(id: UUID(), name: "Leg Press", category: "Quads", setupTime: .medium),
+        Exercise(id: UUID(), name: "Romanian Deadlift", category: "Hamstrings", setupTime: .slow),
+        Exercise(id: UUID(), name: "Leg Curls", category: "Hamstrings", setupTime: .fast),
+        Exercise(id: UUID(), name: "Calf Raises", category: "Calves", setupTime: .fast),
 
         // Shoulders
         Exercise(id: UUID(), name: "Overhead Press", category: "Shoulders", setupTime: .slow),
@@ -65,10 +65,10 @@ struct DefaultData {
                 ("Shoulder press", "Shoulders", 1, "6-10", "0-1"),
                 ("Preacher dumbbell curl", "Biceps", 1, "8-12", "0-1"),
                 ("Cable extension", "Triceps", 1, "8-12", "0-1"),
-                ("Stiff-leg deadlift", "Legs", 1, "8-12", "0-1"),
-                ("Leg extension", "Legs", 1, "10-15", "0-1"),
-                ("Seated leg curl", "Legs", 1, "6-10", "0-1"),
-                ("Standing calf raise", "Legs", 1, "6-10", "0-1"),
+                ("Stiff-leg deadlift", "Hamstrings", 1, "8-12", "0-1"),
+                ("Leg extension", "Quads", 1, "10-15", "0-1"),
+                ("Seated leg curl", "Hamstrings", 1, "6-10", "0-1"),
+                ("Standing calf raise", "Calves", 1, "6-10", "0-1"),
                 ("Cable crunch", "Core", 1, "8-12", "0-1")
             ]
         ),
@@ -94,12 +94,12 @@ struct DefaultData {
             category: "Lower",
             note: "2–5 sett per muskelgruppe, 0–1 RIR",
             exercises: [
-                ("Hack squat", "Legs", 1, "6-10", "0-1"),
-                ("Leg extension", "Legs", 2, "10-15", "0-1"),
-                ("Seated leg curl", "Legs", 2, "6-10", "0-1"),
-                ("Stiff-leg deadlift", "Legs", 1, "8-12", "0-1"),
-                ("Hip adductor", "Legs", 2, "8-12", "0-1"),
-                ("Standing calf raise", "Legs", 2, "10-15", "0-1"),
+                ("Hack squat", "Quads", 1, "6-10", "0-1"),
+                ("Leg extension", "Quads", 2, "10-15", "0-1"),
+                ("Seated leg curl", "Hamstrings", 2, "6-10", "0-1"),
+                ("Stiff-leg deadlift", "Hamstrings", 1, "8-12", "0-1"),
+                ("Hip adductor", "Quads", 2, "8-12", "0-1"),
+                ("Standing calf raise", "Calves", 2, "10-15", "0-1"),
                 ("Cable crunch", "Core", 2, "10-15", "0-1")
             ]
         )

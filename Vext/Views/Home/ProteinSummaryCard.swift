@@ -343,6 +343,7 @@ struct QuickAddButton: View {
                 } label: {
                     Label("Remove Entry", systemImage: "trash")
                 }
+                .foregroundColor(.red)
             }
         }
     }

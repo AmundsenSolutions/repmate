@@ -504,8 +504,7 @@ struct GlassSection<Content: View>: View {
             VStack(spacing: 0) {
                 content
             }
-            .padding(Theme.Spacing.standard)
-            .glassCard(style: .secondary)
+            .oledCard()
         }
     }
 }

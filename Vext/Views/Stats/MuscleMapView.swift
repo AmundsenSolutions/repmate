@@ -7,6 +7,8 @@ struct MuscleMapView: View {
     var days: Int 
     @Binding var showPaywall: Bool
     
+    @State private var showingEditMuscles = false
+    
     // Dynamic Data Source for Category Volume (Most Trained)
     private var categoryData: [(name: String, count: Double, intensity: Double)] {
         let volumes = store.workoutManager.getCategoryVolume(
@@ -36,26 +38,28 @@ struct MuscleMapView: View {
         return "N/A"
     }
     
-    // Combine all unique categories from library
-    private var allMuscles: [String] {
-        var set = Set<String>()
-        for ex in store.exerciseLibrary {
-            set.insert(ex.category.trimmingCharacters(in: .whitespacesAndNewlines).capitalized)
-            if let sec = ex.secondaryMuscle {
-                set.insert(sec.trimmingCharacters(in: .whitespacesAndNewlines).capitalized)
-            }
-        }
-        return Array(set).sorted()
+    private var trackedMuscles: [String] {
+        store.settings.trackedMuscles
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("RECOVERY & MUSCLE FOCUS")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            // Header Cards
+            HStack {
+                Text("RECOVERY & MUSCLE FOCUS")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button {
+                    showingEditMuscles = true
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
             HStack(spacing: 8) {
                 StatCard(
                     title: "Most Trained",
@@ -91,13 +95,16 @@ struct MuscleMapView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingEditMuscles) {
+            EditNeglectedMusclesView()
+        }
     }
     
     private var recoveryGrid: some View {
         let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
         
         return LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(allMuscles, id: \.self) { muscle in
+            ForEach(trackedMuscles, id: \.self) { muscle in
                 let daysSince = recoveryStatus[muscle] // nil means never trained or very long time
                 recoveryCell(muscle: muscle, daysSince: daysSince)
             }
@@ -159,7 +166,7 @@ struct MuscleMapView: View {
     
     private var blurredGridPreview: some View {
         let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        let dummyMuscles = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core"]
+        let dummyMuscles = store.settings.trackedMuscles.prefix(6).map { String($0) }
         
         return LazyVGrid(columns: columns, spacing: 8) {
             ForEach(dummyMuscles, id: \.self) { muscle in

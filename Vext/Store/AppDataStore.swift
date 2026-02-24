@@ -166,10 +166,15 @@ final class AppDataStore: ObservableObject {
         save()
     }
     
-    /// Updates the global target minimum and maximum reps for progressive overload indicators.
     func updateTargetRepRange(min: Int, max: Int) {
         settings.minReps = min
         settings.maxReps = max
+        save()
+    }
+    
+    /// Updates the specific muscle groups tracked in the Neglected Stats view.
+    func updateTrackedMuscles(_ muscles: [String]) {
+        settings.trackedMuscles = muscles
         save()
     }
 
@@ -292,6 +297,9 @@ final class AppDataStore: ObservableObject {
             
             // One-time migration: Convert Arms to Biceps/Triceps
             migrateArmsToBicepsTriceps()
+            
+            // One-time migration: Convert Legs to Quads/Hamstrings/Glutes/Calves
+            migrateLegsToGranularCategories()
         } catch PersistenceError.fileNotFound {
             print("First launch: Seeding defaults.")
             // Defaults
@@ -844,6 +852,39 @@ final class AppDataStore: ObservableObject {
         
         if hasChanges {
             print("Migration: Converted Arms -> Biceps: \(counts["Biceps"]!), Triceps: \(counts["Triceps"]!)")
+            save()
+        }
+    }
+    
+    /// One-time migration: Convert 'Legs' exercises to 'Quads', 'Hamstrings', 'Glutes', or 'Calves'.
+    private func migrateLegsToGranularCategories() {
+        var hasChanges = false
+        var counts: [String: Int] = ["Quads": 0, "Hamstrings": 0, "Glutes": 0, "Calves": 0]
+        
+        for index in exerciseLibrary.indices {
+            if exerciseLibrary[index].category == "Legs" {
+                let name = exerciseLibrary[index].name.lowercased()
+                let newCategory: String
+                
+                if name.contains("calf") || name.contains("calves") {
+                    newCategory = "Calves"
+                } else if name.contains("curl") || name.contains("romanian") || name.contains("stiff") || name.contains("rdl") {
+                    newCategory = "Hamstrings"
+                } else if name.contains("glute") || name.contains("hip thrust") || name.contains("bridge") {
+                    newCategory = "Glutes"
+                } else {
+                    // Default to Quads for Squats, Leg Press, Extensions, lunges, etc.
+                    newCategory = "Quads"
+                }
+                
+                exerciseLibrary[index].category = newCategory
+                counts[newCategory, default: 0] += 1
+                hasChanges = true
+            }
+        }
+        
+        if hasChanges {
+            print("Migration: Converted Legs -> Quads: \(counts["Quads"]!), Hamstrings: \(counts["Hamstrings"]!), Glutes: \(counts["Glutes"]!), Calves: \(counts["Calves"]!)")
             save()
         }
     }

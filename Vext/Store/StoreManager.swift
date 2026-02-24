@@ -55,6 +55,7 @@ class StoreManager: ObservableObject {
         Task {
             do {
                 try await AppStore.sync()
+                await updateCustomerProductStatus()
             } catch {
                 print("Failed to sync purchases: \(error)")
                 self.errorMessage = "Failed to restore purchases."

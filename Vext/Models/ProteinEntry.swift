@@ -64,6 +64,14 @@ struct AppSettings: Codable {
         set { targetMaxReps = newValue }
     }
     
+    // Muscles to display in the Neglected Stats view.
+    var neglectedStatsMuscles: [String]?
+    
+    var trackedMuscles: [String] {
+        get { neglectedStatsMuscles ?? ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves"] }
+        set { neglectedStatsMuscles = newValue }
+    }
+    
     var hasSeededDefaults: Bool = false
     
     /// Default settings used on first launch or when loading fails.
@@ -72,6 +80,7 @@ struct AppSettings: Codable {
         defaultRestTime: 90,
         targetMinReps: 4,
         targetMaxReps: 8,
+        neglectedStatsMuscles: ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves"],
         hasSeededDefaults: false
     )
 }

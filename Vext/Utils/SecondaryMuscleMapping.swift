@@ -26,7 +26,7 @@ struct SecondaryMuscleMapping {
                 return "Biceps"
             }
             if name.contains("deadlift") {
-                return "Legs" // Hamstrings/Glutes
+                return "Hamstrings"
             }
         }
         
@@ -37,8 +37,8 @@ struct SecondaryMuscleMapping {
             }
         }
         
-        // Leg compounds hit Core
-        if primary == "legs" {
+        // Leg compounds hit Core/Hamstrings
+        if primary == "quads" || primary == "hamstrings" || primary == "glutes" {
             if name.contains("squat") || name.contains("deadlift") || name.contains("lunge") {
                 return "Core"
             }
