@@ -8,7 +8,7 @@ struct CreateExerciseView: View {
     var editingExercise: Exercise? = nil
     
     @State private var name = ""
-    @State private var category = "Other"
+    @State private var category = "Chest"
     @State private var secondaryMuscle: String = ""
     @State private var setupTime: SetupTime = .medium
     

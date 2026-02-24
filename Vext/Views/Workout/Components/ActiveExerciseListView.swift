@@ -25,7 +25,6 @@ private func parseDoubleFlexible(_ s: String) -> Double? {
 
 struct ActiveExerciseListView: View {
     @EnvironmentObject var store: AppDataStore
-    @Binding var isReorderingMode: Bool
     
     // Local Sheet States
     @State private var showingAddExercise = false
@@ -121,8 +120,15 @@ struct ActiveExerciseListView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        removeExercise(exercise)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .tint(.red)
+                }
             }
-            .onMove(perform: moveExercises)
             
             // Add Exercise Button (Footer)
             if !exercises.isEmpty {
@@ -151,7 +157,6 @@ struct ActiveExerciseListView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .environment(\.editMode, isReorderingMode ? .constant(.active) : .constant(.inactive))
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -424,12 +429,6 @@ struct ActiveExerciseListView: View {
     }
     
     // MARK: - Exercise Management
-    
-    private func moveExercises(from source: IndexSet, to destination: Int) {
-        guard var aw = active else { return }
-        aw.exerciseIds.move(fromOffsets: source, toOffset: destination)
-        store.updateActiveWorkout(aw)
-    }
     
     private func removeExercise(_ exercise: Exercise) {
         guard var aw = active else { return }

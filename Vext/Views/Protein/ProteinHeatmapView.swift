@@ -21,7 +21,7 @@ struct ProteinHeatmapView: View {
     
     // Last 30 days
     private var daysToDisplay: [Date] {
-        let today = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: store.currentDate)
         var days: [Date] = []
         // 0 to 29 (30 days total)
         for i in (0..<30).reversed() {

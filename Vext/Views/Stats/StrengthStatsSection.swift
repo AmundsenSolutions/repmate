@@ -134,7 +134,7 @@ struct StrengthStatsSection: View {
             NavigationStack {
                 ExerciseLibraryView(onSelect: { exercise in
                     selectedExerciseId = exercise.id
-                })
+                }, isForStats: true)
             }
         }
         .onAppear {

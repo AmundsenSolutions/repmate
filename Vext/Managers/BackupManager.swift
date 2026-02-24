@@ -22,7 +22,13 @@ class BackupManager {
     }
     
     private var backupDirectory: URL {
-        documentsDirectory.appendingPathComponent(backupDirectoryName)
+        if let ubiquityURL = fileManager.url(forUbiquityContainerIdentifier: nil) {
+            // Safe to store in iCloud Drive's Documents folder so it syncs and is user-visible
+            let icloudDocs = ubiquityURL.appendingPathComponent("Documents")
+            return icloudDocs.appendingPathComponent(backupDirectoryName)
+        } else {
+            return documentsDirectory.appendingPathComponent(backupDirectoryName)
+        }
     }
     
     private init() {}

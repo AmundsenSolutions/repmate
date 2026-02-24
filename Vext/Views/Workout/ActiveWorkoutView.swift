@@ -24,7 +24,7 @@ struct ActiveWorkoutView: View {
     @State private var isTimerActive = false
     @State private var overtimeSeconds: Int = 0
     
-    @State private var isReorderingMode = false
+    @State private var showingReorderView = false
     @FocusState private var isAnyFieldFocused: Bool
     @State private var keyboardVisible = false
 
@@ -142,10 +142,9 @@ struct ActiveWorkoutView: View {
                         
                         // Reorder Exercises
                         Button {
-                            withAnimation { isReorderingMode.toggle() }
+                            showingReorderView = true
                         } label: {
-                            Label(isReorderingMode ? "Done Reordering" : "Reorder Exercises",
-                                  systemImage: "arrow.up.arrow.down")
+                            Label("Reorder Exercises", systemImage: "arrow.up.arrow.down")
                         }
                         
                         // Save as Template
@@ -241,6 +240,9 @@ struct ActiveWorkoutView: View {
         } message: {
             Text("This workout and all its data will be permanently deleted.")
         }
+        .sheet(isPresented: $showingReorderView) {
+            ReorderExercisesView()
+        }
     }
 
 
@@ -270,7 +272,7 @@ struct ActiveWorkoutView: View {
             ActiveWorkoutHeaderView()
             
             // List Component
-            ActiveExerciseListView(isReorderingMode: $isReorderingMode)
+            ActiveExerciseListView()
         }
         .safeAreaInset(edge: .bottom) {
             // Invisible spacer so list content scrolls above the floating button

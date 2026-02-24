@@ -18,7 +18,7 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath()
     
     private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
+        let hour = Calendar.current.component(.hour, from: store.currentDate)
         switch hour {
         case 5..<12: return "Good morning"
         case 12..<17: return "Good afternoon"
@@ -426,7 +426,7 @@ struct HomeView: View {
     // MARK: - Helpers
     
     private var todayEntries: [ProteinEntry] {
-        store.proteinEntriesFor(date: Date()).sorted { $0.date > $1.date }
+        store.proteinEntriesFor(date: store.currentDate).sorted { $0.date > $1.date }
     }
     
     private var sortedWorkoutSessions: [WorkoutSession] {

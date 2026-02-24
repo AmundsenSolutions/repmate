@@ -20,7 +20,7 @@ struct ProteinSummaryCard: View {
     
     private var streakCount: Int { store.proteinStreak() }
     private var goalMetToday: Bool {
-        store.totalProteinFor(date: Date()) >= store.settings.dailyProteinTarget
+        store.totalProteinFor(date: store.currentDate) >= store.settings.dailyProteinTarget
     }
     
     var body: some View {
@@ -99,7 +99,7 @@ struct ProteinSummaryCard: View {
     // MARK: - Protein Value Display
     
     private var proteinValueDisplay: some View {
-        let today = Date()
+        let today = store.currentDate
         let total = store.totalProteinFor(date: today)
         
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
@@ -184,7 +184,7 @@ struct ProteinSummaryCard: View {
     
     private var dayLabels: some View {
         let days = ["S", "M", "T", "W", "T", "F", "S"]
-        let todayIndex = Calendar.current.component(.weekday, from: Date()) - 1 // 0 = Sunday
+        let todayIndex = Calendar.current.component(.weekday, from: store.currentDate) - 1 // 0 = Sunday
         
         return HStack(spacing: 12) {
             ForEach(0..<7, id: \.self) { index in
@@ -201,7 +201,7 @@ struct ProteinSummaryCard: View {
     
     private func getWeeklyData() -> [DayData] {
         let calendar = Calendar.current
-        let today = Date()
+        let today = store.currentDate
         let todayWeekday = calendar.component(.weekday, from: today) - 1 // 0 = Sunday
         
         var data: [DayData] = []

@@ -1,62 +1,67 @@
 import Foundation
 
 struct DefaultData {
-    static let categories = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Other"]
+    static let categories = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core"]
     
     static let workoutCategories = ["Full Body", "Upper", "Lower", "Push", "Pull", "Cardio", "Other"]
     
     static let exercises: [Exercise] = [
-        // Chest
-        Exercise(id: UUID(), name: "Bench Press", category: "Chest", setupTime: .slow),
-        Exercise(id: UUID(), name: "Incline Bench Press", category: "Chest", setupTime: .slow),
-        Exercise(id: UUID(), name: "Dumbbell Flyes", category: "Chest", setupTime: .medium),
-        Exercise(id: UUID(), name: "Push-ups", category: "Chest", setupTime: .fast),
-        Exercise(id: UUID(), name: "Cable Crossover", category: "Chest", setupTime: .fast),
+        // --- Chest ---
+        Exercise(id: UUID(), name: "Incline chest press", category: "Chest", secondaryMuscle: "Shoulders", setupTime: .slow),
+        Exercise(id: UUID(), name: "Pec deck", category: "Chest", secondaryMuscle: "Shoulders", setupTime: .fast),
+        Exercise(id: UUID(), name: "Bench press", category: "Chest", secondaryMuscle: "Triceps", setupTime: .slow),
+        Exercise(id: UUID(), name: "Cable crossover", category: "Chest", secondaryMuscle: "Shoulders", setupTime: .fast),
+        Exercise(id: UUID(), name: "Push-ups", category: "Chest", secondaryMuscle: "Triceps", setupTime: .fast),
 
-        // Back
-        Exercise(id: UUID(), name: "Pull-ups", category: "Back", setupTime: .medium),
-        Exercise(id: UUID(), name: "Barbell Rows", category: "Back", setupTime: .slow),
-        Exercise(id: UUID(), name: "Lat Pulldown", category: "Back", setupTime: .fast),
-        Exercise(id: UUID(), name: "Deadlift", category: "Back", setupTime: .slow),
-        Exercise(id: UUID(), name: "T-Bar Row", category: "Back", setupTime: .slow),
+        // --- Back ---
+        Exercise(id: UUID(), name: "Wide grip pulldown", category: "Back", secondaryMuscle: "Biceps", setupTime: .fast),
+        Exercise(id: UUID(), name: "Chest-supported row", category: "Back", secondaryMuscle: "Biceps", setupTime: .medium),
+        Exercise(id: UUID(), name: "Barbell row", category: "Back", secondaryMuscle: "Biceps", setupTime: .slow),
+        Exercise(id: UUID(), name: "Pull-ups", category: "Back", secondaryMuscle: "Biceps", setupTime: .fast),
+        Exercise(id: UUID(), name: "Deadlift", category: "Back", secondaryMuscle: "Hamstrings", setupTime: .slow),
 
-        // Quads, Hamstrings, Glutes, Calves
-        Exercise(id: UUID(), name: "Squats", category: "Quads", setupTime: .slow),
-        Exercise(id: UUID(), name: "Leg Press", category: "Quads", setupTime: .medium),
-        Exercise(id: UUID(), name: "Romanian Deadlift", category: "Hamstrings", setupTime: .slow),
-        Exercise(id: UUID(), name: "Leg Curls", category: "Hamstrings", setupTime: .fast),
-        Exercise(id: UUID(), name: "Calf Raises", category: "Calves", setupTime: .fast),
+        // --- Shoulders ---
+        Exercise(id: UUID(), name: "Shoulder press", category: "Shoulders", secondaryMuscle: "Triceps", setupTime: .slow),
+        Exercise(id: UUID(), name: "Cable lateral raise", category: "Shoulders", setupTime: .fast),
+        Exercise(id: UUID(), name: "Lateral raise", category: "Shoulders", setupTime: .fast),
+        Exercise(id: UUID(), name: "Front raise", category: "Shoulders", secondaryMuscle: "Chest", setupTime: .fast),
+        Exercise(id: UUID(), name: "Rear delt flyes", category: "Shoulders", secondaryMuscle: "Back", setupTime: .fast),
 
-        // Shoulders
-        Exercise(id: UUID(), name: "Overhead Press", category: "Shoulders", setupTime: .slow),
-        Exercise(id: UUID(), name: "Lateral Raises", category: "Shoulders", setupTime: .medium),
-        Exercise(id: UUID(), name: "Front Raises", category: "Shoulders", setupTime: .medium),
-        Exercise(id: UUID(), name: "Rear Delt Flyes", category: "Shoulders", setupTime: .medium),
+        // --- Biceps ---
+        Exercise(id: UUID(), name: "Preacher dumbbell curl", category: "Biceps", setupTime: .medium),
+        Exercise(id: UUID(), name: "Reverse cable curl", category: "Biceps", setupTime: .fast),
+        Exercise(id: UUID(), name: "Bicep curl", category: "Biceps", setupTime: .medium),
+        Exercise(id: UUID(), name: "Hammer curl", category: "Biceps", setupTime: .medium),
 
-        // Biceps
-        Exercise(id: UUID(), name: "Bicep Curls", category: "Biceps", setupTime: .medium),
-        Exercise(id: UUID(), name: "Hammer Curls", category: "Biceps", setupTime: .medium),
+        // --- Triceps ---
+        Exercise(id: UUID(), name: "Cable extension", category: "Triceps", setupTime: .fast),
+        Exercise(id: UUID(), name: "Overhead cable extension", category: "Triceps", setupTime: .fast),
+        Exercise(id: UUID(), name: "Tricep dips", category: "Triceps", secondaryMuscle: "Chest", setupTime: .medium),
 
-        // Triceps
-        Exercise(id: UUID(), name: "Tricep Dips", category: "Triceps", setupTime: .medium),
-        Exercise(id: UUID(), name: "Tricep Extensions", category: "Triceps", setupTime: .fast),
+        // --- Quads ---
+        Exercise(id: UUID(), name: "Hack squat", category: "Quads", secondaryMuscle: "Glutes", setupTime: .slow),
+        Exercise(id: UUID(), name: "Leg extension", category: "Quads", setupTime: .fast),
+        Exercise(id: UUID(), name: "Squat", category: "Quads", secondaryMuscle: "Glutes", setupTime: .slow),
+        Exercise(id: UUID(), name: "Leg press", category: "Quads", secondaryMuscle: "Glutes", setupTime: .medium),
+        Exercise(id: UUID(), name: "Hip adductor", category: "Quads", setupTime: .fast),
 
-        // Core
-        Exercise(id: UUID(), name: "Plank", category: "Core", setupTime: .fast),
-        Exercise(id: UUID(), name: "Russian Twists", category: "Core", setupTime: .fast),
-        Exercise(id: UUID(), name: "Leg Raises", category: "Core", setupTime: .fast),
-        Exercise(id: UUID(), name: "Crunches", category: "Core", setupTime: .fast),
+        // --- Hamstrings ---
+        Exercise(id: UUID(), name: "Stiff-leg deadlift", category: "Hamstrings", secondaryMuscle: "Glutes", setupTime: .slow),
+        Exercise(id: UUID(), name: "Seated leg curl", category: "Hamstrings", setupTime: .fast),
+        Exercise(id: UUID(), name: "Romanian deadlift", category: "Hamstrings", secondaryMuscle: "Glutes", setupTime: .slow),
 
-        // Other
-        Exercise(id: UUID(), name: "Burpees", category: "Other", setupTime: .fast),
-        Exercise(id: UUID(), name: "Mountain Climbers", category: "Other", setupTime: .fast)
+        // --- Calves ---
+        Exercise(id: UUID(), name: "Standing calf raise", category: "Calves", setupTime: .fast),
+        
+        // --- Core ---
+        Exercise(id: UUID(), name: "Cable crunch", category: "Core", setupTime: .fast)
     ]
     
     static let workouts: [(name: String, category: String, note: String?, exercises: [(name: String, cat: String, sets: Int, reps: String, rir: String)])] = [
         (
             name: "FULLBODY",
             category: "Full Body",
-            note: "1–3 sett per muskelgruppe, 0–1 RIR",
+            note: nil,
             exercises: [
                 ("Incline chest press", "Chest", 1, "6-10", "0-1"),
                 ("Pec deck", "Chest", 1, "8-12", "0-1"),
@@ -68,14 +73,13 @@ struct DefaultData {
                 ("Stiff-leg deadlift", "Hamstrings", 1, "8-12", "0-1"),
                 ("Leg extension", "Quads", 1, "10-15", "0-1"),
                 ("Seated leg curl", "Hamstrings", 1, "6-10", "0-1"),
-                ("Standing calf raise", "Calves", 1, "6-10", "0-1"),
-                ("Cable crunch", "Core", 1, "8-12", "0-1")
+                ("Standing calf raise", "Calves", 1, "6-10", "0-1")
             ]
         ),
         (
             name: "UPPER",
             category: "Upper",
-            note: "2–5 sett per muskelgruppe, 0–1 RIR",
+            note: nil,
             exercises: [
                 ("Incline chest press", "Chest", 2, "6-10", "0-1"),
                 ("Pec deck", "Chest", 2, "8-12", "0-1"),
@@ -92,7 +96,7 @@ struct DefaultData {
         (
             name: "LOWER",
             category: "Lower",
-            note: "2–5 sett per muskelgruppe, 0–1 RIR",
+            note: nil,
             exercises: [
                 ("Hack squat", "Quads", 1, "6-10", "0-1"),
                 ("Leg extension", "Quads", 2, "10-15", "0-1"),

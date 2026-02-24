@@ -16,6 +16,7 @@ struct ExerciseLibraryView: View {
     // For "Select Mode" (Single or Multi)
     var onSelect: ((Exercise) -> Void)? = nil
     var onMultiSelect: ((Set<UUID>) -> Void)? = nil
+    var isForStats: Bool = false
     
     @State private var multiSelectedIds: Set<UUID> = []
     
@@ -226,13 +227,15 @@ struct ExerciseLibraryView: View {
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button {
-                showingAddExercise = true
-            } label: {
-                Text("Create New")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(Theme.Colors.accent)
+        if !isForStats {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingAddExercise = true
+                } label: {
+                    Text("Create New")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Theme.Colors.accent)
+                }
             }
         }
     }
@@ -265,8 +268,21 @@ struct ExerciseLibraryView: View {
         }
     }
     
+    private var sortedExercises: [Exercise] {
+        store.exerciseLibrary.sorted { ex1, ex2 in
+            if isForStats {
+                let d1 = store.lastTrainedDate(for: ex1.id) ?? Date.distantPast
+                let d2 = store.lastTrainedDate(for: ex2.id) ?? Date.distantPast
+                if d1 != d2 {
+                    return d1 > d2 // Newest first
+                }
+            }
+            return ex1.name < ex2.name
+        }
+    }
+    
     private var filteredExercises: [Exercise] {
-        var exercises = store.exerciseLibrary
+        var exercises = sortedExercises
         
         if let category = selectedCategory {
             exercises = exercises.filter { $0.category == category }

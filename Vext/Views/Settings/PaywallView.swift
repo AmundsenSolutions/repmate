@@ -76,35 +76,14 @@ struct PaywallView: View {
                             }
                             .padding(.horizontal, 32)
                         } else {
-                            // Fallback button for when Products don't load (e.g. in Simulator without StoreKit Config)
-                            Text("$4.99")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(Theme.Colors.textPrimary)
+                            // Product not loaded yet — show loading state
+                            ProgressView()
+                                .tint(Theme.Colors.accent)
+                                .padding(.bottom, 8)
                             
-                            Button {
-                                // Simulate successful purchase in development
-                                storeManager.isPro = true
-                                HapticManager.shared.success()
-                                dismiss()
-                            } label: {
-                                Text("Upgrade to Pro (Dev Mode)")
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(Theme.Colors.accent)
-                                    .cornerRadius(16)
-                                    .shadow(color: Theme.Colors.accent.opacity(0.4), radius: 8, x: 0, y: 4)
-                            }
-                            .padding(.horizontal, 32)
-                            
-                            Text("StoreKit is not configured for this simulator. Dev Mode bypasses the App Store.")
-                                .font(.caption2)
-                                .foregroundColor(Theme.Colors.textDim)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 40)
-                                .padding(.top, 4)
+                            Text("Loading product info...")
+                                .font(.subheadline)
+                                .foregroundColor(Theme.Colors.textSecondary)
                         }
                     } else {
                         Text("You have unlocked Vext Pro!")
@@ -140,6 +119,14 @@ struct PaywallView: View {
                     .foregroundColor(Theme.Colors.textSecondary)
                     .padding()
             }
+        }
+        .alert("Restore Purchases", isPresented: Binding(
+            get: { storeManager.restoreMessage != nil },
+            set: { if !$0 { storeManager.restoreMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(storeManager.restoreMessage ?? "")
         }
     }
 }

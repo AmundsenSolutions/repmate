@@ -9,6 +9,7 @@ class StoreManager: ObservableObject {
     @Published var products: [Product] = []
     @Published var purchasedProductIDs: Set<String> = []
     @Published var errorMessage: String? = nil
+    @Published var restoreMessage: String? = nil
     
     private let proProductID = "vext_pro_lifetime"
     private var updateListenerTask: Task<Void, Error>? = nil
@@ -55,10 +56,23 @@ class StoreManager: ObservableObject {
         Task {
             do {
                 try await AppStore.sync()
+                let wasPro = isPro
                 await updateCustomerProductStatus()
+                
+                DispatchQueue.main.async {
+                    if self.isPro && !wasPro {
+                        self.restoreMessage = "Successfully restored Pro access!"
+                    } else if self.isPro && wasPro {
+                        self.restoreMessage = "Pro access is already active on this device."
+                    } else {
+                        self.restoreMessage = "No prior Pro purchase was found on this Apple ID."
+                    }
+                }
             } catch {
                 print("Failed to sync purchases: \(error)")
-                self.errorMessage = "Failed to restore purchases."
+                DispatchQueue.main.async {
+                    self.restoreMessage = "Failed to restore: \(error.localizedDescription)"
+                }
             }
         }
     }

@@ -19,6 +19,10 @@ final class AppDataStore: ObservableObject {
     @Published var workoutSessions: [WorkoutSession] = []
     @Published var exerciseLibrary: [Exercise] = []
     @Published var customBarcodes: [String: CustomBarcodeEntry] = [:]
+    
+    /// Global current date that forces app-wide UI refreshes exactly at midnight.
+    @Published var currentDate: Date = Date()
+    
     @Published var lastErrorMessage: String? = nil
     
     // ActiveWorkout uses custom getter/setter to allow silent updates
@@ -45,10 +49,30 @@ final class AppDataStore: ObservableObject {
     private let fileName = "vext_data.json"
 
     init() {
+        // Load data synchronously so it's ready before views render
         load()
         // Backup initially loaded data (safety on launch)
         if let url = PersistenceManager.shared.fileURL(for: fileName) {
             BackupManager.shared.backup(sourceURL: url)
+        }
+        
+        // Setup observers for day changes (Midnight Edge Case)
+        NotificationCenter.default.addObserver(self, selector: #selector(dayChanged), name: .NSCalendarDayChanged, object: nil)
+        
+        #if os(iOS)
+        NotificationCenter.default.addObserver(self, selector: #selector(dayChanged), name: UIApplication.significantTimeChangeNotification, object: nil)
+        #endif
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func dayChanged() {
+        DispatchQueue.main.async {
+            self.currentDate = Date()
+            // Force re-evaluation of computed properties like streaks
+            self.objectWillChange.send()
         }
     }
     
@@ -643,6 +667,17 @@ final class AppDataStore: ObservableObject {
             let filtered = workoutSessions.filter { $0.templateId == templateId }
             return historyManager.previousExerciseNote(for: exerciseId, in: filtered)
         }
+    }
+    
+    /// Returns the most recent date a specific exercise was trained.
+    func lastTrainedDate(for exerciseId: UUID) -> Date? {
+        // workoutSessions are already sorted newest first
+        for session in workoutSessions {
+            if session.sets.contains(where: { $0.exerciseId == exerciseId }) {
+                return session.date
+            }
+        }
+        return nil
     }
     
     // MARK: - Stats Helpers
