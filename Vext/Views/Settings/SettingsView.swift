@@ -250,7 +250,7 @@ struct SettingsView: View {
                         
                         // MARK: - About & Support
                         cyberGlassSection(title: "About & Support") {
-                            Link(destination: URL(string: "mailto:support@vextapp.com")!) {
+                            Link(destination: URL(string: "mailto:amundsen.dev@gmail.com")!) {
                                 navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
                             }
                             divider
