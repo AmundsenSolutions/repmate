@@ -18,23 +18,19 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
+                // Pure OLED Black background
+                Color.black.ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 20) {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 24) {
                         
                         // MARK: - Pro Status Header
                         proHeaderCard
                         
                         // MARK: - Appearance
-                        GlassSection(title: "Appearance") {
+                        cyberGlassSection(title: "Appearance") {
                             // Theme Picker
-                            HStack {
-                                Label("Theme", systemImage: "paintpalette")
-                                    .font(Theme.Fonts.body)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                
+                            settingsRow(title: "Theme", icon: "paintpalette") {
                                 Menu {
                                     ForEach(ThemeManager.availableThemes) { theme in
                                         Button {
@@ -70,53 +66,26 @@ struct SettingsView: View {
                                     }
                                     
                                 } label: {
-                                    HStack(spacing: 8) {
-                                        Circle()
-                                            .fill(themeManager.palette.accent)
-                                            .frame(width: 10, height: 10)
-                                            .shadow(color: themeManager.palette.accent.opacity(0.6), radius: 3)
-                                        
-                                        Text(themeManager.activeTheme.displayName)
-                                            .font(Theme.Fonts.body)
-                                            .foregroundColor(Theme.Colors.textPrimary)
-                                        
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .font(.caption2)
-                                            .foregroundColor(Theme.Colors.textDim)
-                                    }
-                                    .frame(height: 44)
-                                    .padding(.horizontal, 12)
-                                    .background(Color.white.opacity(0.06))
-                                    .cornerRadius(Theme.Spacing.compact)
+                                    valueDisplay(
+                                        text: themeManager.activeTheme.displayName,
+                                        icon: "chevron.up.chevron.down",
+                                        accentPrefix: true
+                                    )
                                 }
                             }
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             // App Icon
                             NavigationLink(destination: CustomIconPickerView()) {
-                                HStack {
-                                    Label("App Icon", systemImage: "app.badge")
-                                        .font(Theme.Fonts.body)
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(Theme.Colors.textDim)
-                                        .font(.system(size: 14, weight: .semibold))
-                                }
-                                .frame(height: 44)
+                                navRow(title: "App Icon", icon: "app.badge")
                             }
                         }
                         
                         // MARK: - Training
-                        GlassSection(title: "Training") {
+                        cyberGlassSection(title: "Training") {
                             // Default Rest Time
-                            HStack {
-                                Label("Default Rest Time", systemImage: "timer")
-                                    .font(Theme.Fonts.body)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                
+                            settingsRow(title: "Default Rest Time", icon: "timer") {
                                 Menu {
                                     Picker("Rest Time", selection: Binding(
                                         get: { store.settings.restTime },
@@ -132,30 +101,17 @@ struct SettingsView: View {
                                         Text("300s").tag(300)
                                     }
                                 } label: {
-                                    HStack(spacing: 4) {
-                                        Text("\(store.settings.restTime)s")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(Theme.Colors.accent)
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .font(.caption)
-                                            .foregroundColor(Theme.Colors.accent)
-                                    }
-                                    .frame(height: 44)
-                                    .padding(.horizontal, 12)
-                                    .background(Color.white.opacity(0.06))
-                                    .cornerRadius(Theme.Spacing.compact)
+                                    valueDisplay(
+                                        text: "\(store.settings.restTime)s",
+                                        icon: "chevron.up.chevron.down"
+                                    )
                                 }
                             }
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             // Target Rep Range
-                            HStack {
-                                Label("Target Rep Range", systemImage: "arrow.up.arrow.down")
-                                    .font(Theme.Fonts.body)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                
+                            settingsRow(title: "Target Rep Range", icon: "arrow.up.arrow.down") {
                                 HStack(spacing: 8) {
                                     Menu {
                                         Picker("Min", selection: Binding(
@@ -170,12 +126,7 @@ struct SettingsView: View {
                                             }
                                         }
                                     } label: {
-                                        Text("\(store.settings.minReps)")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(Theme.Colors.accent)
-                                            .frame(width: 36, height: 44)
-                                            .background(Color.white.opacity(0.06))
-                                            .cornerRadius(Theme.Spacing.compact)
+                                        compactValueDisplay("\(store.settings.minReps)")
                                     }
                                     
                                     Text("to")
@@ -195,26 +146,16 @@ struct SettingsView: View {
                                             }
                                         }
                                     } label: {
-                                        Text("\(store.settings.maxReps)")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(Theme.Colors.accent)
-                                            .frame(width: 36, height: 44)
-                                            .background(Color.white.opacity(0.06))
-                                            .cornerRadius(Theme.Spacing.compact)
+                                        compactValueDisplay("\(store.settings.maxReps)")
                                     }
                                 }
                             }
                         }
                         
                         // MARK: - Nutrition
-                        GlassSection(title: "Nutrition") {
+                        cyberGlassSection(title: "Nutrition") {
                             // Daily Target
-                            HStack {
-                                Label("Daily Target (g)", systemImage: "fork.knife")
-                                    .font(Theme.Fonts.body)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                
+                            settingsRow(title: "Daily Target (g)", icon: "fork.knife") {
                                 BufferedInputView(
                                     value: $targetText,
                                     placeholder: "150",
@@ -233,11 +174,11 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             // Protein Calculator
                             VStack(spacing: Theme.Spacing.compact) {
-                                HStack {
+                                HStack(spacing: 8) {
                                     BufferedInputView(
                                         value: $weightString,
                                         placeholder: "Weight (kg)",
@@ -249,11 +190,11 @@ struct SettingsView: View {
                                         cornerRadius: Theme.Spacing.compact
                                     )
                                     .frame(height: 44)
-                                    .frame(minWidth: 0, maxWidth: .infinity)
                                     
                                     Button(action: {
                                         calculateProtein()
                                         hideKeyboard()
+                                        HapticManager.shared.lightImpact()
                                     }) {
                                         Text("Calculate")
                                             .font(Theme.Fonts.value)
@@ -267,7 +208,7 @@ struct SettingsView: View {
                                 
                                 if let result = calculatedProtein {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        Divider().background(Color.white.opacity(0.1)).padding(.vertical, 4)
+                                        divider.padding(.vertical, 4)
                                         
                                         Text("Recommended: ~\(result) g/day")
                                             .font(.headline)
@@ -301,90 +242,49 @@ struct SettingsView: View {
                         }
                         
                         // MARK: - Management
-                        GlassSection(title: "Management") {
+                        cyberGlassSection(title: "Management") {
                             NavigationLink(destination: ExerciseLibraryView()) {
-                                HStack {
-                                    Label("Exercises & Categories", systemImage: "dumbbell")
-                                        .font(Theme.Fonts.body)
-                                        .foregroundColor(Theme.Colors.textPrimary)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(Theme.Colors.textDim)
-                                        .font(.system(size: 14, weight: .semibold))
-                                }
-                                .frame(height: 44)
+                                navRow(title: "Exercises & Categories", icon: "dumbbell")
                             }
                         }
                         
                         // MARK: - About & Support
-                        GlassSection(title: "About & Support") {
-                            // Send Feedback
+                        cyberGlassSection(title: "About & Support") {
                             Link(destination: URL(string: "mailto:support@vextapp.com")!) {
-                                HStack {
-                                    Label("Send Feedback", systemImage: "envelope.fill")
-                                        .font(Theme.Fonts.body)
-                                        .foregroundColor(Theme.Colors.textPrimary)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right")
-                                        .foregroundColor(Theme.Colors.textDim)
-                                        .font(.system(size: 12, weight: .semibold))
-                                }
-                                .frame(height: 44)
+                                navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
                             }
-                            
-                            Divider().background(Color.white.opacity(0.1))
-                            
-                            // Privacy Policy
+                            divider
                             Link(destination: URL(string: "https://vextapp.com/privacy")!) {
-                                HStack {
-                                    Label("Privacy Policy", systemImage: "hand.raised.fill")
-                                        .font(Theme.Fonts.body)
-                                        .foregroundColor(Theme.Colors.textPrimary)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right")
-                                        .foregroundColor(Theme.Colors.textDim)
-                                        .font(.system(size: 12, weight: .semibold))
-                                }
-                                .frame(height: 44)
+                                navRow(title: "Privacy Policy", icon: "hand.raised.fill", isExternal: true)
                             }
-                            
-                            Divider().background(Color.white.opacity(0.1))
-                            
-                            // Terms of Service
+                            divider
                             Link(destination: URL(string: "https://vextapp.com/terms")!) {
-                                HStack {
-                                    Label("Terms of Service", systemImage: "doc.text.fill")
-                                        .font(Theme.Fonts.body)
-                                        .foregroundColor(Theme.Colors.textPrimary)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right")
-                                        .foregroundColor(Theme.Colors.textDim)
-                                        .font(.system(size: 12, weight: .semibold))
-                                }
-                                .frame(height: 44)
+                                navRow(title: "Terms of Service", icon: "doc.text.fill", isExternal: true)
                             }
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             Toggle(isOn: $shareAnalytics) {
                                 Label("Share Anonymous Analytics", systemImage: "chart.pie.fill")
                                     .font(Theme.Fonts.body)
-                                    .foregroundColor(Theme.Colors.textPrimary)
+                                    .foregroundColor(.white)
                             }
-                            .tint(themeManager.palette.accent)
+                            .toggleStyle(NeonToggleStyle(onColor: themeManager.palette.accent))
+                            .frame(height: 44)
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             Toggle(isOn: $sendCrashReports) {
                                 Label("Send Crash Reports", systemImage: "ladybug.fill")
                                     .font(Theme.Fonts.body)
-                                    .foregroundColor(Theme.Colors.textPrimary)
+                                    .foregroundColor(.white)
                             }
-                            .tint(themeManager.palette.accent)
+                            .toggleStyle(NeonToggleStyle(onColor: themeManager.palette.accent))
+                            .frame(height: 44)
                         }
                         
                         // MARK: - Advanced
-                        GlassSection(title: "Advanced") {
+                        cyberGlassSection(title: "Advanced") {
                             Button(action: {
                                 UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
                                 HapticManager.shared.success()
@@ -396,12 +296,12 @@ struct SettingsView: View {
                                     Spacer()
                                     Text("Restart app")
                                         .font(.caption)
-                                        .foregroundColor(.white.opacity(0.4))
+                                        .foregroundColor(Theme.Colors.textDim)
                                 }
                                 .frame(height: 44)
                             }
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             if storeManager.isPro {
                                 ShareLink(
@@ -436,7 +336,7 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            divider
                             
                             Button(action: {
                                 showResetAlert = true
@@ -452,10 +352,12 @@ struct SettingsView: View {
                         }
                     }
                     .padding()
-                    .padding(.bottom, store.activeWorkout != nil ? 80 : 0)
+                    .padding(.bottom, store.activeWorkout != nil ? 100 : 20)
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .onAppear {
                 targetText = String(store.settings.dailyProteinTarget)
             }
@@ -477,6 +379,104 @@ struct SettingsView: View {
         }
     }
     
+    // MARK: - Components
+    
+    @ViewBuilder
+    private func cyberGlassSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption.bold())
+                .foregroundColor(.white.opacity(0.7))
+                .padding(.leading, 8)
+                .shadow(color: themeManager.palette.accent.opacity(0.3), radius: 4)
+            
+            VStack(spacing: 0) {
+                content()
+            }
+            .padding(16)
+            .cyberGlass(glowColor: themeManager.palette.accent, cornerRadius: 20)
+        }
+    }
+    
+    @ViewBuilder
+    private func settingsRow<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack {
+            Label {
+                Text(title)
+                    .font(Theme.Fonts.body)
+                    .foregroundColor(.white)
+            } icon: {
+                Image(systemName: icon)
+                    .foregroundColor(themeManager.palette.accent)
+                    .shadow(color: themeManager.palette.accent.opacity(0.4), radius: 3)
+            }
+            Spacer()
+            content()
+        }
+        .frame(minHeight: 44)
+    }
+    
+    @ViewBuilder
+    private func navRow(title: String, icon: String, isExternal: Bool = false) -> some View {
+        HStack {
+            Label {
+                Text(title)
+                    .font(Theme.Fonts.body)
+                    .foregroundColor(.white)
+            } icon: {
+                Image(systemName: icon)
+                    .foregroundColor(themeManager.palette.accent)
+                    .shadow(color: themeManager.palette.accent.opacity(0.4), radius: 3)
+            }
+            Spacer()
+            Image(systemName: isExternal ? "arrow.up.right" : "chevron.right")
+                .foregroundColor(Theme.Colors.textDim)
+                .font(.system(size: 14, weight: .semibold))
+        }
+        .frame(height: 44)
+        .contentShape(Rectangle())
+    }
+    
+    private var divider: some View {
+        Divider()
+            .background(Color.white.opacity(0.1))
+            .padding(.vertical, 4)
+    }
+    
+    @ViewBuilder
+    private func valueDisplay(text: String, icon: String, accentPrefix: Bool = false) -> some View {
+        HStack(spacing: 8) {
+            if accentPrefix {
+                Circle()
+                    .fill(themeManager.palette.accent)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: themeManager.palette.accent.opacity(0.6), radius: 3)
+            }
+            
+            Text(text)
+                .font(Theme.Fonts.value)
+                .foregroundColor(accentPrefix ? .white : themeManager.palette.accent)
+            
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(Theme.Colors.textDim)
+        }
+        .frame(height: 38)
+        .padding(.horizontal, 14)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(Theme.Spacing.compact)
+    }
+    
+    @ViewBuilder
+    private func compactValueDisplay(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.Fonts.value)
+            .foregroundColor(themeManager.palette.accent)
+            .frame(width: 44, height: 38)
+            .background(Color.white.opacity(0.06))
+            .cornerRadius(Theme.Spacing.compact)
+    }
+    
     // MARK: - Pro Header Card
     
     private var proHeaderCard: some View {
@@ -484,56 +484,54 @@ struct SettingsView: View {
             showPaywall = true
             HapticManager.shared.lightImpact()
         } label: {
-            VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Vext")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        if storeManager.isPro {
-                            HStack(spacing: 6) {
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.yellow)
-                                Text("Pro")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.yellow)
-                            }
-                        }
-                    }
-                    
-                    Spacer()
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Vext")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
                     
                     if storeManager.isPro {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 32))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.yellow, .orange],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                    } else {
-                        Text("Get Pro")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(
-                                LinearGradient(
-                                    colors: [.yellow, .orange],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(20)
+                        HStack(spacing: 6) {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.yellow)
+                            Text("Pro")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.yellow)
+                        }
                     }
                 }
+                
+                Spacer()
+                
+                if storeManager.isPro {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.yellow, .orange],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                } else {
+                    Text("Get Pro")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(
+                                colors: [.yellow, .orange],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(24)
+                }
             }
-            .padding(Theme.Spacing.standard)
-            .glassCard(style: .primary)
+            .padding(20)
+            .cyberGlass(glowColor: storeManager.isPro ? .yellow : themeManager.palette.accent, cornerRadius: 24)
         }
         .buttonStyle(.plain)
     }
@@ -581,4 +579,5 @@ struct SettingsCard<Content: View>: View {
     SettingsView()
         .environmentObject(AppDataStore())
         .environmentObject(ThemeManager.shared)
+        .environmentObject(StoreManager())
 }
