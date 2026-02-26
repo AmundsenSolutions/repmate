@@ -15,10 +15,10 @@ struct OnboardingView: View {
             // Background Layer
             GeometryReader { proxy in
                 TabView(selection: $currentPage) {
-                    Image("welcomeBG").resizable().scaledToFill().tag(0)
-                    Image("nutritionBG").resizable().scaledToFill().tag(1)
-                    Image("tutorialBG").resizable().scaledToFill().tag(2)
-                    Image("startBG").resizable().scaledToFill().tag(3)
+                    Image("onboarding_bg_1").resizable().scaledToFill().tag(0)
+                    Image("onboarding_bg_2").resizable().scaledToFill().tag(1)
+                    Image("onboarding_bg_3").resizable().scaledToFill().tag(2)
+                    Image("onboarding_bg_4").resizable().scaledToFill().tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never)) // Hide native index since we want custom placement
                 .frame(width: proxy.size.width, height: proxy.size.height)
