@@ -8,7 +8,7 @@ import Foundation
 final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
     
-    @Published var activeTheme: ThemeVariant = .cleanBlue {
+    @Published var activeTheme: ThemeVariant = .arcticWhite {
         didSet {
             UserDefaults.standard.set(activeTheme.rawValue, forKey: "activeTheme")
         }
@@ -49,8 +49,8 @@ final class ThemeManager: ObservableObject {
     
     // Filtered List for Menu
     static let availableThemes: [ThemeVariant] = [
+        .arcticWhite,
         .cleanBlue,
-        .neonPurple,
         .lavaRed
     ]
 }

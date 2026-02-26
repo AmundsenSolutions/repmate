@@ -250,7 +250,7 @@ struct SettingsView: View {
                         
                         // MARK: - About & Support
                         cyberGlassSection(title: "About & Support") {
-                            Link(destination: URL(string: "mailto:amundsen.dev@gmail.com")!) {
+                            Link(destination: URL(string: "mailto:amundsen.dev@gmail.com") ?? URL(string: "https://google.com")!) {
                                 navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
                             }
                             divider
@@ -394,7 +394,8 @@ struct SettingsView: View {
                 content()
             }
             .padding(16)
-            .cyberGlass(glowColor: themeManager.palette.accent, cornerRadius: 20)
+            .background(Theme.Colors.cardBackground)
+            .cornerRadius(16)
         }
     }
     
@@ -531,7 +532,8 @@ struct SettingsView: View {
                 }
             }
             .padding(20)
-            .cyberGlass(glowColor: storeManager.isPro ? .yellow : themeManager.palette.accent, cornerRadius: 24)
+            .background(Theme.Colors.cardBackground)
+            .cornerRadius(16)
         }
         .buttonStyle(.plain)
     }
