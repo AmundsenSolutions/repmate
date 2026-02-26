@@ -127,8 +127,6 @@ struct SetRowView: View {
                     .blur(radius: 8)
                 : nil
         )
-        // Force redraw of input colors when completion/PR state changes
-        .id(isCompleted && isPR ? "pr-row-\(index)" : "row-\(index)")
         .onChange(of: isCompleted) { _, newValue in
             if newValue && isPR {
                 // Show glow briefly

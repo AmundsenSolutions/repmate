@@ -88,9 +88,7 @@ struct DefaultData {
                 ("Shoulder press", "Shoulders", 2, "6-10", "0-1"),
                 ("Cable lateral raise", "Shoulders", 2, "10-15", "0-1"),
                 ("Preacher dumbbell curl", "Biceps", 2, "8-12", "0-1"),
-                ("Reverse cable curl", "Biceps", 2, "8-12", "0-1"),
-                ("Cable extension", "Triceps", 2, "8-12", "0-1"),
-                ("Overhead cable extension", "Triceps", 2, "8-12", "0-1")
+                ("Cable extension", "Triceps", 2, "8-12", "0-1")
             ]
         ),
         (

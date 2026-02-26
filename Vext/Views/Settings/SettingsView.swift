@@ -254,11 +254,11 @@ struct SettingsView: View {
                                 navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
                             }
                             divider
-                            Link(destination: URL(string: "https://vextapp.com/privacy")!) {
+                            Link(destination: URL(string: "https://docs.google.com/document/d/e/2PACX-1vQOo5BJxVsGS-ZOoDh6kFxdNrhkl_my0ZC0e4ICmZSAPdyXLhYN6S1rZG3r2HUIELKQRl0BBJa1h_J5/pub")!) {
                                 navRow(title: "Privacy Policy", icon: "hand.raised.fill", isExternal: true)
                             }
                             divider
-                            Link(destination: URL(string: "https://vextapp.com/terms")!) {
+                            Link(destination: URL(string: "https://docs.google.com/document/d/e/2PACX-1vQOo5BJxVsGS-ZOoDh6kFxdNrhkl_my0ZC0e4ICmZSAPdyXLhYN6S1rZG3r2HUIELKQRl0BBJa1h_J5/pub")!) {
                                 navRow(title: "Terms of Service", icon: "doc.text.fill", isExternal: true)
                             }
                             

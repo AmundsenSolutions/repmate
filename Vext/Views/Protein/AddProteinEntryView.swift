@@ -24,6 +24,7 @@ struct AddProteinEntryView: View {
     @State private var showRegisterSheet = false
     @State private var newProductName: String = ""
     @State private var newProductProtein: String = ""
+    @State private var lookupTask: Task<Void, Never>?
     
     @FocusState private var focusedField: Field?
     
@@ -219,6 +220,9 @@ struct AddProteinEntryView: View {
         .presentationBackground {
              Theme.Colors.background.opacity(0.98) 
         }
+        .onDisappear {
+            lookupTask?.cancel()
+        }
         .fullScreenCover(isPresented: $showScanner) {
             BarcodeScannerView { barcode in
                 handleBarcodeScan(barcode)
@@ -403,8 +407,10 @@ struct AddProteinEntryView: View {
         isLookingUp = true
         scanError = nil
         
-        Task {
+        lookupTask?.cancel()
+        lookupTask = Task {
             if let product = await OpenFoodFactsService.fetchProduct(barcode: barcode) {
+                if Task.isCancelled { return }
                 await MainActor.run {
                     // Prefer per-serving protein if available, otherwise use per-100g
                     let protein: Int
@@ -419,6 +425,7 @@ struct AddProteinEntryView: View {
                     isLookingUp = false
                 }
             } else {
+                if Task.isCancelled { return }
                 await MainActor.run {
                     isLookingUp = false
                     unknownBarcode = barcode

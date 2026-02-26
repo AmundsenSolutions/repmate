@@ -10,8 +10,6 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var bodyWeight = ""
     
-    private let backgrounds = ["onboarding_bg_1", "onboarding_bg_2", "onboarding_bg_3", "onboarding_bg_4"]
-    
     var body: some View {
         TabView(selection: $currentPage) {
             OnboardingWelcomeSlide(onNext: advancePage)
@@ -31,26 +29,10 @@ struct OnboardingView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
+        // Color the pagination dots with the accent color
+        .tint(themeManager.palette.accent)
         .animation(.easeInOut(duration: 0.3), value: currentPage)
-        .background(
-            ZStack {
-                GeometryReader { geo in
-                    ForEach(0..<4, id: \.self) { index in
-                        Image(backgrounds[index])
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .clipped()
-                            .opacity(currentPage == index ? 1 : 0)
-                            .animation(.easeInOut(duration: 0.6), value: currentPage)
-                    }
-                }
-                .ignoresSafeArea(.all)
-                
-                Color.black.opacity(0.5)
-            }
-            .ignoresSafeArea(.all)
-        )
+        .background(Color.black.ignoresSafeArea(.all))
     }
     
     private func advancePage() {
@@ -75,19 +57,12 @@ struct OnboardingView: View {
 }
 
 // MARK: - Glass Container Modifier
-
+// Kept for backward compatibility if needed elsewhere, but we will use .cyberGlass natively
 struct OnboardingGlassCard: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.ultraThinMaterial.opacity(0.6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.05), lineWidth: 1)
-                    )
-            )
+            .padding(24)
+            .cyberGlass(glowColor: ThemeManager.shared.palette.accent, cornerRadius: 24)
     }
 }
 
@@ -107,26 +82,30 @@ struct OnboardingWelcomeSlide: View {
         VStack(spacing: 32) {
             Spacer()
             
-            Text("👋")
-                .font(.system(size: 72))
-            
-            Text("Welcome to\n**Vext**")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .multilineTextAlignment(.center)
-                .foregroundColor(.white)
-            
-            Text("Choose your vibe")
-                .font(.headline)
-                .foregroundColor(.white.opacity(0.7))
-            
-            // Theme selector in glass container
-            HStack(spacing: 20) {
-                ForEach(ThemeManager.availableThemes.filter { $0 != .custom }, id: \.self) { variant in
-                    ThemeBubble(variant: variant)
+            VStack(spacing: 16) {
+                Text("👋")
+                    .font(.system(size: 72))
+                
+                Text("Welcome to\nVext")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .multilineTextAlignment(.center)
+                    .glowingText(color: themeManager.palette.accent, radius: 12)
+                
+                Text("Choose your vibe")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.7))
+                
+                // Theme selector in glass container
+                HStack(spacing: 20) {
+                    ForEach(ThemeManager.availableThemes.filter { $0 != .custom }, id: \.self) { variant in
+                        ThemeBubble(variant: variant)
+                    }
                 }
+                .padding(.vertical, 20)
+                .padding(.horizontal, 12)
+                .onboardingGlass()
             }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 8)
+            .padding(24)
             .onboardingGlass()
             
             Spacer()
@@ -164,7 +143,8 @@ struct ThemeBubble: View {
                 Text(variant.displayName.components(separatedBy: " ").first ?? "")
                     .font(.caption2)
                     .fontWeight(isActive ? .bold : .regular)
-                    .foregroundColor(isActive ? .white : .white.opacity(0.6))
+                    .foregroundColor(isActive ? themeManager.palette.accent : .white.opacity(0.6))
+                    .glowingText(color: isActive ? themeManager.palette.accent : .clear, radius: isActive ? 8 : 0)
             }
         }
         .buttonStyle(.plain)
@@ -189,42 +169,39 @@ struct OnboardingNutritionSlide: View {
         VStack(spacing: 28) {
             Spacer()
             
-            Text("🥩")
-                .font(.system(size: 72))
-            
-            Text("Set Your Goal")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-            
-            Text("Enter your body weight")
-                .font(.headline)
-                .foregroundColor(.white.opacity(0.7))
-            
-            weightInput
-            presetButtons
-            
-            // Show calculated protein space reserved via opacity
-            Text("Your target: **\(calculatedProtein ?? 150)g protein/day**")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(themeManager.palette.accent)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule()
-                        .fill(.ultraThinMaterial.opacity(0.6))
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-                        )
-                )
-                .opacity(calculatedProtein != nil ? 1 : 0)
-                .animation(.easeInOut, value: calculatedProtein)
-            
-            Text("Based on 1.6g protein per kg body weight")
-                .font(.caption)
-                .foregroundColor(.white.opacity(0.5))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
+            VStack(spacing: 24) {
+                Text("🥩")
+                    .font(.system(size: 72))
+                
+                Text("Set Your Goal")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .glowingText(color: themeManager.palette.accent, radius: 12)
+                
+                Text("Enter your body weight")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.7))
+                
+                weightInput
+                presetButtons
+                
+                // Show calculated protein space reserved via opacity
+                Text("Your target: **\(calculatedProtein ?? 150)g protein/day**")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(themeManager.palette.accent)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .cyberGlass(glowColor: themeManager.palette.accent, cornerRadius: 20)
+                    .opacity(calculatedProtein != nil ? 1 : 0)
+                    .animation(.easeInOut, value: calculatedProtein)
+                
+                Text("Based on 1.6g protein per kg body weight")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.5))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            .padding(24)
+            .onboardingGlass()
             
             Spacer()
             
@@ -240,7 +217,7 @@ struct OnboardingNutritionSlide: View {
     }
     
     private var weightInput: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             TextField("80", text: $bodyWeight)
                 .keyboardType(.decimalPad)
                 .focused($isWeightFocused)
@@ -257,8 +234,8 @@ struct OnboardingNutritionSlide: View {
                 }
             
             Text("kg")
-                .font(.system(size: 28, weight: .medium, design: .rounded))
-                .foregroundColor(themeManager.palette.accent.opacity(0.6))
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundColor(themeManager.palette.accent.opacity(0.8))
         }
     }
     
@@ -271,13 +248,13 @@ struct OnboardingNutritionSlide: View {
                     HapticManager.shared.lightImpact()
                 } label: {
                     Text("\(preset)")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14, weight: .bold))
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 10)
                         .background(
                             bodyWeight == "\(preset)"
                                 ? AnyShapeStyle(themeManager.palette.accent)
-                                : AnyShapeStyle(.ultraThinMaterial)
+                                : AnyShapeStyle(Color.black.opacity(0.3))
                         )
                         .foregroundColor(
                             bodyWeight == "\(preset)" ? .black : .white
@@ -285,7 +262,7 @@ struct OnboardingNutritionSlide: View {
                         .cornerRadius(20)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.white.opacity(bodyWeight == "\(preset)" ? 0 : 0.05), lineWidth: 1)
+                                .stroke(Color.white.opacity(bodyWeight == "\(preset)" ? 0 : 0.1), lineWidth: 1)
                         )
                 }
             }
@@ -300,29 +277,32 @@ struct OnboardingTutorialSlide: View {
     var onNext: () -> Void
     
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            
-            Text("🎓")
-                .font(.system(size: 64))
-            
-            Text("How It Works")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-            
-            ghostDataCard
-            swipeCard
-            arrowsCard
-            
-            Spacer()
-            
-            OnboardingNextButton(action: onNext)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 20) {
+                Spacer().frame(height: 40)
+                
+                Text("🎓")
+                    .font(.system(size: 64))
+                
+                Text("How It Works")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .glowingText(color: themeManager.palette.accent, radius: 12)
+                    .padding(.bottom, 16)
+                
+                ghostDataCard
+                swipeCard
+                arrowsCard
+                
+                Spacer().frame(height: 20)
+                
+                OnboardingNextButton(action: onNext)
+            }
+            .padding(24)
         }
-        .padding(32)
     }
     
     private var ghostDataCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 24))
@@ -345,7 +325,7 @@ struct OnboardingTutorialSlide: View {
     }
     
     private var swipeCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "hand.draw")
                     .font(.system(size: 24))
@@ -368,7 +348,7 @@ struct OnboardingTutorialSlide: View {
     }
     
     private var arrowsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "arrow.up.arrow.down.circle")
                     .font(.system(size: 24))
@@ -404,34 +384,34 @@ struct GhostDataDemoRow: View {
                 .frame(width: 20)
             
             Text("80")
-                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
                 .foregroundColor(themeManager.palette.accent)
                 .frame(width: 50)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.1))
-                .cornerRadius(6)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(0.4))
+                .cornerRadius(8)
             
             ghostCell("75")
             ghostCell("2")
             
             Spacer()
             
-            HStack(spacing: 2) {
-                Text("←").font(.caption2)
-                Text("Ghost").font(.caption2)
+            HStack(spacing: 4) {
+                Text("←").font(.caption2).bold()
+                Text("Ghost").font(.caption2).bold()
             }
-            .foregroundColor(.white.opacity(0.4))
+            .foregroundColor(.white.opacity(0.5))
         }
     }
     
     private func ghostCell(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 15, weight: .semibold, design: .monospaced))
-            .foregroundColor(.white.opacity(0.25))
+            .font(.system(size: 15, weight: .bold, design: .monospaced))
+            .foregroundColor(.white.opacity(0.3))
             .frame(width: 50)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(0.1))
-            .cornerRadius(6)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.4))
+            .cornerRadius(8)
     }
 }
 
@@ -446,32 +426,32 @@ struct SwipeDeleteDemoRow: View {
                 Spacer()
                 Image(systemName: "trash.fill")
                     .foregroundColor(.white)
-                    .padding(.trailing, 16)
+                    .padding(.trailing, 20)
             }
-            .frame(height: 40)
+            .frame(height: 48)
             .background(Color.red.opacity(0.8))
-            .cornerRadius(8)
+            .cornerRadius(12)
             
             // Sliding row — NO user interaction
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 Text("1")
                     .font(.caption).bold()
                     .foregroundColor(.white.opacity(0.5))
                 
                 Text("Bench Press")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
                 
                 Spacer()
                 
                 Text("80 kg × 8")
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(.system(size: 14, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
             }
-            .padding(.horizontal, 12)
-            .frame(height: 40)
-            .background(Color(white: 0.15))
-            .cornerRadius(8)
+            .padding(.horizontal, 16)
+            .frame(height: 48)
+            .background(Color.black.opacity(0.6))
+            .cornerRadius(12)
             .offset(x: swipeOffset)
         }
         .allowsHitTesting(false)
@@ -517,26 +497,28 @@ struct ArrowsDemoRow: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.up.circle.fill")
                     .foregroundColor(.green)
+                    .font(.system(size: 18))
                 Text("Too Light")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
             }
             .frame(maxWidth: .infinity)
             
-            Divider().background(Color.white.opacity(0.3)).frame(height: 20)
+            Divider().background(Color.white.opacity(0.2)).frame(height: 24)
             
             HStack(spacing: 8) {
                 Image(systemName: "arrow.down.circle.fill")
                     .foregroundColor(.red)
+                    .font(.system(size: 18))
                 Text("Too Heavy")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.vertical, 10)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(8)
+        .padding(.vertical, 16)
+        .background(Color.black.opacity(0.4))
+        .cornerRadius(12)
     }
 }
 
@@ -550,35 +532,35 @@ struct OnboardingStartSlide: View {
         VStack(spacing: 32) {
             Spacer()
             
-            Text("🚀")
-                .font(.system(size: 80))
-            
-            Text("Let's Lift")
-                .font(.system(size: 40, weight: .heavy, design: .rounded))
-                .foregroundColor(.white)
-            
-            Text("You're all set.")
-                .font(.title3)
-                .foregroundColor(.white.opacity(0.7))
+            VStack(spacing: 24) {
+                Text("🚀")
+                    .font(.system(size: 80))
+                
+                Text("Let's Lift")
+                    .font(.system(size: 40, weight: .heavy, design: .rounded))
+                    .glowingText(color: themeManager.palette.accent, radius: 16)
+                
+                Text("You're all set.")
+                    .font(.title3)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(32)
+            .onboardingGlass()
             
             Spacer()
             
             Button {
                 onStart()
             } label: {
-                Text("Start Lifting")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(
-                        Capsule()
-                            .fill(themeManager.palette.accent)
-                            .shadow(color: themeManager.palette.accent.opacity(0.5), radius: 16, x: 0, y: 6)
-                    )
+                HStack(spacing: 8) {
+                    Text("START LIFTING")
+                    Image(systemName: "play.fill")
+                }
             }
+            .cyberButton(color: themeManager.palette.accent)
             .padding(.horizontal, 24)
-            .padding(.bottom, 40)
+            .padding(.bottom, 48)
         }
         .padding(32)
     }
@@ -594,20 +576,14 @@ struct OnboardingNextButton: View {
         Button {
             action()
         } label: {
-            HStack(spacing: 6) {
-                Text("Next")
-                    .fontWeight(.semibold)
+            HStack(spacing: 8) {
+                Text("NEXT")
                 Image(systemName: "arrow.right")
             }
-            .foregroundColor(.black)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 14)
-            .background(
-                Capsule()
-                    .fill(themeManager.palette.accent)
-            )
         }
-        .padding(.bottom, 24)
+        .cyberButton(color: themeManager.palette.accent)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 32)
     }
 }
 
