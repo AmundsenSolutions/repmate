@@ -264,7 +264,13 @@ final class AppDataStore: ObservableObject {
     }
 
     /// Duplicates an existing workout template with "Copy of" prefix.
-    func duplicateWorkoutTemplate(id: UUID) {
+    /// Falls back to enforcing the 3 template limit for free users.
+    func duplicateWorkoutTemplate(id: UUID, isPro: Bool) {
+        if !isPro && workoutTemplates.count >= 3 {
+             lastErrorMessage = "Free limit reached"
+             return
+        }
+        
         guard let template = workoutTemplates.first(where: { $0.id == id }) else { return }
         let newTemplate = WorkoutTemplate(
             id: UUID(),

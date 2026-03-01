@@ -125,11 +125,30 @@ struct OnboardingNextButton: View {
             .foregroundColor(themeManager.activeTheme == .arcticWhite ? .black : .white) // High contrast
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(themeManager.palette.accent) // Solid color, no glow
+            .background(
+                // Tactile Gradient Fill
+                LinearGradient(
+                    colors: [themeManager.palette.accent, themeManager.palette.accent.opacity(0.75)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             .clipShape(Capsule()) // Pill-shaped
+            .overlay(
+                // Thin, bright 3D edge
+                Capsule()
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.4), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            )
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.bottom, 24) // Leaves room for custom pagination dots
     }
 }
 
@@ -143,41 +162,31 @@ struct OnboardingWelcomeSlide: View {
         VStack(spacing: 0) {
             Spacer()
             
-            VStack(spacing: 16) {
-                Text("👋")
-                    .font(.system(size: 64))
-                
+            VStack(spacing: 8) {
                 Text("Welcome to\nVext")
-                    .font(.system(size: 32, weight: .bold)) // Sans-serif, no glow
+                    .font(.system(size: 42, weight: .bold)) // Larger, matching image
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
+                    .padding(.bottom, 4)
                 
                 Text("Choose your vibe")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 16, weight: .regular)) // Cleaner sans-serif
+                    .foregroundColor(.white.opacity(0.8))
                 
-                // Theme selector in minimal panel
-                HStack(spacing: 20) {
+                // Theme selector
+                HStack(spacing: 24) {
                     ForEach(ThemeManager.availableThemes.filter { $0 != .custom }, id: \.self) { variant in
                         ThemeBubble(variant: variant)
                     }
                 }
-                .padding(.vertical, 20)
-                .padding(.horizontal, 16)
-                .background(Color(white: 0.05))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
+                .padding(.top, 32)
+                .padding(.bottom, 20)
             }
-            .padding(24)
-            .minimalCard()
             .padding(.horizontal, 24)
             
             Spacer()
             
-            OnboardingNextButton(action: onNext, title: "NEXT")
+            OnboardingNextButton(action: onNext, title: "NEXT", icon: nil) // No icon in Welcome screen to match design
         }
     }
 }
@@ -195,19 +204,39 @@ struct ThemeBubble: View {
             }
             HapticManager.shared.selection()
         } label: {
-            VStack(spacing: 8) {
+            ZStack {
+                // Inactive state: Dark metallic circle
                 Circle()
-                    .fill(variant.palette.accent)
-                    .frame(width: isActive ? 56 : 44, height: isActive ? 56 : 44)
+                    .fill(Color(white: 0.15))
+                    .frame(width: 56, height: 56)
                     .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(isActive ? 0.8 : 0), lineWidth: 2)
+                        Circle().stroke(Color.white.opacity(0.1), lineWidth: 1)
                     )
                 
-                Text(variant.displayName.components(separatedBy: " ").first ?? "")
-                    .font(.system(size: 12, weight: isActive ? .bold : .medium))
-                    .foregroundColor(isActive ? themeManager.palette.accent : .white.opacity(0.6))
+                // Inner color fill (gradient for tactile feel)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [variant.palette.accent.opacity(isActive ? 1.0 : 0.8), variant.palette.accent.opacity(isActive ? 0.7 : 0.5)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+                
+                // Active ring layer
+                if isActive {
+                    Circle()
+                        .stroke(variant.palette.accent.opacity(0.8), lineWidth: 3) // Glowing active ring
+                        .frame(width: 64, height: 64)
+                        .blur(radius: 2) // Slight glow on the active ring itself
+                    
+                    Circle()
+                        .stroke(variant.palette.accent, lineWidth: 2) // Crisp inner ring
+                        .frame(width: 64, height: 64)
+                }
             }
+            .scaleEffect(isActive ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
     }
@@ -239,7 +268,7 @@ struct OnboardingNutritionSlide: View {
                     .font(.system(size: 32, weight: .bold)) // Sans-serif, no glow
                     .foregroundColor(.white)
                 
-                Text("Enter your body weight")
+                Text("Estimate your body weight")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white.opacity(0.7))
                 
@@ -252,7 +281,13 @@ struct OnboardingNutritionSlide: View {
                     .foregroundColor(themeManager.activeTheme == .arcticWhite ? .black : .white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 14)
-                    .background(themeManager.palette.accent)
+                    .background(
+                        LinearGradient(
+                            colors: [themeManager.palette.accent, themeManager.palette.accent.opacity(0.75)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                     .cornerRadius(12)
                     .opacity(calculatedProtein != nil ? 1 : 0)
                     .animation(.easeInOut, value: calculatedProtein)
@@ -263,8 +298,8 @@ struct OnboardingNutritionSlide: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
             }
+            // Removed minimalCard() to let elements float directly over the background ZStack
             .padding(24)
-            .minimalCard()
             .padding(.horizontal, 24)
             
             Spacer()
@@ -303,33 +338,70 @@ struct OnboardingNutritionSlide: View {
     }
     
     private var presetButtons: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach([50, 60, 70, 80, 90, 100, 110, 120, 130], id: \.self) { preset in
-                    Button {
-                        bodyWeight = "\(preset)"
-                        isWeightFocused = false
-                        HapticManager.shared.lightImpact()
-                    } label: {
-                        Text("\(preset)")
-                            .font(.system(size: 14, weight: .bold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                bodyWeight == "\(preset)"
-                                    ? themeManager.palette.accent
-                                    : Color(white: 0.15)
-                            )
-                            .foregroundColor(
-                                bodyWeight == "\(preset)"
-                                    ? (themeManager.activeTheme == .arcticWhite ? .black : .white)
-                                    : .white
-                            )
-                            .cornerRadius(12)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    // Start lower to allow 80 to be in the middle, and go up higher
+                    ForEach([40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150], id: \.self) { preset in
+                        let isActive = bodyWeight == "\(preset)"
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                bodyWeight = "\(preset)"
+                                proxy.scrollTo(preset, anchor: .center)
+                            }
+                            isWeightFocused = false
+                            HapticManager.shared.lightImpact()
+                        } label: {
+                            Text("\(preset)")
+                                .font(.system(size: 14, weight: .bold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(
+                                    ZStack {
+                                        if isActive {
+                                            LinearGradient(
+                                                colors: [themeManager.palette.accent, themeManager.palette.accent.opacity(0.75)],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        } else {
+                                            Color(white: 0.15)
+                                        }
+                                    }
+                                )
+                                .foregroundColor(
+                                    isActive
+                                        ? (themeManager.activeTheme == .arcticWhite ? .black : .white)
+                                        : .white
+                                )
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            isActive ? themeManager.palette.accent : Color.white.opacity(0.1),
+                                            lineWidth: isActive ? 2 : 1
+                                        )
+                                )
+                        }
+                        .id(preset) // Enable scroll to
+                    }
+                }
+                .padding(.horizontal, 24) // Ensures first and last items are centered nicely without truncation
+            }
+            .onAppear {
+                // Determine starting preset
+                let startValue = Int(bodyWeight) ?? 80
+                // Default body weight value to 80 if it's currently empty
+                if bodyWeight.isEmpty {
+                    bodyWeight = "80"
+                }
+                // Scroll to active item on appear
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation {
+                        proxy.scrollTo(startValue, anchor: .center)
                     }
                 }
             }
-            .padding(.horizontal, 24) // Ensures first and last items are centered nicely without truncation
         }
     }
 }
@@ -387,7 +459,6 @@ struct OnboardingTutorialSlide: View {
             GhostDataDemoRow()
         }
         .padding(16)
-        .minimalCard()
         .padding(.horizontal, 24)
     }
     
@@ -412,7 +483,6 @@ struct OnboardingTutorialSlide: View {
             SwipeDeleteDemoRow()
         }
         .padding(16)
-        .minimalCard()
         .padding(.horizontal, 24)
     }
     
@@ -437,7 +507,6 @@ struct OnboardingTutorialSlide: View {
             ArrowsDemoRow()
         }
         .padding(16)
-        .minimalCard()
         .padding(.horizontal, 24)
     }
 }
@@ -616,8 +685,8 @@ struct OnboardingStartSlide: View {
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.white.opacity(0.8))
             }
+            // Removed minimalCard() to let elements float directly over the background ZStack
             .padding(32)
-            .minimalCard()
             .padding(.horizontal, 24)
             
             Spacer()

@@ -165,7 +165,12 @@ struct WorkoutsView: View {
                                         navigationPath.append(WorkoutNavigation.templateDetail(template.id))
                                     },
                                     onDuplicate: {
-                                        store.duplicateWorkoutTemplate(id: template.id)
+                                        if !storeManager.isPro && store.workoutTemplates.count >= 3 {
+                                            showPaywall = true
+                                            HapticManager.shared.lightImpact()
+                                        } else {
+                                            store.duplicateWorkoutTemplate(id: template.id, isPro: storeManager.isPro)
+                                        }
                                     },
                                     onDelete: {
                                         templateToDelete = template
@@ -184,7 +189,12 @@ struct WorkoutsView: View {
                             .tint(.red) // Force RED color
                             
                             Button {
-                                store.duplicateWorkoutTemplate(id: template.id)
+                                if !storeManager.isPro && store.workoutTemplates.count >= 3 {
+                                    showPaywall = true
+                                    HapticManager.shared.lightImpact()
+                                } else {
+                                    store.duplicateWorkoutTemplate(id: template.id, isPro: storeManager.isPro)
+                                }
                             } label: {
                                 Label("Duplicate", systemImage: "doc.on.doc")
                             }
