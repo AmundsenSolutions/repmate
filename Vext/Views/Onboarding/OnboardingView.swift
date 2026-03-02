@@ -125,27 +125,8 @@ struct OnboardingNextButton: View {
             .foregroundColor(themeManager.activeTheme == .arcticWhite ? .black : .white) // High contrast
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(
-                // Tactile Gradient Fill
-                LinearGradient(
-                    colors: [themeManager.palette.accent, themeManager.palette.accent.opacity(0.75)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .background(themeManager.palette.accent)
             .clipShape(Capsule()) // Pill-shaped
-            .overlay(
-                // Thin, bright 3D edge
-                Capsule()
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.4), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
-            )
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 24) // Leaves room for custom pagination dots
@@ -213,24 +194,13 @@ struct ThemeBubble: View {
                         Circle().stroke(Color.white.opacity(0.1), lineWidth: 1)
                     )
                 
-                // Inner color fill (gradient for tactile feel)
+                // Inner color fill (solid color for flat feel)
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [variant.palette.accent.opacity(isActive ? 1.0 : 0.8), variant.palette.accent.opacity(isActive ? 0.7 : 0.5)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .fill(variant.palette.accent.opacity(isActive ? 1.0 : 0.6))
                     .frame(width: 48, height: 48)
                 
                 // Active ring layer
                 if isActive {
-                    Circle()
-                        .stroke(variant.palette.accent.opacity(0.8), lineWidth: 3) // Glowing active ring
-                        .frame(width: 64, height: 64)
-                        .blur(radius: 2) // Slight glow on the active ring itself
-                    
                     Circle()
                         .stroke(variant.palette.accent, lineWidth: 2) // Crisp inner ring
                         .frame(width: 64, height: 64)
@@ -281,13 +251,7 @@ struct OnboardingNutritionSlide: View {
                     .foregroundColor(themeManager.activeTheme == .arcticWhite ? .black : .white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            colors: [themeManager.palette.accent, themeManager.palette.accent.opacity(0.75)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .background(themeManager.palette.accent)
                     .cornerRadius(12)
                     .opacity(calculatedProtein != nil ? 1 : 0)
                     .animation(.easeInOut, value: calculatedProtein)
@@ -356,32 +320,13 @@ struct OnboardingNutritionSlide: View {
                                 .font(.system(size: 14, weight: .bold))
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
-                                .background(
-                                    ZStack {
-                                        if isActive {
-                                            LinearGradient(
-                                                colors: [themeManager.palette.accent, themeManager.palette.accent.opacity(0.75)],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        } else {
-                                            Color(white: 0.15)
-                                        }
-                                    }
-                                )
+                                .background(isActive ? themeManager.palette.accent : Color(white: 0.15))
                                 .foregroundColor(
                                     isActive
                                         ? (themeManager.activeTheme == .arcticWhite ? .black : .white)
                                         : .white
                                 )
                                 .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(
-                                            isActive ? themeManager.palette.accent : Color.white.opacity(0.1),
-                                            lineWidth: isActive ? 2 : 1
-                                        )
-                                )
                         }
                         .id(preset) // Enable scroll to
                     }

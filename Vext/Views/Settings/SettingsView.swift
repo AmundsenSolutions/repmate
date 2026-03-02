@@ -388,7 +388,6 @@ struct SettingsView: View {
                 .font(.caption.bold())
                 .foregroundColor(.white.opacity(0.7))
                 .padding(.leading, 8)
-                .shadow(color: themeManager.palette.accent.opacity(0.3), radius: 4)
             
             VStack(spacing: 0) {
                 content()
@@ -409,7 +408,6 @@ struct SettingsView: View {
             } icon: {
                 Image(systemName: icon)
                     .foregroundColor(themeManager.palette.accent)
-                    .shadow(color: themeManager.palette.accent.opacity(0.4), radius: 3)
             }
             Spacer()
             content()
@@ -427,7 +425,6 @@ struct SettingsView: View {
             } icon: {
                 Image(systemName: icon)
                     .foregroundColor(themeManager.palette.accent)
-                    .shadow(color: themeManager.palette.accent.opacity(0.4), radius: 3)
             }
             Spacer()
             Image(systemName: isExternal ? "arrow.up.right" : "chevron.right")
@@ -451,7 +448,6 @@ struct SettingsView: View {
                 Circle()
                     .fill(themeManager.palette.accent)
                     .frame(width: 8, height: 8)
-                    .shadow(color: themeManager.palette.accent.opacity(0.6), radius: 3)
             }
             
             Text(text)
@@ -508,26 +504,14 @@ struct SettingsView: View {
                 if storeManager.isPro {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 34))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
+                        .foregroundColor(.yellow)
                 } else {
                     Text("Get Pro")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.black)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .background(Color.yellow)
                         .cornerRadius(24)
                 }
             }
