@@ -11,6 +11,8 @@ struct SettingsView: View {
     @EnvironmentObject var storeManager: StoreManager
     @State private var showPaywall = false
     
+    @Environment(\.openURL) var openURL
+    
     // Analytics & Crash Reporting
     @AppStorage("shareAnalytics") private var shareAnalytics = true
     @AppStorage("sendCrashReports") private var sendCrashReports = true
@@ -250,7 +252,16 @@ struct SettingsView: View {
                         
                         // MARK: - About & Support
                         cyberGlassSection(title: "About & Support") {
-                            Link(destination: URL(string: "mailto:amundsen.dev@gmail.com") ?? URL(string: "https://google.com")!) {
+                            Button(action: {
+                                if let url = URL(string: "mailto:amundsen.dev@gmail.com"), UIApplication.shared.canOpenURL(url) {
+                                    openURL(url)
+                                } else {
+                                    // Fallback to web interface (e.g., standard contact form) if Mail is unconfigured
+                                    if let fallbackURL = URL(string: "https://x.com/aleksanderamun1") {
+                                        openURL(fallbackURL)
+                                    }
+                                }
+                            }) {
                                 navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
                             }
                             divider
@@ -269,7 +280,7 @@ struct SettingsView: View {
                                     .font(Theme.Fonts.body)
                                     .foregroundColor(.white)
                             }
-                            .toggleStyle(NeonToggleStyle(onColor: themeManager.palette.accent))
+                            .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
                             .frame(height: 44)
                             
                             divider
@@ -279,7 +290,7 @@ struct SettingsView: View {
                                     .font(Theme.Fonts.body)
                                     .foregroundColor(.white)
                             }
-                            .toggleStyle(NeonToggleStyle(onColor: themeManager.palette.accent))
+                            .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
                             .frame(height: 44)
                         }
                         
@@ -387,14 +398,14 @@ struct SettingsView: View {
             Text(title.uppercased())
                 .font(.caption.bold())
                 .foregroundColor(.white.opacity(0.7))
+                .shadow(color: .white.opacity(0.3), radius: 4)
                 .padding(.leading, 8)
             
             VStack(spacing: 0) {
                 content()
             }
             .padding(16)
-            .background(Theme.Colors.cardBackground)
-            .cornerRadius(16)
+            .glassCard(style: .primary)
         }
     }
     
@@ -504,20 +515,31 @@ struct SettingsView: View {
                 if storeManager.isPro {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 34))
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.yellow, .orange],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                 } else {
                     Text("Get Pro")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.black)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Color.yellow)
+                        .background(
+                            LinearGradient(
+                                colors: [.yellow, .orange],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .cornerRadius(24)
                 }
             }
             .padding(20)
-            .background(Theme.Colors.cardBackground)
-            .cornerRadius(16)
+            .glassCard(style: .primary)
         }
         .buttonStyle(.plain)
     }
@@ -556,7 +578,7 @@ struct SettingsCard<Content: View>: View {
             VStack {
                 content
             }
-            .oledCard()
+            .glassCard(style: .primary)
         }
     }
 }

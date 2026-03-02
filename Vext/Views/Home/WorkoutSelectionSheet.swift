@@ -29,35 +29,25 @@ struct WorkoutSelectionSheet: View {
             // Templates List
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(store.workoutTemplates.prefix(4)) { template in
+                    ForEach(store.workoutTemplates.prefix(3)) { template in
                         Button {
                             startWorkout(template: template)
                         } label: {
                             HStack {
                                 Text(template.name)
-                                    .font(.system(size: 18, weight: .semibold))
+                                Text(template.name)
+                                    .font(.system(size: 16, weight: .bold)) // Slightly smaller, cleaner
                                     .foregroundColor(.white)
                                 Spacer()
                             }
                             .padding(.vertical, 18)
                             .padding(.horizontal, 24)
-                            .background(.ultraThinMaterial)
+                            .background(Color(white: 0.1)) // Dark, neutral background
                             .clipShape(Capsule())
                             .overlay(
                                 Capsule()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [
-                                                Theme.active.accent.opacity(0.6),
-                                                Theme.active.accent.opacity(0.1)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1
-                                    )
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1) // Subtle border
                             )
-                            .shadow(color: Theme.active.accent.opacity(0.2), radius: 8, x: 0, y: 4)
                         }
                     }
                 }
@@ -65,7 +55,7 @@ struct WorkoutSelectionSheet: View {
             }
             .scrollIndicators(.hidden)
             // Limit height if few items, but allow expansion
-            .frame(maxHeight: CGFloat(min(store.workoutTemplates.count, 4)) * 80 + 20) 
+            .frame(maxHeight: CGFloat(min(store.workoutTemplates.count, 3)) * 80 + 20) 
             
             Spacer().frame(height: 24)
             
@@ -85,11 +75,7 @@ struct WorkoutSelectionSheet: View {
         }
         .padding(.horizontal, 20)
         .background(
-            ZStack {
-                Color.black.opacity(0.8) // Darken base
-                Rectangle()
-                    .fill(.ultraThinMaterial) // Maximum glass effect
-            }
+            Color.black
             .ignoresSafeArea()
         )
         .clipShape(RoundedCorner(radius: 30, corners: [.topLeft, .topRight]))

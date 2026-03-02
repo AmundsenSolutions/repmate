@@ -107,7 +107,7 @@ struct ExerciseLibraryView: View {
                         .font(.system(size: 14, weight: .medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(selectedCategory == nil ? themeManager.palette.accent : Color(uiColor: .tertiarySystemFill))
+                        .background(selectedCategory == nil ? AnyView(Theme.active.verticalGradient) : AnyView(Color(uiColor: .tertiarySystemFill)))
                         .foregroundColor(selectedCategory == nil ? .black : .white) // Black text when selected
                         .cornerRadius(20)
                 }
@@ -143,7 +143,7 @@ struct ExerciseLibraryView: View {
                 .font(.system(size: 14, weight: .medium))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(selectedCategory == category ? themeManager.palette.accent : Color(uiColor: .tertiarySystemFill))
+                .background(selectedCategory == category ? AnyView(Theme.active.verticalGradient) : AnyView(Color(uiColor: .tertiarySystemFill)))
                 .foregroundColor(selectedCategory == category ? .black : .white) // Black text when selected
                 .cornerRadius(20)
         }
