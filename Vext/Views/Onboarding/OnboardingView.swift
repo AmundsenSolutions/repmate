@@ -269,7 +269,7 @@ struct OnboardingNextButton: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Theme.active.accent.opacity(0.8), lineWidth: 1.5)
+                                .strokeBorder(Theme.active.accent.opacity(0.8), lineWidth: 1.5)
                         )
                         .shadow(color: Theme.active.accent.opacity(0.3), radius: 8, x: 0, y: 0)
                         .opacity(calculatedProtein != nil ? 1 : 0)
@@ -356,7 +356,7 @@ struct OnboardingNextButton: View {
                                     .foregroundColor(.white)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(isActive ? Theme.active.accent.opacity(0.8) : Color.clear, lineWidth: 1.5)
+                                            .strokeBorder(isActive ? Theme.active.accent.opacity(0.8) : Color.clear, lineWidth: 1.5)
                                     )
                             }
                             .id(preset) // Enable scroll to

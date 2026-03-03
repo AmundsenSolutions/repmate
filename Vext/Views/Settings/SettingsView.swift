@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject var store: AppDataStore
@@ -8,10 +9,13 @@ struct SettingsView: View {
     @State private var weightString = ""
     @State private var calculatedProtein: Int?
     @State private var showResetAlert = false
+    @State private var showEmailFallbackAlert = false
+    @State private var showRepRangeSheet = false
     @EnvironmentObject var storeManager: StoreManager
     @State private var showPaywall = false
     
     @Environment(\.openURL) var openURL
+    @Environment(\.requestReview) var requestReview
     
     // Analytics & Crash Reporting
     @AppStorage("shareAnalytics") private var shareAnalytics = true
@@ -114,42 +118,29 @@ struct SettingsView: View {
                             
                             // Target Rep Range
                             settingsRow(title: "Target Rep Range", icon: "arrow.up.arrow.down") {
-                                HStack(spacing: 8) {
-                                    Menu {
-                                        Picker("Min", selection: Binding(
-                                            get: { store.settings.minReps },
-                                            set: { 
-                                                let newMax = max($0, store.settings.maxReps)
-                                                store.updateTargetRepRange(min: $0, max: newMax) 
-                                            }
-                                        )) {
-                                            ForEach(1..<20, id: \.self) { val in
-                                                Text("\(val)").tag(val)
-                                            }
-                                        }
-                                    } label: {
-                                        compactValueDisplay("\(store.settings.minReps)")
+                                Button {
+                                    showRepRangeSheet = true
+                                    HapticManager.shared.lightImpact()
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Text("\(store.settings.minReps)")
+                                            .font(Theme.Fonts.value)
+                                            .foregroundColor(themeManager.palette.accent)
+                                            .frame(minWidth: 20, alignment: .trailing)
+                                        
+                                        Text("–")
+                                            .font(.system(size: 14, weight: .light))
+                                            .foregroundColor(themeManager.palette.accent.opacity(0.8))
+                                        
+                                        Text("\(store.settings.maxReps)")
+                                            .font(Theme.Fonts.value)
+                                            .foregroundColor(themeManager.palette.accent)
+                                            .frame(minWidth: 20, alignment: .leading)
                                     }
-                                    
-                                    Text("to")
-                                        .font(.caption)
-                                        .foregroundColor(Theme.Colors.textDim)
-                                    
-                                    Menu {
-                                        Picker("Max", selection: Binding(
-                                            get: { store.settings.maxReps },
-                                            set: { 
-                                                let newMin = min($0, store.settings.minReps)
-                                                store.updateTargetRepRange(min: newMin, max: $0) 
-                                            }
-                                        )) {
-                                            ForEach(1..<31, id: \.self) { val in
-                                                Text("\(val)").tag(val)
-                                            }
-                                        }
-                                    } label: {
-                                        compactValueDisplay("\(store.settings.maxReps)")
-                                    }
+                                    .padding(.horizontal, 14)
+                                    .frame(height: 38)
+                                    .background(Color.white.opacity(0.06))
+                                    .cornerRadius(19)
                                 }
                             }
                         }
@@ -163,7 +154,7 @@ struct SettingsView: View {
                                     placeholder: "150",
                                     keyboardType: .numberPad,
                                     color: Theme.Colors.accent,
-                                    alignment: .trailing,
+                                    alignment: .center,
                                     font: Theme.Fonts.value,
                                     backgroundColor: Color.white.opacity(0.06),
                                     cornerRadius: Theme.Spacing.compact
@@ -256,15 +247,20 @@ struct SettingsView: View {
                                 if let url = URL(string: "mailto:amundsen.dev@gmail.com"), UIApplication.shared.canOpenURL(url) {
                                     openURL(url)
                                 } else {
-                                    // Fallback to web interface (e.g., standard contact form) if Mail is unconfigured
-                                    if let fallbackURL = URL(string: "https://x.com/aleksanderamun1") {
-                                        openURL(fallbackURL)
-                                    }
+                                    showEmailFallbackAlert = true
                                 }
                             }) {
                                 navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
                             }
+                            Button(action: {
+                                requestReview()
+                                HapticManager.shared.lightImpact()
+                            }) {
+                                navRow(title: "Rate on App Store", icon: "star.fill")
+                            }
+                            
                             divider
+                            
                             Link(destination: URL(string: "https://docs.google.com/document/d/e/2PACX-1vQOo5BJxVsGS-ZOoDh6kFxdNrhkl_my0ZC0e4ICmZSAPdyXLhYN6S1rZG3r2HUIELKQRl0BBJa1h_J5/pub")!) {
                                 navRow(title: "Privacy Policy", icon: "hand.raised.fill", isExternal: true)
                             }
@@ -372,6 +368,15 @@ struct SettingsView: View {
             .onAppear {
                 targetText = String(store.settings.dailyProteinTarget)
             }
+            .alert("No Mail Account Found", isPresented: $showEmailFallbackAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Copy Email") {
+                    UIPasteboard.general.string = "amundsen.dev@gmail.com"
+                    HapticManager.shared.success()
+                }
+            } message: {
+                Text("We couldn't open the Mail app. You can send your feedback directly to amundsen.dev@gmail.com. Do you want to copy the email address?")
+            }
             .alert("Reset All Data?", isPresented: $showResetAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Reset", role: .destructive) {
@@ -388,6 +393,11 @@ struct SettingsView: View {
         .fullScreenCover(isPresented: $showingCustomTheme) {
             CustomThemeView()
         }
+        .sheet(isPresented: $showRepRangeSheet) {
+            TargetRepRangeSheet(minReps: store.settings.minReps, maxReps: store.settings.maxReps) { newMin, newMax in
+                store.updateTargetRepRange(min: newMin, max: newMax)
+            }
+        }
     }
     
     // MARK: - Components
@@ -398,14 +408,14 @@ struct SettingsView: View {
             Text(title.uppercased())
                 .font(.caption.bold())
                 .foregroundColor(.white.opacity(0.7))
-                .shadow(color: .white.opacity(0.3), radius: 4)
                 .padding(.leading, 8)
             
             VStack(spacing: 0) {
                 content()
             }
             .padding(16)
-            .glassCard(style: .primary)
+            .background(Theme.Colors.cardBackground)
+            .cornerRadius(Theme.Spacing.cornerRadius)
         }
     }
     
@@ -578,7 +588,8 @@ struct SettingsCard<Content: View>: View {
             VStack {
                 content
             }
-            .glassCard(style: .primary)
+            .background(Theme.Colors.cardBackground)
+            .cornerRadius(Theme.Spacing.cornerRadius)
         }
     }
 }

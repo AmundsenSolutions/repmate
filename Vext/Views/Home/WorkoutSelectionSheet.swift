@@ -35,10 +35,12 @@ struct WorkoutSelectionSheet: View {
                         } label: {
                             HStack {
                                 Text(template.name)
-                                Text(template.name)
-                                    .font(.system(size: 16, weight: .bold)) // Slightly smaller, cleaner
+                                    .font(.system(size: 18, weight: .bold)) // Clean and prominent
                                     .foregroundColor(.white)
                                 Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color.white.opacity(0.3))
                             }
                             .padding(.vertical, 18)
                             .padding(.horizontal, 24)
