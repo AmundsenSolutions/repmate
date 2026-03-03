@@ -26,7 +26,7 @@ struct OnboardingView: View {
                 .animation(.easeInOut(duration: 0.8), value: currentPage)
                 
                 // Heavy dark overlay to make text premium and legible
-                Color.black.opacity(0.7).ignoresSafeArea()
+                Color.black.opacity(0.65).ignoresSafeArea()
             }
             .ignoresSafeArea()
             
@@ -148,7 +148,7 @@ struct OnboardingNextButton: View {
                     
                     Text("Choose your vibe")
                         .font(.system(size: 16, weight: .regular)) // Cleaner sans-serif
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(.white)
                     
                     // Theme selector
                     HStack(spacing: 24) {
@@ -249,7 +249,7 @@ struct OnboardingNextButton: View {
                     
                     Text("Estimate your body weight")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(.white)
                     
                     weightInput
                     presetButtons
@@ -277,7 +277,7 @@ struct OnboardingNextButton: View {
                     
                     Text("Based on 1.6g protein per kg body weight")
                         .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
                 }
@@ -429,7 +429,7 @@ struct OnboardingNextButton: View {
                             .foregroundColor(.white)
                         Text("Grey numbers show your last session.")
                             .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.white)
                     }
                 }
                 
@@ -453,7 +453,7 @@ struct OnboardingNextButton: View {
                             .foregroundColor(.white)
                         Text("Swipe left on any row to remove it.")
                             .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.white)
                     }
                 }
                 
@@ -477,7 +477,7 @@ struct OnboardingNextButton: View {
                             .foregroundColor(.white)
                         Text("Arrows guide weight adjustments.")
                             .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.white)
                     }
                 }
                 
