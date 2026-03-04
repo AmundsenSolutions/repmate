@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var calculatedProtein: Int?
     @State private var showResetAlert = false
     @State private var showEmailFallbackAlert = false
+    @State private var showEmailOptions = false
     @State private var showRepRangeSheet = false
     @EnvironmentObject var storeManager: StoreManager
     @State private var showPaywall = false
@@ -244,13 +245,50 @@ struct SettingsView: View {
                         // MARK: - About & Support
                         cyberGlassSection(title: "About & Support") {
                             Button(action: {
-                                if let url = URL(string: "mailto:amundsen.dev@gmail.com"), UIApplication.shared.canOpenURL(url) {
-                                    openURL(url)
-                                } else {
-                                    showEmailFallbackAlert = true
-                                }
+                                showEmailOptions = true
                             }) {
                                 navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
+                            }
+                            .confirmationDialog("Choose Email App", isPresented: $showEmailOptions, titleVisibility: .visible) {
+                                Button("Apple Mail") {
+                                    if let url = URL(string: "mailto:amundsen.dev@gmail.com") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }
+                                Button("Gmail") {
+                                    if let url = URL(string: "googlegmail://co?to=amundsen.dev@gmail.com") {
+                                        if UIApplication.shared.canOpenURL(url) {
+                                            UIApplication.shared.open(url)
+                                        } else {
+                                            showEmailFallbackAlert = true
+                                        }
+                                    }
+                                }
+                                Button("Outlook") {
+                                    if let url = URL(string: "ms-outlook://compose?to=amundsen.dev@gmail.com") {
+                                        if UIApplication.shared.canOpenURL(url) {
+                                            UIApplication.shared.open(url)
+                                        } else {
+                                            showEmailFallbackAlert = true
+                                        }
+                                    }
+                                }
+                                Button("Yahoo Mail") {
+                                    if let url = URL(string: "ymail://mail/compose?to=amundsen.dev@gmail.com") {
+                                        if UIApplication.shared.canOpenURL(url) {
+                                            UIApplication.shared.open(url)
+                                        } else {
+                                            showEmailFallbackAlert = true
+                                        }
+                                    }
+                                }
+                                Button("Copy Email Address") {
+                                    UIPasteboard.general.string = "amundsen.dev@gmail.com"
+                                    HapticManager.shared.success()
+                                }
+                                Button("Cancel", role: .cancel) {}
+                            } message: {
+                                Text("How would you like to send your feedback?")
                             }
                             Button(action: {
                                 requestReview()
@@ -368,14 +406,14 @@ struct SettingsView: View {
             .onAppear {
                 targetText = String(store.settings.dailyProteinTarget)
             }
-            .alert("No Mail Account Found", isPresented: $showEmailFallbackAlert) {
-                Button("Cancel", role: .cancel) { }
+            .alert("App Not Found", isPresented: $showEmailFallbackAlert) {
                 Button("Copy Email") {
                     UIPasteboard.general.string = "amundsen.dev@gmail.com"
                     HapticManager.shared.success()
                 }
+                Button("Cancel", role: .cancel) { }
             } message: {
-                Text("We couldn't open the Mail app. You can send your feedback directly to amundsen.dev@gmail.com. Do you want to copy the email address?")
+                Text("We couldn't open the selected app. Would you like to copy the email address instead?")
             }
             .alert("Reset All Data?", isPresented: $showResetAlert) {
                 Button("Cancel", role: .cancel) { }

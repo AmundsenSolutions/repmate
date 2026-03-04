@@ -234,8 +234,23 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
     }
     
     private func setupCamera() {
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device) else { return }
+        guard let device = AVCaptureDevice.default(for: .video) else { return }
+        
+        // Optimizing Autofocus for macro/barcode scanning speed
+        do {
+            try device.lockForConfiguration()
+            if device.isFocusModeSupported(.continuousAutoFocus) {
+                device.focusMode = .continuousAutoFocus
+            }
+            if device.isAutoFocusRangeRestrictionSupported {
+                device.autoFocusRangeRestriction = .near // Forces macro-focus priority
+            }
+            device.unlockForConfiguration()
+        } catch {
+            print("Failed to lock camera for autofocus optimization")
+        }
+        
+        guard let input = try? AVCaptureDeviceInput(device: device) else { return }
         
         if captureSession.canAddInput(input) {
             captureSession.addInput(input)
@@ -251,8 +266,17 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
         let layer = AVCaptureVideoPreviewLayer(session: captureSession)
         layer.videoGravity = .resizeAspectFill
         layer.frame = view.bounds
+        
+        // Ensure omnidirectional scanning works regardless of physical device rotation
+        if let connection = layer.connection, connection.isVideoOrientationSupported {
+            connection.videoOrientation = .portrait
+        }
+        
         view.layer.addSublayer(layer)
         self.previewLayer = layer
+        
+        // Maximize the rectOfInterest to scan anywhere on screen
+        output.rectOfInterest = CGRect(x: 0, y: 0, width: 1, height: 1)
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.captureSession.startRunning()
