@@ -11,7 +11,7 @@ class StoreManager: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var restoreMessage: String? = nil
     
-    private let proProductID = "vext_pro_lifetime"
+    private let proProductID = "repmate_pro_lifetime"
     private var updateListenerTask: Task<Void, Error>? = nil
     
     init() {

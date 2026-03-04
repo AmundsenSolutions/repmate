@@ -28,7 +28,7 @@ struct PaywallView: View {
                 .padding(.bottom, 24)
                 
                 // Title
-                Text("Unlock Vext Pro")
+                Text("Unlock RepMate Pro")
                     .font(.system(size: 32, weight: .bold, design: .default))
                     .foregroundColor(Theme.Colors.textPrimary)
                     .padding(.bottom, 8)
@@ -51,7 +51,7 @@ struct PaywallView: View {
                 // Pricing & Purchase Button
                 VStack(spacing: 16) {
                     if !storeManager.isPro {
-                        if let product = storeManager.products.first(where: { $0.id == "vext_pro_lifetime" }) {
+                        if let product = storeManager.products.first(where: { $0.id == "repmate_pro_lifetime" }) {
                             Text(product.displayPrice)
                                 .font(.title2)
                                 .fontWeight(.bold)
@@ -86,7 +86,7 @@ struct PaywallView: View {
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
                     } else {
-                        Text("You have unlocked Vext Pro!")
+                        Text("You have unlocked RepMate Pro!")
                             .font(.headline)
                             .foregroundColor(Theme.Colors.accent)
                             .padding(.bottom, 8)

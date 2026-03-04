@@ -3,7 +3,7 @@ import SwiftUI
 struct HomeHeaderView: View {
     var body: some View {
         HStack {
-            Text("Vext")
+            Text("RepMate")
                 .font(.headline)
                 .bold()
                 .foregroundColor(.primary)

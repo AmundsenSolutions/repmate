@@ -44,7 +44,7 @@ extension WorkoutTemplate {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
-        return URL(string: "vext://import?t=\(urlSafe)")
+        return URL(string: "repmate://import?t=\(urlSafe)")
     }
 }
 
@@ -96,7 +96,7 @@ struct ShareableTemplate: Codable {
     
     /// Decode from a deep-link URL
     static func fromURL(_ url: URL) -> ShareableTemplate? {
-        guard url.scheme == "vext",
+        guard url.scheme == "repmate",
               url.host == "import",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let base64 = components.queryItems?.first(where: { $0.name == "t" })?.value

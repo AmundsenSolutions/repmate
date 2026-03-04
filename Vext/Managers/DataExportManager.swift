@@ -53,7 +53,7 @@ final class DataExportManager {
             DataRepresentation(exportedContentType: .commaSeparatedText) { export in
                 export.csvText.data(using: .utf8) ?? Data()
             }
-            .suggestedFileName("Vext_Workouts.csv")
+            .suggestedFileName("RepMate_Workouts.csv")
         }
     }
 }

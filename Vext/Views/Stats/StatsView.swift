@@ -120,7 +120,7 @@ struct ProLockedOverlay<Content: View>: View {
                         .foregroundColor(.yellow)
                         .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
                     
-                    Text("Unlock Vext Pro")
+                    Text("Unlock RepMate Pro")
                         .font(.headline)
                         .foregroundColor(.white)
                 }

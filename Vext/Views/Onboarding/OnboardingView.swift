@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// First-run onboarding flow — 4 swipeable pages.
-/// Controlled by `@AppStorage("hasSeenOnboarding")` in VextApp.
+/// Controlled by `@AppStorage("hasSeenOnboarding")` in RepMateApp.
 struct OnboardingView: View {
     @EnvironmentObject var store: AppDataStore
     @ObservedObject var themeManager = ThemeManager.shared
@@ -140,7 +140,7 @@ struct OnboardingNextButton: View {
                 Spacer()
                 
                 VStack(spacing: 8) {
-                    Text("Welcome to\nVext")
+                    Text("Welcome to\nRepMate")
                         .font(.system(size: 42, weight: .bold)) // Larger, matching image
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)

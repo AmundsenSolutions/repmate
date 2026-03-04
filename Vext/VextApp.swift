@@ -2,7 +2,7 @@ import SwiftUI
 
 /// App entry point that wires the shared store into the tabbed interface.
 @main
-struct VextApp: App {
+struct RepMateApp: App {
     @StateObject private var store = AppDataStore()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     

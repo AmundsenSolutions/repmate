@@ -356,7 +356,7 @@ struct SettingsView: View {
                                             exerciseLibrary: store.exerciseLibrary
                                         )
                                     ),
-                                    preview: SharePreview("Vext Workouts Data")
+                                    preview: SharePreview("RepMate Workouts Data")
                                 ) {
                                     HStack {
                                         Label("Export Data (CSV)", systemImage: "square.and.arrow.up")
@@ -542,7 +542,7 @@ struct SettingsView: View {
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Vext")
+                    Text("RepMate")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
                     

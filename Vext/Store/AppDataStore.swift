@@ -46,9 +46,17 @@ final class AppDataStore: ObservableObject {
     let historyManager = HistoryManager()
     let workoutManager = WorkoutManager()
 
-    private let fileName = "vext_data.json"
+    private let fileName = "repmate_data.json"
 
     init() {
+        // Migrate old vext_data.json to repmate_data.json to prevent data loss on update
+        if PersistenceManager.shared.fileExists("vext_data.json") {
+            if let oldURL = PersistenceManager.shared.fileURL(for: "vext_data.json"),
+               let newURL = PersistenceManager.shared.fileURL(for: "repmate_data.json") {
+                try? FileManager.default.moveItem(at: oldURL, to: newURL)
+            }
+        }
+        
         // Load data synchronously so it's ready before views render
         load()
         // Backup initially loaded data (safety on launch)

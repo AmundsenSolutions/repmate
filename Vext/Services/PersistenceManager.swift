@@ -20,7 +20,7 @@ class PersistenceManager {
     static let shared = PersistenceManager()
     
     private let fileManager = FileManager.default
-    private let dispatchQueue = DispatchQueue(label: "com.vext.persistence", qos: .background)
+    private let dispatchQueue = DispatchQueue(label: "com.repmate.persistence", qos: .background)
     
     private init() {}
     
