@@ -21,5 +21,13 @@
 			<string>no.alek.vext</string>
 		</dict>
 	</array>
+
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchLogo</string>
+	</dict>
 </dict>
 </plist>
