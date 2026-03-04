@@ -146,7 +146,7 @@ struct OnboardingNextButton: View {
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 4)
                     
-                    Text("Choose your vibe")
+                    Text("Reps, sets, lifts & progress")
                         .font(.system(size: 16, weight: .regular)) // Cleaner sans-serif
                         .foregroundColor(.white)
                     
