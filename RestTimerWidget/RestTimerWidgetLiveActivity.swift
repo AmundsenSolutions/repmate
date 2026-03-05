@@ -55,7 +55,7 @@ struct RestTimerLiveActivity: Widget {
                 
                 DynamicIslandExpandedRegion(.bottom) {
                     if context.state.endTime > Date() {
-                        Link(destination: URL(string: "vext://workout")!) {
+                        Link(destination: URL(string: "repmate://workout")!) {
                             HStack(spacing: 8) {
                                 Image(systemName: "stop.fill")
                                 Text("Stop Timer")
