@@ -58,21 +58,19 @@
 			);
 			target = 2A8A2F202F42950C007B7E0B /* RepMateWidgets */;
 		};
-		2A8A2F462F429890007B7E0B /* Exceptions for "RepMate" folder in "RepMate" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 2A543F982EEA139100D30187 /* RepMate */;
-		};
 		2A8A2F482F42999A007B7E0B /* Exceptions for "RepMate" folder in "RepMateWidgets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Managers/ThemeManager.swift,
 				Models/RestTimerAttributes.swift,
-				Utils/Theme.swift,
 			);
 			target = 2A8A2F202F42950C007B7E0B /* RepMateWidgets */;
+		};
+		2AFF99462F59CB7B00469F69 /* Exceptions for "RepMate" folder in "RepMate" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = 2A543F982EEA139100D30187 /* RepMate */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -80,7 +78,7 @@
 		2A543F9B2EEA139100D30187 /* RepMate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				2A8A2F462F429890007B7E0B /* Exceptions for "RepMate" folder in "RepMate" target */,
+				2AFF99462F59CB7B00469F69 /* Exceptions for "RepMate" folder in "RepMate" target */,
 				2A8A2F482F42999A007B7E0B /* Exceptions for "RepMate" folder in "RepMateWidgets" target */,
 			);
 			path = RepMate;
