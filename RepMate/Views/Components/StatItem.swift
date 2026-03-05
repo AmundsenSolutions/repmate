@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A reusable stat display component used in workout views.
-/// Shows a label above a value in a vertical layout.
+/// Simple vertical stat label and value.
 struct StatItem: View {
     let value: String
     let label: String
@@ -20,7 +19,7 @@ struct StatItem: View {
     }
 }
 
-/// A premium, glass-styled stat card used in the StatsView sections.
+/// Glassmorphism stat card for dashboards.
 struct StatCard: View {
     let title: String
     let value: String

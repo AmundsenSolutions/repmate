@@ -2,8 +2,7 @@ import Foundation
 import ActivityKit
 import SwiftUI
 
-/// Manages Live Activities for the rest timer.
-/// Start/update/end activities when the timer state changes.
+/// Rest timer Live Activity manager.
 final class LiveActivityManager {
     static let shared = LiveActivityManager()
     
@@ -11,10 +10,7 @@ final class LiveActivityManager {
     
     private init() {}
     
-    /// Starts a new Live Activity for a rest timer.
-    /// - Parameters:
-    ///   - duration: Total timer duration in seconds
-    ///   - accentColor: The current theme accent color
+    /// Starts a rest timer Live Activity.
     func startTimer(duration: Int, accentColor: Color) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         
@@ -51,7 +47,7 @@ final class LiveActivityManager {
         }
     }
     
-    /// Updates the Live Activity with a new end time (e.g. after ±15s adjustment).
+    /// Updates Live Activity end time.
     func updateTimer(newEndTime: Date) {
         guard let activity = currentActivity else { return }
         
@@ -67,7 +63,7 @@ final class LiveActivityManager {
         }
     }
     
-    /// Ends the current Live Activity (and any stale ones).
+    /// Ends all active Live Activities.
     func endTimer() {
         // End the tracked current activity
         if let activity = currentActivity {

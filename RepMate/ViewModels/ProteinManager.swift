@@ -1,7 +1,6 @@
 import Foundation
 
-/// Manages protein tracking logic, streaks, and statistics.
-/// This service is owned by AppDataStore, which persists the data.
+/// Core logic for protein tracking and statistics.
 class ProteinManager {
     
     // MARK: - Core Logic
@@ -71,7 +70,7 @@ class ProteinManager {
     
     // MARK: - Stats Methods
     
-    /// Helper: Precomputes daily totals to avoid O(N*M) lookups
+    /// Precomputes daily protein totals.
     private func precomputeDailyTotals(from entries: [ProteinEntry], since startDate: Date) -> [Date: Int] {
         let calendar = Calendar.current
         var totals: [Date: Int] = [:]
@@ -82,7 +81,7 @@ class ProteinManager {
         return totals
     }
     
-    /// Daily average protein intake over the last N days
+    /// Calculates daily average protein.
     func dailyAverage(entries: [ProteinEntry], days: Int) -> Double {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -94,7 +93,7 @@ class ProteinManager {
         return days > 0 ? Double(totalGrams) / Double(days) : 0
     }
     
-    /// Percentage of days where target was met in the last N days
+    /// Calculates target success rate.
     func targetSuccessRate(entries: [ProteinEntry], target: Int, days: Int) -> Double {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -114,7 +113,7 @@ class ProteinManager {
         return days > 0 ? (Double(successDays) / Double(days)) * 100 : 0
     }
     
-    /// Most frequently logged note (protein source) in the last N days
+    /// Finds most frequent protein source.
     func mostConsumedNote(entries: [ProteinEntry], days: Int) -> String? {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -132,7 +131,7 @@ class ProteinManager {
         return noteCounts.max(by: { $0.value < $1.value })?.key
     }
     
-    /// Daily protein totals for charting (returns array of date -> total grams)
+    /// Gets daily totals for charting.
     func dailyTotals(entries: [ProteinEntry], days: Int) -> [(date: Date, grams: Int)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -150,7 +149,7 @@ class ProteinManager {
         return result
     }
     
-    /// Compares average protein intake on training days vs rest days
+    /// Compares training vs. rest day protein.
     func trainingVsRestDayProtein(entries: [ProteinEntry], sessions: [WorkoutSession], days: Int) -> (trainingAvg: Double, restAvg: Double) {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())

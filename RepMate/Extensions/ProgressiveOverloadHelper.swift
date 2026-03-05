@@ -6,17 +6,10 @@ enum OverloadDirection {
     case down
 }
 
-/// Helper to detect when user is ready to increase weight based on:
-/// 1. Beat their previous session's performance (weight × reps)
-/// 2. Had RIR ≤ 2 in last session (indicating strength reserve)
+/// Determines weight progression/deload suggestions.
 struct ProgressiveOverloadHelper {
     
-    /// Checks if progressive overload (or deload) is suggested for an exercise based on criteria.
-    /// - Parameters:
-    ///   - exerciseId: The exercise to check
-    ///   - sessions: All workout sessions to analyze
-    ///   - settings: User's app settings for target rep ranges
-    /// - Returns: Direction to adjust weight
+    /// Returns progression direction (.up or .down) based on past performance.
     static func checkOverloadStatus(
         for exerciseId: UUID,
         in sessions: [WorkoutSession],
@@ -67,7 +60,7 @@ struct ProgressiveOverloadHelper {
         return .none
     }
     
-    /// Gets a formatted suggestion string for the exercise
+    /// Formats the suggested weight change string.
     static func getSuggestion(
         for exerciseId: UUID,
         in sessions: [WorkoutSession],

@@ -1,13 +1,9 @@
 import Foundation
 
-/// Auto-mapping of secondary muscles based on exercise name patterns.
-/// Used to migrate existing exercises and suggest secondary muscles for new ones.
-///
-/// Valid muscle groups: Chest, Back, Shoulders, Biceps, Triceps, Quads, Hamstrings, Glutes, Calves, Core
+/// Auto-maps secondary muscles from exercise names.
 struct SecondaryMuscleMapping {
     
-    /// Returns suggested secondary muscle for an exercise based on its name and primary category.
-    /// Returns nil if no secondary muscle is applicable (isolation exercises).
+    /// Infers secondary muscle from name and primary category.
     static func suggestSecondaryMuscle(exerciseName: String, primaryCategory: String) -> String? {
         let name = exerciseName.lowercased()
         let primary = primaryCategory.lowercased()
@@ -125,8 +121,7 @@ struct SecondaryMuscleMapping {
         return nil
     }
     
-    /// Applies secondary muscle mapping to an array of exercises.
-    /// Only sets secondary muscle if it's currently nil.
+    /// Populates missing secondary muscles in an exercise list.
     static func applyMappings(to exercises: inout [Exercise]) {
         for index in exercises.indices {
             if exercises[index].secondaryMuscle == nil {

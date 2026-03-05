@@ -34,7 +34,7 @@ extension WorkoutTemplate {
         )
     }
     
-    /// Generates a shareable deep-link URL for this template.
+    /// Generates template deep-link URL.
     func shareURL(exercises: [Exercise]) -> URL? {
         let shareable = ShareableTemplate(from: self, exercises: exercises)
         guard let data = try? JSONEncoder().encode(shareable) else { return nil }
@@ -60,8 +60,7 @@ enum GhostDataSource: String, Codable, CaseIterable {
 
 // MARK: - Shareable Template (for deep-link sharing)
 
-/// A portable representation of a workout template.
-/// Uses exercise names instead of UUIDs so it can be shared between users.
+/// Portable workout template model for deep-link sharing.
 struct ShareableTemplate: Codable {
     struct ShareableExercise: Codable {
         var name: String
@@ -76,7 +75,7 @@ struct ShareableTemplate: Codable {
     var note: String?
     var exercises: [ShareableExercise]
     
-    /// Create from a WorkoutTemplate + exercise library
+    /// Creates from local template.
     init(from template: WorkoutTemplate, exercises: [Exercise]) {
         self.name = template.name
         self.category = template.category
@@ -94,7 +93,7 @@ struct ShareableTemplate: Codable {
         }
     }
     
-    /// Decode from a deep-link URL
+    /// Decodes from deep-link URL.
     static func fromURL(_ url: URL) -> ShareableTemplate? {
         guard url.scheme == "repmate",
               url.host == "import",
@@ -114,8 +113,7 @@ struct ShareableTemplate: Codable {
         return try? JSONDecoder().decode(ShareableTemplate.self, from: data)
     }
     
-    /// Convert to a WorkoutTemplate, matching or creating exercises in the library.
-    /// The `addExercise` closure should add the exercise and is called with (name, category).
+    /// Converts to a local WorkoutTemplate, creating missing exercises.
     func toWorkoutTemplate(exerciseLibrary: [Exercise], addExercise: (String, String) -> Exercise) -> WorkoutTemplate {
         var exerciseIds: [UUID] = []
         var targets: [UUID: TemplateTarget] = [:]

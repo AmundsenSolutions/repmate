@@ -7,11 +7,10 @@
 
 import Foundation
 
-/// Service responsible for history calculations and data retrieval logic.
+/// Retrieves historical workout data.
 struct HistoryManager {
     
-    /// Returns previous set definition (weight, reps, rir) for a given exercise and set index.
-    /// Looks through sessions sorted by date descending.
+    /// Gets previous set performance.
     func previousSetData(for exerciseId: UUID, setIndex: Int, in sessions: [WorkoutSession]) -> (weight: Double, reps: Int, rir: String)? {
         // We assume sessions are maintained in sorted order by AppDataStore (newest first).
         
@@ -33,7 +32,7 @@ struct HistoryManager {
         return nil
     }
 
-    /// Retrieve the most recent note for a specific exercise.
+    /// Gets latest exercise note.
     func previousExerciseNote(for exerciseId: UUID, in sessions: [WorkoutSession]) -> String? {
         for session in sessions {
             if let note = session.exerciseNotes?[exerciseId], !note.isEmpty {
@@ -43,9 +42,7 @@ struct HistoryManager {
         return nil
     }
     
-    /// Generates chart data (Date vs Max Weight) for a given exercise over a time period.
-    /// - Parameters:
-    ///   - months: Number of months to look back. 0 for all time.
+    /// Generates max weight chart data.
     func chartData(for exerciseId: UUID, months: Int, in sessions: [WorkoutSession]) -> [(date: Date, weight: Double)] {
         var filteredSessions = sessions
         

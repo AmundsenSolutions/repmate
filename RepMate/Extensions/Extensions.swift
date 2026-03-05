@@ -1,8 +1,7 @@
 import Foundation
 
 extension Array {
-    /// Safely access an element at the given index.
-    /// Returns nil if the index is out of bounds.
+    /// Safely gets item at index.
     subscript(safe index: Int) -> Element? {
         guard indices.contains(index) else { return nil }
         return self[index]
@@ -10,8 +9,7 @@ extension Array {
 }
 
 extension Int {
-    /// Formats seconds as a duration string.
-    /// Returns "Xm" for whole minutes, "X.Xm" for half-minutes, or "M:SS" for others.
+    /// Formats seconds as readable duration.
     var formattedDuration: String {
         if self % 60 == 0 {
             return "\(self / 60)m"
@@ -28,7 +26,7 @@ extension Int {
 
 // MARK: - Date Wrapper
 
-/// A wrapper to make Date identifiable for use in SwiftUI sheets/navigation.
+/// Wraps Date to make it Identifiable for SwiftUI.
 struct DateWrapper: Identifiable, Hashable {
     let id: UUID
     let date: Date

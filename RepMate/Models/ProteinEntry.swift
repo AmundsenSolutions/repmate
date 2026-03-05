@@ -8,14 +8,14 @@
 
 import Foundation
 
-/// Represents a single logged protein intake with optional note and timestamp.
+/// A single logged protein intake.
 struct ProteinEntry: Identifiable, Codable {
     let id: UUID
     var date: Date
     var grams: Int
     var note: String?
 
-    /// Creates a protein entry, defaulting to a new UUID and the current time.
+    /// Creates a new protein log with current time.
     init(id: UUID = UUID(),
          date: Date = Date(),
          grams: Int,
@@ -27,13 +27,13 @@ struct ProteinEntry: Identifiable, Codable {
     }
 }
 
-/// A custom local mapping for a barcode not found in OpenFoodFacts.
+/// Custom barcode mapping for unresolved items.
 struct CustomBarcodeEntry: Codable, Hashable {
     var name: String
     var proteinGrams: Int
 }
 
-/// A saved favorite protein item for quick entry.
+/// Saved quick-add protein item.
 struct FavoriteProtein: Codable, Hashable, Identifiable {
     var id: UUID = UUID()
     var grams: Int
@@ -74,7 +74,7 @@ struct AppSettings: Codable {
     
     var hasSeededDefaults: Bool = false
     
-    /// Default settings used on first launch or when loading fails.
+    /// Fallback settings for first launch.
     static let `default` = AppSettings(
         dailyProteinTarget: 150,
         defaultRestTime: 90,

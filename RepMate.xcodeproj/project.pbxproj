@@ -408,7 +408,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = RepMate/Info.plist;
+				INFOPLIST_FILE = RepMate/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RepMate;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RepMate uses the camera to scan food barcodes for quick protein logging.";
@@ -448,7 +448,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = RepMate/Info.plist;
+				INFOPLIST_FILE = RepMate/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RepMate;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RepMate uses the camera to scan food barcodes for quick protein logging.";

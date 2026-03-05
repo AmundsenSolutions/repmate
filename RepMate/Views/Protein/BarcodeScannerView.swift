@@ -1,7 +1,7 @@
 import SwiftUI
 import AVFoundation
 
-/// A full-screen barcode scanner with a dark glass overlay and animated scan line.
+/// Full-screen barcode scanner with a dark glass overlay.
 struct BarcodeScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var themeManager: ThemeManager

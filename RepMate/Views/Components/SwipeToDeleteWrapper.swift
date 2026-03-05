@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// A wrapper that adds swipe-to-delete functionality to any content.
-/// Shows a red circular delete button when swiped left.
-/// Designed for minimal animation - instant deletion without affecting siblings.
+/// Adds swipe-to-delete gesture to list items.
 struct SwipeToDeleteWrapper<Content: View>: View {
     let content: Content
     let onDelete: (() -> Void)?

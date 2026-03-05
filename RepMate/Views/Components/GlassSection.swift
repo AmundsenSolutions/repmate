@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A shared card section with the cohesive 'Cyber Glass' aesthetic.
+/// Reusable Cyber Glass style section wrapper.
 struct GlassSection<Content: View>: View {
     let title: String
     let content: Content

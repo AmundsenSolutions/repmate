@@ -1,9 +1,9 @@
 import Foundation
 
-/// Maps exercise names to their appropriate setup time based on exercise type
+/// Maps exercise names to appropriate setup times.
 struct SetupTimeMapping {
     
-    /// Returns the appropriate SetupTime for an exercise based on its name
+    /// Suggests setup time based on exercise name heuristics.
     static func suggestSetupTime(exerciseName: String) -> SetupTime {
         let name = exerciseName.lowercased()
         

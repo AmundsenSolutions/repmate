@@ -9,7 +9,7 @@ import Foundation
 import Combine
 import SwiftUI
 
-/// Central observable store handling protein entries, settings, and persistence.
+/// Core data store managing app state, user data, and persistence.
 @MainActor
 final class AppDataStore: ObservableObject {
     // Published = SwiftUI updates UI automatically when these change
@@ -20,7 +20,7 @@ final class AppDataStore: ObservableObject {
     @Published var exerciseLibrary: [Exercise] = []
     @Published var customBarcodes: [String: CustomBarcodeEntry] = [:]
     
-    /// Global current date that forces app-wide UI refreshes exactly at midnight.
+    /// Drives automatic midnight UI refreshes.
     @Published var currentDate: Date = Date()
     
     @Published var lastErrorMessage: String? = nil
@@ -84,7 +84,7 @@ final class AppDataStore: ObservableObject {
         }
     }
     
-    /// Resets all data to default state - useful for testing or fresh start
+    /// Wipes and resets all user data.
     func resetAllData() {
         proteinEntries = []
         settings = .default
@@ -105,15 +105,14 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Protein helpers
 
-    /// Adds a protein entry with optional note, then persists the updated list.
+    /// Logs a new protein intake.
     func addProteinEntry(grams: Int, note: String?) {
         let entry = ProteinEntry(grams: grams, note: note)
         proteinEntries.append(entry)
         save()
     }
 
-    /// Deletes protein entries for the current day at the provided list offsets,
-    /// then saves the updated list.
+    /// Removes specific protein logs for today.
     func deleteProteinEntriesForToday(at offsets: IndexSet) {
         let today = Date()
         let todayEntries = proteinEntriesFor(date: today)
@@ -123,8 +122,7 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
-    /// Deletes protein entries for a specific date at the provided list offsets,
-    /// then saves the updated list.
+    /// Removes specific protein logs for a given date.
     func deleteProteinEntriesFor(date: Date, at offsets: IndexSet) {
         let dateEntries = proteinEntriesFor(date: date)
         let idsToDelete = proteinManager.resolveIdsToDelete(at: offsets, in: dateEntries)
@@ -139,9 +137,7 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
-    /// Calculates the current hit target streak (consecutive days ending today
-    /// where totalProteinFor(day) >= dailyProteinTarget).
-    /// Days with no entries count as 0g and break the streak.
+    /// Calculates consecutive days the protein target was met.
     func proteinStreak() -> Int {
         proteinManager.proteinStreak(entries: proteinEntries, target: settings.dailyProteinTarget)
     }
@@ -158,13 +154,12 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Protein Favorites & Quick Add
     
-    /// Returns the 5 most recent unique protein entries (based on grams + note combination).
+    /// Gets recent unique protein logs for Quick Add.
     func getRecentUniqueEntries() -> [ProteinEntry] {
         proteinManager.getRecentUniqueEntries(from: proteinEntries)
     }
     
-    /// Toggles a protein entry as a favorite.
-    /// If an identical favorite exists (same grams/note), it removes it. Otherwise, adds it.
+    /// Toggles a protein log in Favorites.
     func toggleFavorite(entry: ProteinEntry) {
         if let index = favoriteProteinItems.firstIndex(where: { $0.grams == entry.grams && $0.note == entry.note }) {
             favoriteProteinItems.remove(at: index)
@@ -218,8 +213,7 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
-    /// Deletes workout templates at the provided offsets and persists the updated list.
-    /// Blocks deletion if the template is currently active OR is used by historical sessions.
+    /// Deletes templates (blocked if active or in history).
     func deleteWorkoutTemplate(at offsets: IndexSet) {
         let indicesToRemove = offsets.sorted(by: >)
         var blockedCount = 0
@@ -271,8 +265,7 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
-    /// Duplicates an existing workout template with "Copy of" prefix.
-    /// Falls back to enforcing the 3 template limit for free users.
+    /// Duplicates a template (enforces free tier limit).
     func duplicateWorkoutTemplate(id: UUID, isPro: Bool) {
         if !isPro && workoutTemplates.count >= 3 {
              lastErrorMessage = "Free limit reached"
@@ -306,8 +299,7 @@ final class AppDataStore: ObservableObject {
         var customBarcodes: [String: CustomBarcodeEntry]?
     }
 
-    /// Loads persisted data from disk, falling back to defaults on first launch
-    /// or when decoding fails.
+    /// Loads saved data from disk or seeds defaults on first launch.
     private func load() {
         do {
             let decoded = try PersistenceManager.shared.load(PersistedData.self, from: fileName)
@@ -463,9 +455,7 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Workout Sessions
 
-    /// Adds a workout session and persists the updated list.
-    /// INVARIANT: Sessions are maintained in date-descending order (newest first).
-    /// This method inserts at index 0 because new sessions are always the newest.
+    /// Saves a completed session (newest first).
     func addWorkoutSession(_ session: WorkoutSession) {
         // Insert at the beginning to maintain date descending order
         workoutSessions.insert(session, at: 0)
@@ -496,7 +486,7 @@ final class AppDataStore: ObservableObject {
         DefaultData.exercises
     }
 
-    /// Adds an exercise to the library and persists the updated list.
+    /// Adds a new exercise to the library.
     @discardableResult
     func addExercise(name: String, category: String, secondaryMuscle: String? = nil, setupTime: SetupTime = .medium) -> Exercise {
         let exercise = Exercise(id: UUID(), name: name, category: category, secondaryMuscle: secondaryMuscle, setupTime: setupTime)
@@ -513,9 +503,7 @@ final class AppDataStore: ObservableObject {
         }
     }
 
-    /// Deletes exercises at the provided offsets and persists the updated list.
-    /// If an exercise is referenced by any workout template, deletion is blocked and an error message is set.
-    /// - Returns: `true` if deletion succeeded, `false` if blocked
+    /// Deletes exercises if unused in history or templates.
     @discardableResult
     func deleteExercise(at offsets: IndexSet) -> Bool {
         // Map offsets to stable exercise IDs
@@ -616,16 +604,14 @@ final class AppDataStore: ObservableObject {
         save()
     }
     
-    /// Updates the active workout WITHOUT triggering objectWillChange.
-    /// Use this for minor updates (adding sets, updating row values) to prevent full re-renders.
+    /// Updates active workout without triggering UI stutters.
     func silentUpdateActiveWorkout(_ workout: ActiveWorkout) {
         // Directly update backing storage, bypassing the setter that calls objectWillChange
         _activeWorkoutStorage = workout
         save()
     }
 
-    /// Finishes the current active workout by converting rows into SetLog entries,
-    /// creating a WorkoutSession, saving it, and clearing the active workout.
+    /// Finalizes active workout and saves to history.
     func finishActiveWorkout() {
         guard let aw = activeWorkout else { return }
         
@@ -651,12 +637,12 @@ final class AppDataStore: ObservableObject {
         historyManager.previousSetData(for: exerciseId, setIndex: setIndex, in: workoutSessions)
     }
 
-    /// Retrieve the most recent note for a specific exercise.
+    /// Gets latest exercise note.
     func previousExerciseNote(for exerciseId: UUID) -> String? {
         historyManager.previousExerciseNote(for: exerciseId, in: workoutSessions)
     }
     
-    /// Ghost data respecting the Routine vs Latest toggle.
+    /// Gets ghost data for previous performance.
     func ghostSetData(for exerciseId: UUID, setIndex: Int) -> (weight: Double, reps: Int, rir: String)? {
         switch ghostDataSource {
         case .latest:
@@ -683,7 +669,7 @@ final class AppDataStore: ObservableObject {
         }
     }
     
-    /// Returns the most recent date a specific exercise was trained.
+    /// Find last date exercise was performed.
     func lastTrainedDate(for exerciseId: UUID) -> Date? {
         // workoutSessions are already sorted newest first
         for session in workoutSessions {
@@ -830,7 +816,7 @@ final class AppDataStore: ObservableObject {
     
     // MARK: - Migrations
     
-    /// One-time migration to auto-populate secondary muscles for existing exercises.
+    /// Auto-fills secondary muscles for older exercises.
     private func migrateSecondaryMuscles() {
         var hasChanges = false
         
@@ -852,7 +838,7 @@ final class AppDataStore: ObservableObject {
         }
     }
     
-    /// One-time migration to auto-populate setupTime for existing exercises.
+    /// Auto-fills setup times for older exercises.
     private func migrateSetupTimes() {
         var hasChanges = false
         var counts: [SetupTime: Int] = [.fast: 0, .medium: 0, .slow: 0]
@@ -874,7 +860,7 @@ final class AppDataStore: ObservableObject {
         }
     }
     
-    /// One-time migration: Convert 'Arms' exercises to 'Biceps' or 'Triceps'.
+    /// Converts 'Arms' category to Biceps/Triceps.
     private func migrateArmsToBicepsTriceps() {
         var hasChanges = false
         var counts: [String: Int] = ["Biceps": 0, "Triceps": 0]
@@ -905,7 +891,7 @@ final class AppDataStore: ObservableObject {
         }
     }
     
-    /// One-time migration: Convert 'Legs' exercises to 'Quads', 'Hamstrings', 'Glutes', or 'Calves'.
+    /// Converts 'Legs' category to specific leg muscles.
     private func migrateLegsToGranularCategories() {
         var hasChanges = false
         var counts: [String: Int] = ["Quads": 0, "Hamstrings": 0, "Glutes": 0, "Calves": 0]

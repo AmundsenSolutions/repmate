@@ -3,8 +3,7 @@ import SwiftUI
 import Combine
 import Foundation
 
-/// Manages the application's theme/color palette.
-/// Features a "Glass Clean" base aesthetic with dynamic accent colors.
+/// App color palette manager.
 final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
     
@@ -55,7 +54,7 @@ final class ThemeManager: ObservableObject {
     ]
 }
 
-/// Defines the available theme variants for the Multi-Theme Engine.
+/// Supported theme variants.
 enum ThemeVariant: String, CaseIterable, Identifiable {
     case cleanBlue
     case neonPurple
@@ -163,18 +162,18 @@ enum ThemeVariant: String, CaseIterable, Identifiable {
     }
 }
 
-/// Defines the color set for a theme.
+/// Theme palette blueprint.
 struct ThemePalette {
-    /// The primary accent color (buttons, highlights).
+    /// Primary UI accent.
     let accent: Color
     
-    /// The secondary glow color (gradients, shadows).
+    /// Secondary gradient glow.
     let glow: Color
     
-    /// A subtle tint color for card backgrounds.
+    /// Material background tint.
     let tint: Color
     
-    /// Returns a linear gradient using the accent and glow colors.
+    /// Diagonal accent gradient.
     var gradient: LinearGradient {
         LinearGradient(
             colors: [accent.opacity(0.8), glow.opacity(0.8)],
@@ -183,7 +182,7 @@ struct ThemePalette {
         )
     }
     
-    /// Returns a vertical gradient for backgrounds.
+    /// Vertical background gradient.
     var verticalGradient: LinearGradient {
         LinearGradient(
             colors: [accent, glow],

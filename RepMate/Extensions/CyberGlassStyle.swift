@@ -3,33 +3,30 @@ import SwiftUI
 // MARK: - Cyber-Glass Color Extensions
 
 extension Theme.Colors {
-    /// Electric Blue - Primary accent for the Cyber-Glass theme
+    /// Primary electric blue accent.
     static let electricBlue = Color(red: 0, green: 0.83, blue: 1.0) // #00D4FF
     
-    /// Cyber Gold - Secondary accent for nutrition elements
+    /// Secondary gold accent for nutrition.
     static let cyberGold = Color(red: 1.0, green: 0.72, blue: 0) // #FFB800
     
-    /// Glow Blue for shadow effects
+    /// Blue shadow glow.
     static let glowBlue = electricBlue.opacity(0.6)
     
-    /// Glow Gold for shadow effects
+    /// Gold shadow glow.
     static let glowGold = cyberGold.opacity(0.6)
     
     // MARK: - Heatmap Colors
-    /// Heatmap low value (< 50% of target)
+    /// Heatmap low.
     static let heatmapLow = Color.red.opacity(0.8)
-    /// Heatmap medium value (50-99% of target)
+    /// Heatmap medium.
     static let heatmapMedium = Color.orange
-    /// Heatmap high value (100%+ of target)
+    /// Heatmap high.
     static let heatmapHigh = Color.green
 }
 
 // MARK: - Cyber-Glass Style Modifier
 
-/// A reusable modifier that applies the "Cyber-Glass" aesthetic:
-/// - Ultra-thin material background with dark tint
-/// - 1px gradient stroke border
-/// - Outer glow shadow matching the accent color
+/// Applies the core Cyber-Glass material and glowing border aesthetic.
 struct CyberGlassStyle: ViewModifier {
     let glowColor: Color
     let cornerRadius: CGFloat
@@ -85,17 +82,17 @@ struct CyberGlassStyle: ViewModifier {
 // MARK: - Convenience View Extension
 
 extension View {
-    /// Applies the Cyber-Glass style with optional glow color customization
+    /// Applies standard Cyber-Glass styling.
     func cyberGlass(glowColor: Color = Theme.Colors.electricBlue, cornerRadius: CGFloat = 20) -> some View {
         modifier(CyberGlassStyle(glowColor: glowColor, cornerRadius: cornerRadius))
     }
     
-    /// Blue-accented cyber glass (for training elements)
+    /// Training-specific glass style.
     func cyberGlassBlue() -> some View {
         cyberGlass(glowColor: Theme.Colors.electricBlue)
     }
     
-    /// Gold-accented cyber glass (for nutrition elements)
+    /// Nutrition-specific glass style.
     func cyberGlassGold() -> some View {
         cyberGlass(glowColor: Theme.Colors.cyberGold)
     }
@@ -124,7 +121,7 @@ struct GlowingText: ViewModifier {
 }
 
 extension View {
-    /// Applies a glowing effect to text
+    /// Applies neon text glow.
     func glowingText(color: Color = Theme.Colors.electricBlue, radius: CGFloat = 8) -> some View {
         modifier(GlowingText(color: color, radius: radius))
     }
@@ -160,17 +157,17 @@ struct CyberGradientButton: ViewModifier {
 }
 
 extension View {
-    /// Applies the cyber gradient button style
+    /// Applies gradient button style.
     func cyberButton(color: Color = Theme.Colors.electricBlue) -> some View {
         modifier(CyberGradientButton(primaryColor: color))
     }
     
-    /// Blue cyber button (training)
+    /// Training-specific button.
     func cyberButtonBlue() -> some View {
         cyberButton(color: Theme.Colors.electricBlue)
     }
     
-    /// Gold cyber button (nutrition)
+    /// Nutrition-specific button.
     func cyberButtonGold() -> some View {
         cyberButton(color: Theme.Colors.cyberGold)
     }
@@ -202,7 +199,7 @@ struct PulsingAnimation: ViewModifier {
 }
 
 extension View {
-    /// Adds a pulsing glow animation
+    /// Adds a pulsing neon animation.
     func pulsingGlow(color: Color = Theme.Colors.electricBlue) -> some View {
         modifier(PulsingAnimation(color: color))
     }

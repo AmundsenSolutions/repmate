@@ -33,9 +33,7 @@ class BackupManager {
     
     private init() {}
     
-    /// Creates a backup of the specified file URL.
-    /// Throttled to only create one backup per 5 minutes.
-    /// - Parameter sourceURL: The URL of the file to back up (e.g. repmate_data.json)
+    /// Copies the local database to a backup, max once per 5 minutes.
     func backup(sourceURL: URL) {
         // Throttle: Skip if we backed up less than 5 minutes ago
         if let lastBackup = lastBackupTime,

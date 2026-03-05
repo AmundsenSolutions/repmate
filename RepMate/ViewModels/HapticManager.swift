@@ -7,10 +7,9 @@
 
 import UIKit
 
-/// Centralized manager for all haptic feedback in the application.
-/// Uses `UISelectionFeedbackGenerator`, `UINotificationFeedbackGenerator`, and `UIImpactFeedbackGenerator`.
+/// App-wide haptic feedback engine.
 class HapticManager {
-    /// Shared singleton instance.
+    /// Singleton instance.
     static let shared = HapticManager()
     
     #if !targetEnvironment(simulator)
@@ -32,49 +31,49 @@ class HapticManager {
         #endif
     }
 
-    /// Triggers a selection feedback (e.g., picker wheels, light toggles).
+    /// Selection tick.
     func selection() {
         #if !targetEnvironment(simulator)
         selectionGenerator.selectionChanged()
         #endif
     }
     
-    /// Triggers a success notification feedback.
+    /// Success burst.
     func success() {
         #if !targetEnvironment(simulator)
         notificationGenerator.notificationOccurred(.success)
         #endif
     }
     
-    /// Triggers an error notification feedback.
+    /// Error burst.
     func error() {
         #if !targetEnvironment(simulator)
         notificationGenerator.notificationOccurred(.error)
         #endif
     }
     
-    /// Triggers a warning notification feedback.
+    /// Warning burst.
     func warning() {
         #if !targetEnvironment(simulator)
         notificationGenerator.notificationOccurred(.warning)
         #endif
     }
     
-    /// Triggers a medium impact feedback (e.g., buttons, collisions).
+    /// Medium impact.
     func impact() {
         #if !targetEnvironment(simulator)
         impactGenerator.impactOccurred()
         #endif
     }
     
-    /// Triggers a heavy impact feedback.
+    /// Heavy impact.
     func heavyImpact() {
         #if !targetEnvironment(simulator)
         heavyImpactGenerator.impactOccurred()
         #endif
     }
     
-    /// Triggers a light impact feedback.
+    /// Light impact.
     func lightImpact() {
         #if !targetEnvironment(simulator)
         lightImpactGenerator.impactOccurred()

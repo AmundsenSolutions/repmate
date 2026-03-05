@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// App entry point that wires the shared store into the tabbed interface.
+/// Main application entry point and global state host.
 @main
 struct RepMateApp: App {
     @StateObject private var store = AppDataStore()
@@ -12,8 +12,7 @@ struct RepMateApp: App {
 
     @StateObject private var storeManager = StoreManager()
     
-    /// Creates the main window group and injects `AppDataStore` into the view
-    /// hierarchy.
+    /// Root view hierarchy.
     var body: some Scene {
         WindowGroup {
             Group {

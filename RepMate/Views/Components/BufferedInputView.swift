@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A TextField wrapper that buffers input in local State to preventing focus loss
-/// when parent views re-render (e.g. from global store updates).
+/// TextField wrapper that buffers input to prevent focus loss during re-renders.
 struct BufferedInputView: View {
     @Binding var value: String
     var placeholder: String

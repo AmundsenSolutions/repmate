@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Centralized Design System for RepMate
-/// Follows the "Cyber Glass" aesthetic: Flat OLED blacks, tactile buttons, glowing accents. spacing.
+/// Core design system and theme tokens.
 struct Theme {
     
     // MARK: - Colors
@@ -53,7 +52,7 @@ struct Theme {
 // MARK: - View Extensions for Consistency
 
 extension View {
-    /// Applies the standard OLED card style
+    /// Standard OLED card.
     func oledCard() -> some View {
         self
             .padding(Theme.Spacing.standard)
@@ -61,7 +60,7 @@ extension View {
             .cornerRadius(Theme.Spacing.cornerRadius)
     }
     
-    /// Applies a slimmer OLED row style (less vertical padding)
+    /// Slim OLED row.
     func slimOledRow() -> some View {
         self
             .padding(.horizontal, Theme.Spacing.standard)
@@ -70,7 +69,7 @@ extension View {
             .cornerRadius(Theme.Spacing.cornerRadius)
     }
     
-    /// Applies the standard Primary Action Button style (Dynamic Theme)
+    /// Primary action button.
     func primaryActionButton() -> some View {
         self
             .font(.system(size: 16, weight: .bold))
@@ -82,7 +81,7 @@ extension View {
             .shadow(color: Theme.active.accent.opacity(0.3), radius: 8, x: 0, y: 4)
     }
     
-    /// Applies the standard Secondary Action Button style
+    /// Secondary action button.
     func secondaryActionButton() -> some View {
         self
             .font(.system(size: 16, weight: .bold))
@@ -93,7 +92,7 @@ extension View {
             .cornerRadius(Theme.Spacing.cornerRadius)
     }
     
-    /// Standard section header style
+    /// Section header.
     func sectionHeader() -> some View {
         self
             .font(.caption)
@@ -103,7 +102,7 @@ extension View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    /// Pill button style for chips
+    /// Pill button chip.
     func pillButton(backgroundColor: Color = Theme.Colors.cardBackground, foregroundColor: Color = .white) -> some View {
         self
             .padding(.vertical, 8)
@@ -115,8 +114,7 @@ extension View {
     
     // MARK: - Heavy Glass Modifiers
     
-    /// Applies the "Heavy Glass" card style (Apple Glass Aesthetic)
-    /// - Parameter style: .primary (Active Theme Accent) or .secondary (Neutral/Gray)
+    /// Heavy Glass visual card.
     func glassCard(style: Theme.GlassStyle = .primary) -> some View {
         self
             .background(
@@ -166,7 +164,7 @@ extension View {
             )
     }
     
-    /// A large, pill-shaped glass button with directional arrow (for "Start Workout")
+    /// Glass capsule action button.
     func glassCapsuleButton() -> some View {
         self
             .font(.system(size: 17, weight: .semibold))
@@ -203,7 +201,7 @@ extension View {
             .shadow(color: Theme.active.accent.opacity(0.25), radius: 8, x: 0, y: 4)
     }
     
-    /// A full-width, heavy glowing button for primary bottom actions
+    /// Glowing bottom panel button.
     func glowingPanelButton() -> some View {
         self
             .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -235,7 +233,7 @@ extension View {
             .shadow(color: Theme.active.accent.opacity(0.4), radius: 12, x: 0, y: 0) // External glow
     }
     
-    /// Applies a glass effect to the bottom tab bar area (Refined)
+    /// Tab bar glass effect.
     func glassTabBar() -> some View {
         self
             .background(

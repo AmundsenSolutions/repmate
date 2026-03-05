@@ -1,6 +1,6 @@
 import Foundation
 
-/// How long an exercise takes to set up and perform each set
+/// Setup duration categories for exercises.
 enum SetupTime: String, Codable, CaseIterable {
     case fast = "fast"     // ~30s - Machine exercises, cables
     case medium = "medium" // ~60s - Dumbbells, accessories

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Fetches product nutrition data from the Open Food Facts public API.
+/// Retrieves product nutrition via Open Food Facts API.
 struct OpenFoodFactsService {
     
     struct ProductResult {
@@ -10,8 +10,7 @@ struct OpenFoodFactsService {
         let proteinPerServing: Double?  // protein for one serving
     }
     
-    /// Looks up a product by its barcode (EAN-13 / UPC-A).
-    /// Returns `nil` if the product is not found or lacks protein data.
+    /// Scans database for product by EAN/UPC barcode.
     static func fetchProduct(barcode: String) async -> ProductResult? {
         // SIMULATION MOCK: Return immediate result for magic barcode
         if barcode == "9999999999999" {

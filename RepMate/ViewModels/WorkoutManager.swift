@@ -18,11 +18,7 @@ struct WorkoutManager {
     
     // MARK: - Duration Estimation
     
-    /// Estimates total workout duration for a template (before starting)
-    /// - Parameters:
-    ///   - template: The workout template
-    ///   - userRestTime: User's configured rest time in seconds
-    /// - Returns: Estimated duration in minutes
+    /// Estimates template duration in minutes.
     func estimateTotalDuration(for template: WorkoutTemplate, userRestTime: Int) -> Int {
         let exerciseCount = template.exerciseIds.count
         guard exerciseCount > 0 else { return 0 }
@@ -57,11 +53,7 @@ struct WorkoutManager {
         return totalSeconds / 60
     }
     
-    /// Estimates total workout duration for an active workout
-    /// - Parameters:
-    ///   - activeWorkout: The active workout in progress
-    ///   - userRestTime: User's configured rest time in seconds
-    /// - Returns: Estimated duration in minutes
+    /// Estimates active workout duration in minutes.
     func estimateTotalDuration(for activeWorkout: ActiveWorkout, userRestTime: Int) -> Int {
         let exerciseIds = activeWorkout.exerciseIds
         let exerciseCount = exerciseIds.count
@@ -209,14 +201,13 @@ struct WorkoutManager {
         let estimated1RM: Double
     }
     
-    /// Calculate estimated 1RM using Brzycki formula
-    /// Formula: 1RM = weight × (36 / (37 - reps))
+    /// Calculates estimated 1RM using the Brzycki formula.
     func calculate1RM(weight: Double, reps: Int) -> Double {
         guard reps > 0 && reps < 37 else { return weight }
         return weight * (36.0 / (37.0 - Double(reps)))
     }
     
-    /// Get all personal records for an exercise, sorted by date
+    /// Gets chronological personal records for an exercise.
     func personalRecords(sessions: [WorkoutSession], exerciseId: UUID) -> [PersonalRecord] {
         var records: [PersonalRecord] = []
         
@@ -239,13 +230,13 @@ struct WorkoutManager {
         return records.sorted { $0.date < $1.date }
     }
     
-    /// Get current PR (highest estimated 1RM) for an exercise
+    /// Gets the highest estimated 1RM for an exercise.
     func currentPR(sessions: [WorkoutSession], exerciseId: UUID) -> PersonalRecord? {
         let allRecords = personalRecords(sessions: sessions, exerciseId: exerciseId)
         return allRecords.max(by: { $0.estimated1RM < $1.estimated1RM })
     }
     
-    /// Get 1RM progression over time for charting
+    /// Gets daily max 1RM progression for charting.
     func prProgression(sessions: [WorkoutSession], exerciseId: UUID, days: Int) -> [(date: Date, est1RM: Double)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -266,7 +257,7 @@ struct WorkoutManager {
         return dailyMax.map { (date: $0.key, est1RM: $0.value) }.sorted { $0.date < $1.date }
     }
     
-    /// Get Volume progression over time for charting
+    /// Gets daily volume progression for charting.
     func volumeProgression(sessions: [WorkoutSession], exerciseId: UUID, days: Int) -> [(date: Date, volume: Double)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -295,7 +286,7 @@ struct WorkoutManager {
         return dailyVolume.map { (date: $0.key, volume: $0.value) }.sorted { $0.date < $1.date }
     }
     
-    /// Get Basic Max Weight progression (Free Tier graph) over time
+    /// Gets maximum weight lifted per day for charting.
     func maxWeightProgression(sessions: [WorkoutSession], exerciseId: UUID, days: Int) -> [(date: Date, maxWeight: Double)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -319,7 +310,7 @@ struct WorkoutManager {
         return dailyMax.map { (date: $0.key, maxWeight: $0.value) }.sorted { $0.date < $1.date }
     }
     
-    /// Get all workout dates for a given year (for heatmap)
+    /// Gets all active workout dates in a given year.
     func workoutDates(sessions: [WorkoutSession], year: Int) -> Set<Date> {
         let calendar = Calendar.current
         var dates = Set<Date>()
@@ -335,7 +326,7 @@ struct WorkoutManager {
         return dates
     }
     
-    /// Count total workouts per week for a given year (for heatmap intensity)
+    /// Counts workouts per week for a given year.
     func weeklyWorkoutCounts(sessions: [WorkoutSession], year: Int) -> [Int: Int] {
         let calendar = Calendar.current
         var counts: [Int: Int] = [:]
@@ -353,9 +344,7 @@ struct WorkoutManager {
     
     // MARK: - Dynamic Stats Aggregation
     
-    /// Calculates total sets per category for the specified number of days looking back.
-    /// Scans all exercises in the sessions to find their categories dynamically.
-    /// Secondary muscles are counted at 50% (0.5 sets per set).
+    /// Calculates recent set volume per muscle category (secondary muscles count as 0.5).
     func getCategoryVolume(sessions: [WorkoutSession], exerciseLibrary: [Exercise], days: Int) -> [String: Double] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -393,7 +382,7 @@ struct WorkoutManager {
         return volumeMap
     }
     
-    /// Counts total workouts in the last N days
+    /// Counts total workouts over a period.
     func getWorkoutCount(sessions: [WorkoutSession], days: Int) -> Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())

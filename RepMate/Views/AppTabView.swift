@@ -11,8 +11,7 @@ import SwiftUI
 struct AppTabView: View {
     @ObservedObject var themeManager = ThemeManager.shared // Observe updates
 
-    /// Hosts the main tab navigation between home, workouts, protein, and
-    /// settings screens.
+    /// Main bottom navigation tab bar.
     var body: some View {
         TabView {
             HomeView()
@@ -66,7 +65,7 @@ struct AppTabView: View {
     @State private var isShowingActiveWorkout = false
 }
 
-/// Preview of `AppTabView` showing the tab bar composition.
+/// AppTabView preview.
 #Preview {
     AppTabView()
 }

@@ -1,7 +1,6 @@
 import SwiftUI
 
 /// Grid picker for alternate app icons.
-/// Placeholder keys are used — actual icon assets will be added later.
 struct CustomIconPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var storeManager: StoreManager

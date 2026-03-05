@@ -8,8 +8,7 @@
 import SwiftUI
 import Combine
 
-/// Parses an Int from a string that may contain decimals (e.g. "5.0" or "5,0").
-/// Returns nil only if the string is not a valid number at all.
+/// Parses numbers from strings, supporting both . and , decimals.
 private func parseIntFlexible(_ s: String) -> Int? {
     if let i = Int(s) { return i }
     let normalized = s.replacingOccurrences(of: ",", with: ".")
@@ -17,7 +16,7 @@ private func parseIntFlexible(_ s: String) -> Int? {
     return nil
 }
 
-/// Parses a Double from a string, handling both "." and "," as decimal separators.
+/// Parses decimals handling both . and , separators.
 private func parseDoubleFlexible(_ s: String) -> Double? {
     let normalized = s.replacingOccurrences(of: ",", with: ".")
     return Double(normalized)

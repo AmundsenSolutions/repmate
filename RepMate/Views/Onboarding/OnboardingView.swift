@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// First-run onboarding flow — 4 swipeable pages.
-/// Controlled by `@AppStorage("hasSeenOnboarding")` in RepMateApp.
+/// First-run onboarding flow with 4 swipeable pages.
 struct OnboardingView: View {
     @EnvironmentObject var store: AppDataStore
     @ObservedObject var themeManager = ThemeManager.shared

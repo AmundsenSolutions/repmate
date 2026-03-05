@@ -3,10 +3,10 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Handles the generation of CSV files from the user's data for export.
+/// Handles CSV generation for data export.
 final class DataExportManager {
     
-    /// Generates a CSV string containing all workout session data.
+    /// Converts workout sessions to CSV format.
     static func generateWorkoutsCSV(sessions: [WorkoutSession], exerciseLibrary: [Exercise]) -> String {
         var csv = "Session Date,Session Duration (s),Exercise Name,Set Number,Weight (kg),Reps,RIR\n"
         
@@ -29,7 +29,7 @@ final class DataExportManager {
         return csv
     }
     
-    /// Generates a CSV string containing all logged protein data. (Bonus)
+    /// Converts protein entries to CSV format.
     static func generateProteinCSV(entries: [ProteinEntry]) -> String {
         var csv = "Date,Grams,Note\n"
         

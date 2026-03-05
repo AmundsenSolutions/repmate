@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Errors that can occur during persistence operations.
+/// File system operational errors.
 enum PersistenceError: Error {
     case fileNotFound
     case decodingFailed(Error)
@@ -15,7 +15,7 @@ enum PersistenceError: Error {
     case writingFailed(Error)
 }
 
-/// A generic, thread-safe manager for saving and loading `Codable` objects to disk.
+/// Thread-safe local file storage manager.
 class PersistenceManager {
     static let shared = PersistenceManager()
     
@@ -24,7 +24,7 @@ class PersistenceManager {
     
     private init() {}
     
-    /// Returns the URL for the documents directory.
+    /// Resolves app documents directory.
     private func documentsDirectory() -> URL {
         do {
             return try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -34,11 +34,7 @@ class PersistenceManager {
         }
     }
     
-    /// Saves a `Codable` object to a file in the documents directory with a backup rotation.
-    /// - Parameters:
-    ///   - object: The object to save.
-    ///   - filename: The name of the file (e.g., "data.json").
-    ///   - completion: Optional completion handler returning logic result (success/failure).
+    /// Safely writes an object to disk with automatic backups.
     func save<T: Encodable>(_ object: T, to filename: String, completion: ((Result<Void, PersistenceError>) -> Void)? = nil) {
         dispatchQueue.async { [weak self] in
             guard let self = self else { return }
@@ -62,11 +58,7 @@ class PersistenceManager {
         }
     }
     
-    /// Loads a `Codable` object from a file, with fallback to backup if corruption occurs.
-    /// - Parameters:
-    ///   - type: The type of object to decode.
-    ///   - filename: The name of the file.
-    /// - Returns: The decoded object, or throws an error.
+    /// Loads a saved object from disk, falling back to backups if corrupted.
     func load<T: Decodable>(_ type: T.Type, from filename: String) throws -> T {
         let url = documentsDirectory().appendingPathComponent(filename)
         let backupUrl = url.appendingPathExtension("bak")
@@ -108,12 +100,12 @@ class PersistenceManager {
         }
     }
     
-    /// Returns the full URL for a file in the documents directory.
+    /// Resolves absolute file URL.
     func fileURL(for filename: String) -> URL? {
         documentsDirectory().appendingPathComponent(filename)
     }
     
-    /// Checks if a file exists.
+    /// Checks for file existence.
     func fileExists(_ filename: String) -> Bool {
         let url = documentsDirectory().appendingPathComponent(filename)
         return fileManager.fileExists(atPath: url.path)

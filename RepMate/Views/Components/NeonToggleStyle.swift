@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A custom glowing toggle style that matches the Cyber Glass aesthetic.
+/// Glowing toggle style matching Cyber Glass theme.
 struct NeonToggleStyle: ToggleStyle {
     var onColor: Color
     var offColor: Color = Color.white.opacity(0.1)
