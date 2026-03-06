@@ -8,14 +8,14 @@ struct CustomIconPickerView: View {
     @State private var showPaywall = false
     @State private var currentIcon: String? = UIApplication.shared.alternateIconName
     
-    // Electric Blue and Stealth Gray are free. Others are Pro.
-    private let icons: [(key: String?, name: String, colors: [Color], isProPath: Bool)] = [
-        (nil, "Electric Blue", [.blue, Color(red: 0, green: 0, blue: 0.5)], false),
-        ("AppIcon_Gold", "24k Gold", [.yellow, .orange], true),
-        ("AppIcon_Purple", "Cosmic Purple", [.purple, Color(red: 0.3, green: 0, blue: 0.5)], true),
-        ("AppIcon_Green", "Hyper Green", [.green, Color(red: 0, green: 0.4, blue: 0)], true),
-        ("AppIcon_Orange", "Plasma Orange", [.orange, .red], true),
-        ("AppIcon_Gray", "Stealth Gray", [Color(white: 0.3), Color(white: 0.1)], false)
+    // Only Electric Blue is free. Others are Pro.
+    private let icons: [(key: String?, name: String, image: String, isProPath: Bool)] = [
+        (nil, "Electric Blue", "Preview_Blue", false),
+        ("AppIcon_Gold", "24k Gold", "Preview_Gold", true),
+        ("AppIcon_Purple", "Cosmic Purple", "Preview_Purple", true),
+        ("AppIcon_Green", "Hyper Green", "Preview_Green", true),
+        ("AppIcon_Orange", "Plasma Orange", "Preview_Orange", true),
+        ("AppIcon_Gray", "Stealth Gray", "Preview_Gray", true)
     ]
     
     var body: some View {
@@ -51,7 +51,7 @@ struct CustomIconPickerView: View {
     }
     
     @ViewBuilder
-    private func iconCell(icon: (key: String?, name: String, colors: [Color], isProPath: Bool)) -> some View {
+    private func iconCell(icon: (key: String?, name: String, image: String, isProPath: Bool)) -> some View {
         let isSelected = currentIcon == icon.key
         let isLocked = icon.isProPath && !storeManager.isPro
         
@@ -64,37 +64,36 @@ struct CustomIconPickerView: View {
             }
         } label: {
             VStack(spacing: 10) {
-                // Placeholder icon visual
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: icon.colors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                // Actual icon visual
+                Image(icon.image)
+                    .resizable()
+                    .scaledToFit()
                     .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .saturation(isLocked ? 0.0 : 1.0)
+                    .opacity(isLocked ? 0.35 : 1.0)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(isSelected ? Color.white : Color.white.opacity(0.2), lineWidth: isSelected ? 3 : 1)
+                            .stroke(isSelected ? Color.blue : Color.white.opacity(0.2), lineWidth: isSelected ? 3 : 1)
                     )
-                    .overlay(
-                        Group {
-                            if isSelected {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(.white)
-                                    .shadow(radius: 4)
-                            } else if isLocked {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(.white.opacity(0.8))
-                                    .shadow(radius: 4)
-                            }
+                    .overlay(alignment: .bottomTrailing) {
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, .blue)
+                                .background(Circle().fill(Color.black).padding(1))
+                                .offset(x: 6, y: 6)
+                        } else if isLocked {
+                            Image(systemName: "lock.circle.fill")
+                                .font(.system(size: 24))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, .gray)
+                                .background(Circle().fill(Color.black).padding(1))
+                                .offset(x: 6, y: 6)
                         }
-                    )
-                    .shadow(color: isSelected ? icon.colors.first!.opacity(0.5) : .clear, radius: 8)
-                    .opacity(isLocked ? 0.6 : 1.0)
+                    }
+                    .shadow(color: isSelected ? Color.blue.opacity(0.4) : .clear, radius: 8)
                 
                 HStack(spacing: 4) {
                     Text(icon.name)

@@ -7,7 +7,7 @@ import Foundation
 final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
     
-    @Published var activeTheme: ThemeVariant = .arcticWhite {
+    @Published var activeTheme: ThemeVariant = .electricBlue {
         didSet {
             UserDefaults.standard.set(activeTheme.rawValue, forKey: "activeTheme")
         }
@@ -48,112 +48,49 @@ final class ThemeManager: ObservableObject {
     
     // Filtered List for Menu
     static let availableThemes: [ThemeVariant] = [
-        .arcticWhite,
-        .cleanBlue,
-        .lavaRed
+        .electricBlue,
+        .crimsonRed,
+        .cosmicPurple
     ]
 }
 
 /// Supported theme variants.
 enum ThemeVariant: String, CaseIterable, Identifiable {
-    case cleanBlue
-    case neonPurple
-    case lavaRed
-    case arcticWhite // Keep only requested core cases in the main logic if desired, but for enum stability we keep cases.
-    // We will use ThemeManager.availableThemes to filter the UI.
-    
-    // Kept for backward compatibility if user had these selected, 
-    // but they won't appear in the new menu.
-    case forestGreen
-    case oceanTeal
-    case cyberGold
-    case deepIndigo
-    case sunsetOrange
-    case royalMagenta
-    
-    case custom // New case
+    case electricBlue
+    case crimsonRed
+    case cosmicPurple
+    case custom
     
     var id: String { rawValue }
     
     var displayName: String {
         switch self {
-        case .cleanBlue: return "Clean Blue 💧"
-        case .neonPurple: return "Neon Purple 💜"
-        case .lavaRed: return "Lava Red 🔥"
-        case .arcticWhite: return "Arctic White ❄️"
+        case .electricBlue: return "Electric Blue 💧"
+        case .crimsonRed: return "Crimson Red 🔥"
+        case .cosmicPurple: return "Cosmic Purple 💜"
         case .custom: return "Custom 🎨"
-            
-        // Legacy/Hidden
-        case .forestGreen: return "Forest Green 🌲"
-        case .oceanTeal: return "Ocean Teal 🌊"
-        case .cyberGold: return "Cyber Gold ⚡️"
-        case .deepIndigo: return "Deep Indigo 🌌"
-        case .sunsetOrange: return "Sunset Orange 🌅"
-        case .royalMagenta: return "Royal Magenta 👑"
         }
     }
     
     var palette: ThemePalette {
         switch self {
-        case .cleanBlue:
+        case .electricBlue:
             return ThemePalette(
-                accent: Color(red: 0, green: 0.83, blue: 1.0), // #00D4FF
-                glow: Color(red: 0, green: 0.6, blue: 1.0),
+                accent: Color(red: 0, green: 0.6, blue: 1.0),
+                glow: Color(red: 0, green: 0.4, blue: 0.8),
                 tint: Color.blue.opacity(0.1)
             )
-        case .neonPurple:
+        case .crimsonRed:
             return ThemePalette(
-                accent: Color(red: 0.8, green: 0.0, blue: 1.0),
-                glow: Color(red: 0.6, green: 0.0, blue: 1.0),
-                tint: Color.purple.opacity(0.1)
-            )
-        case .lavaRed:
-            return ThemePalette(
-                accent: Color(red: 1.0, green: 0.2, blue: 0.2),
-                glow: Color.red,
+                accent: Color(red: 0.85, green: 0.1, blue: 0.2), // Deep Crimson
+                glow: Color(red: 0.6, green: 0.0, blue: 0.1),
                 tint: Color.red.opacity(0.1)
             )
-        case .forestGreen:
+        case .cosmicPurple:
             return ThemePalette(
-                accent: Color(red: 0.2, green: 0.9, blue: 0.4),
-                glow: Color.green,
-                tint: Color.green.opacity(0.1)
-            )
-        case .oceanTeal:
-            return ThemePalette(
-                accent: Color(red: 0.0, green: 0.9, blue: 0.9),
-                glow: Color(red: 0.0, green: 0.6, blue: 0.8),
-                tint: Color.cyan.opacity(0.1)
-            )
-        case .cyberGold:
-            return ThemePalette(
-                accent: Color(red: 1.0, green: 0.8, blue: 0.0),
-                glow: Color(red: 1.0, green: 0.6, blue: 0.0),
-                tint: Color.yellow.opacity(0.1)
-            )
-        case .deepIndigo:
-            return ThemePalette(
-                accent: Color(red: 0.3, green: 0.3, blue: 1.0),
-                glow: Color(red: 0.0, green: 0.0, blue: 0.8),
-                tint: Color.indigo.opacity(0.1)
-            )
-        case .sunsetOrange:
-            return ThemePalette(
-                accent: Color(red: 1.0, green: 0.5, blue: 0.0),
-                glow: Color(red: 1.0, green: 0.3, blue: 0.0),
-                tint: Color.orange.opacity(0.1)
-            )
-        case .royalMagenta:
-            return ThemePalette(
-                accent: Color(red: 1.0, green: 0.0, blue: 0.5),
-                glow: Color(red: 0.8, green: 0.0, blue: 0.4),
-                tint: Color.pink.opacity(0.1)
-            )
-        case .arcticWhite:
-            return ThemePalette(
-                accent: Color.white,
-                glow: Color(white: 0.8),
-                tint: Color.white.opacity(0.1)
+                accent: Color(red: 0.6, green: 0.15, blue: 0.9),
+                glow: Color(red: 0.4, green: 0.05, blue: 0.7),
+                tint: Color.purple.opacity(0.1)
             )
         case .custom:
             // Fallback if accessed directly without Manager context
