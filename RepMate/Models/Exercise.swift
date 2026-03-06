@@ -2,23 +2,43 @@ import Foundation
 
 /// Setup duration categories for exercises.
 enum SetupTime: String, Codable, CaseIterable {
-    case fast = "fast"     // ~30s - Machine exercises, cables
-    case medium = "medium" // ~60s - Dumbbells, accessories
-    case slow = "slow"     // ~90s - Barbell compounds (RDL, Squat, Bench)
+    case fast = "fast"     // 50s work set - Isolations, cables
+    case medium = "medium" // 60s work set - Dumbbells, accessories
+    case slow = "slow"     // 90s work set - Barbell compounds (RDL, Squat, Bench)
     
-    var setDurationSeconds: Int {
+    // Transition times
+    var transitionSeconds: Int {
         switch self {
-        case .fast: return 30
-        case .medium: return 45
-        case .slow: return 70
+        case .fast: return 60
+        case .medium: return 100
+        case .slow: return 150
         }
     }
     
-    var transitionSeconds: Int {
+    // Warmup Set duration
+    var warmupSetSeconds: Int {
         switch self {
-        case .fast: return 30   // Walk + quick adjust
-        case .medium: return 60 // Walk + setup
-        case .slow: return 90   // Walk + load plates + warmup
+        case .fast: return 25
+        case .medium: return 40
+        case .slow: return 60
+        }
+    }
+    
+    // Rest after warmup
+    var warmupRestSeconds: Int {
+        switch self {
+        case .fast: return 60
+        case .medium: return 90
+        case .slow: return 120
+        }
+    }
+    
+    // Work Set duration
+    var setDurationSeconds: Int {
+        switch self {
+        case .fast: return 50
+        case .medium: return 60
+        case .slow: return 90
         }
     }
     

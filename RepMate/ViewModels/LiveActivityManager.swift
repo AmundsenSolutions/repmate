@@ -2,7 +2,7 @@ import Foundation
 import ActivityKit
 import SwiftUI
 
-/// Rest timer Live Activity manager.
+/// Manages the lifecycle of the Rest Timer Live Activity, handling start, update, and termination events.
 final class LiveActivityManager {
     static let shared = LiveActivityManager()
     
@@ -10,8 +10,15 @@ final class LiveActivityManager {
     
     private init() {}
     
-    /// Starts a rest timer Live Activity.
-    func startTimer(duration: Int, accentColor: Color) {
+    /// Requests a new Live Activity to track the user's rest period, injecting the upcoming exercise context for the widget UI.
+    func startTimer(
+        duration: Int,
+        accentColor: Color,
+        exerciseName: String? = nil,
+        setInfo: String? = nil,
+        templateName: String? = nil,
+        exerciseCategory: String? = nil
+    ) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         
         // End any existing activity first
@@ -24,7 +31,11 @@ final class LiveActivityManager {
             totalDuration: duration,
             accentR: r,
             accentG: g,
-            accentB: b
+            accentB: b,
+            exerciseName: exerciseName,
+            setInfo: setInfo,
+            templateName: templateName,
+            exerciseCategory: exerciseCategory
         )
         
         let endTime = Date().addingTimeInterval(TimeInterval(duration))
@@ -47,7 +58,7 @@ final class LiveActivityManager {
         }
     }
     
-    /// Updates Live Activity end time.
+    /// Extends or overwrites the current timer's target end date.
     func updateTimer(newEndTime: Date) {
         guard let activity = currentActivity else { return }
         
@@ -63,7 +74,7 @@ final class LiveActivityManager {
         }
     }
     
-    /// Ends all active Live Activities.
+    /// Instantly terminates any active rest timers globally, ensuring no stale widgets remain on the Lock Screen.
     func endTimer() {
         // End the tracked current activity
         if let activity = currentActivity {

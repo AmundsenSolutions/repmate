@@ -11,6 +11,9 @@ import SwiftUI
 struct AppTabView: View {
     @ObservedObject var themeManager = ThemeManager.shared // Observe updates
 
+    @EnvironmentObject var store: AppDataStore // Ensure we have access to store
+    @State private var isShowingActiveWorkout = false
+
     /// Main bottom navigation tab bar.
     var body: some View {
         TabView {
@@ -60,9 +63,6 @@ struct AppTabView: View {
             .environmentObject(themeManager) // Also inject in fullScreenCover
         }
     }
-    
-    @EnvironmentObject var store: AppDataStore // Ensure we have access to store
-    @State private var isShowingActiveWorkout = false
 }
 
 /// AppTabView preview.

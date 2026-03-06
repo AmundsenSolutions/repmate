@@ -52,12 +52,7 @@ struct ActiveWorkoutHeaderView: View {
         return aw.rowsByExercise.values.reduce(0) { $0 + $1.count }
     }
     
-    // Constants
-    private let kWorkSetDuration: Int = 30
-    private let kWarmupSetDuration: Int = 30
-    private let kWalkTime: Int = 30
-    private let kRiggingTime: Int = 30
-    private var kTransitionTime: Int { kWalkTime + kRiggingTime }
+
     
     private var userRestTime: Int {
         store.settings.restTime
@@ -82,8 +77,8 @@ struct ActiveWorkoutHeaderView: View {
                 totalSeconds += setupTime.transitionSeconds
             }
             
-            // Warmup set
-            totalSeconds += setupTime.setDurationSeconds + userRestTime
+            // Warmup set + Rest
+            totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
             
             // Work sets
             for setIndex in 0..<setCount {
@@ -131,7 +126,7 @@ struct ActiveWorkoutHeaderView: View {
             // Transition + warmup for non-first exercises
             if !isFirstRemaining {
                 totalSeconds += setupTime.transitionSeconds
-                totalSeconds += setupTime.setDurationSeconds + userRestTime
+                totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
             }
             
             // Work sets

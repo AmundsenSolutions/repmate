@@ -415,6 +415,8 @@ struct ActiveWorkoutView: View {
         }
     }
     
+    /// Configures and launches a Live Activity widget to track the user's rest period,
+    /// injecting the upcoming exercise context to display on the Lock Screen.
     private func startRestTimer() {
         stopTimer()
         let duration = store.settings.restTime
@@ -426,15 +428,39 @@ struct ActiveWorkoutView: View {
         
         let targetDate = Date().addingTimeInterval(TimeInterval(duration))
         
+        var nextExerciseName: String?
+        var nextSetInfo: String?
+        let tName = template?.name
+        
         if var aw = store.activeWorkout {
             aw.timerTargetDate = targetDate
             store.updateActiveWorkout(aw)
+            
+            // Calculate next exercise and set
+            outerLoop: for exId in aw.exerciseIds {
+                if let rows = aw.rowsByExercise[exId], let index = rows.firstIndex(where: { !$0.isCompleted }) {
+                    if let ex = store.exerciseLibrary.first(where: { $0.id == exId }) {
+                        nextExerciseName = ex.name
+                        nextSetInfo = "Set \(index + 1) of \(rows.count)"
+                        break outerLoop
+                    }
+                }
+            }
+            
+            if nextExerciseName == nil {
+                nextExerciseName = "Workout Complete"
+                nextSetInfo = "Great Job!"
+            }
         }
         
         // Start Live Activity (Dynamic Island + Lock Screen)
         LiveActivityManager.shared.startTimer(
             duration: duration,
-            accentColor: themeManager.palette.accent
+            accentColor: themeManager.palette.accent,
+            exerciseName: nextExerciseName,
+            setInfo: nextSetInfo,
+            templateName: tName,
+            exerciseCategory: nil
         )
         
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)

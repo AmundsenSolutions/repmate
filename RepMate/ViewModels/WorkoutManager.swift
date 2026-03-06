@@ -9,17 +9,14 @@ import Foundation
 
 struct WorkoutManager {
     
-    // MARK: - Duration Constants (in seconds)
-    static let kWorkSetDuration: Int = 30      // Time to perform a work set (4-10 reps)
-    static let kWarmupSetDuration: Int = 30    // Time to perform a warmup set
-    static let kWalkTime: Int = 30             // Time to walk between stations
-    static let kRiggingTime: Int = 30          // Time to set up equipment
-    static var kTransitionTime: Int { kWalkTime + kRiggingTime } // 60s total
+    // Hardcoded minimums for fallbacks if needed, but we now prefer Exercise-specific SetupTime
+    static let kWalkTime: Int = 30
+    static let kRiggingTime: Int = 30
+    static var kTransitionTime: Int { kWalkTime + kRiggingTime }
     
     // MARK: - Duration Estimation
     
-    /// Estimates template duration in minutes.
-    func estimateTotalDuration(for template: WorkoutTemplate, userRestTime: Int) -> Int {
+    func estimateTotalDuration(for template: WorkoutTemplate, userRestTime: Int, exerciseLibrary: [Exercise]) -> Int {
         let exerciseCount = template.exerciseIds.count
         guard exerciseCount > 0 else { return 0 }
         
@@ -29,19 +26,21 @@ struct WorkoutManager {
             let target = template.targets?[exerciseId]
             let setCount = max(1, target?.sets ?? 3) // Default 3 sets if not specified
             
-            // Transition time (walk + rigging) - not needed for first exercise
+            let exercise = exerciseLibrary.first(where: { $0.id == exerciseId })
+            let setupTime = exercise?.setupTime ?? .medium
+            
+            // Transition time
             if index > 0 {
-                totalSeconds += Self.kTransitionTime // 60s
+                totalSeconds += setupTime.transitionSeconds
             }
             
-            // Warmup: 1 warmup set + rest after
-            totalSeconds += Self.kWarmupSetDuration + userRestTime
+            // Warmup set + specific warmup rest
+            totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
             
-            // Work sets: Each set takes 30s + rest (except for the last set of the ENTIRE workout)
+            // Work sets
             for setIndex in 0..<setCount {
-                totalSeconds += Self.kWorkSetDuration
+                totalSeconds += setupTime.setDurationSeconds
                 
-                // Add rest UNLESS this is the very last set of the entire workout
                 let isLastExercise = (index == exerciseCount - 1)
                 let isLastSet = (setIndex == setCount - 1)
                 if !(isLastExercise && isLastSet) {
@@ -53,8 +52,7 @@ struct WorkoutManager {
         return totalSeconds / 60
     }
     
-    /// Estimates active workout duration in minutes.
-    func estimateTotalDuration(for activeWorkout: ActiveWorkout, userRestTime: Int) -> Int {
+    func estimateTotalDuration(for activeWorkout: ActiveWorkout, userRestTime: Int, exerciseLibrary: [Exercise]) -> Int {
         let exerciseIds = activeWorkout.exerciseIds
         let exerciseCount = exerciseIds.count
         guard exerciseCount > 0 else { return 0 }
@@ -65,14 +63,17 @@ struct WorkoutManager {
             let sets = activeWorkout.rowsByExercise[exerciseId] ?? []
             let setCount = max(1, sets.count)
             
+            let exercise = exerciseLibrary.first(where: { $0.id == exerciseId })
+            let setupTime = exercise?.setupTime ?? .medium
+            
             if index > 0 {
-                totalSeconds += Self.kTransitionTime
+                totalSeconds += setupTime.transitionSeconds
             }
             
-            totalSeconds += Self.kWarmupSetDuration + userRestTime
+            totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
             
             for setIndex in 0..<setCount {
-                totalSeconds += Self.kWorkSetDuration
+                totalSeconds += setupTime.setDurationSeconds
                 
                 let isLastExercise = (index == exerciseCount - 1)
                 let isLastSet = (setIndex == setCount - 1)
@@ -85,8 +86,7 @@ struct WorkoutManager {
         return totalSeconds / 60
     }
     
-    /// Estimates remaining workout duration based on uncompleted sets
-    func estimateRemainingDuration(for activeWorkout: ActiveWorkout, userRestTime: Int, overtimeSeconds: Int = 0) -> Int {
+    func estimateRemainingDuration(for activeWorkout: ActiveWorkout, userRestTime: Int, exerciseLibrary: [Exercise], overtimeSeconds: Int = 0) -> Int {
         let exerciseIds = activeWorkout.exerciseIds
         guard !exerciseIds.isEmpty else { return 0 }
         
@@ -107,16 +107,19 @@ struct WorkoutManager {
         for (offsetIndex, item) in remainingSetsByExercise.enumerated() {
             if item.remaining == 0 { continue }
             
+            let exercise = exerciseLibrary.first(where: { $0.id == item.exerciseId })
+            let setupTime = exercise?.setupTime ?? .medium
+            
             let isFirstRemaining = (offsetIndex == firstIncompleteIndex)
             let isLastExercise = (offsetIndex == totalExercises - 1)
             
             if !isFirstRemaining {
-                totalSeconds += Self.kTransitionTime
-                totalSeconds += Self.kWarmupSetDuration + userRestTime
+                totalSeconds += setupTime.transitionSeconds
+                totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
             }
             
             for setIndex in 0..<item.remaining {
-                totalSeconds += Self.kWorkSetDuration
+                totalSeconds += setupTime.setDurationSeconds
                 
                 let isLastSetOfExercise = (setIndex == item.remaining - 1)
                 if !(isLastExercise && isLastSetOfExercise) {

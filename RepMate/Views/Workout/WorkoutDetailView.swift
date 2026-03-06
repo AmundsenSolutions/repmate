@@ -99,20 +99,7 @@ struct WorkoutDetailView: View {
                                 }
                                 .padding(.top, 8)
                                 
-                                // Ghost Data Source Toggle
-                                VStack(spacing: 4) {
-                                    Text("Ghost Data Source")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Picker("Compare to", selection: $store.ghostDataSource) {
-                                        ForEach(GhostDataSource.allCases, id: \.self) { source in
-                                            Text(source.rawValue).tag(source)
-                                        }
-                                    }
-                                    .pickerStyle(.segmented)
-                                    .frame(maxWidth: 200)
-                                }
-                                .padding(.top, 4)
+
                                 
                                 // Workout Note
                                 TextField("Notes...", text: $note)
@@ -216,14 +203,37 @@ struct WorkoutDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
-                        // Share Workout
-                        if let template = store.workoutTemplates.first(where: { $0.id == templateId }),
-                           let shareURL = template.shareURL(exercises: store.exerciseLibrary) {
-                            ShareLink(item: shareURL) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(themeManager.palette.accent)
+                        // Options Menu (...)
+                        Menu {
+                            // Target Mode (Ghost Data Source)
+                            Menu {
+                                ForEach(GhostDataSource.allCases, id: \.self) { source in
+                                    Button {
+                                        store.ghostDataSource = source
+                                    } label: {
+                                        if store.ghostDataSource == source {
+                                            Label(source.rawValue, systemImage: "checkmark")
+                                        } else {
+                                            Text(source.rawValue)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Label("Compare to: \(store.ghostDataSource.rawValue)", systemImage: "arrow.triangle.2.circlepath")
                             }
+                            
+                            // Share Workout
+                            if let template = store.workoutTemplates.first(where: { $0.id == templateId }),
+                               let shareURL = template.shareURL(exercises: store.exerciseLibrary) {
+                                ShareLink(item: shareURL) {
+                                    Label("Share Workout", systemImage: "square.and.arrow.up")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 18))
+                                .foregroundColor(themeManager.palette.accent)
+                                .contentShape(Rectangle())
                         }
                         
                         // Add Exercise
@@ -534,7 +544,7 @@ struct WorkoutDetailView: View {
             note: nil,
             category: nil
         )
-        let minutes = store.workoutManager.estimateTotalDuration(for: tempTemplate, userRestTime: store.settings.restTime)
+        let minutes = store.workoutManager.estimateTotalDuration(for: tempTemplate, userRestTime: store.settings.restTime, exerciseLibrary: store.exerciseLibrary)
         return "~\(minutes) min"
     }
 
