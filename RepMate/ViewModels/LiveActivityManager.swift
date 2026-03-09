@@ -1,7 +1,7 @@
 import Foundation
 import ActivityKit
 import SwiftUI
-import UserNotifications
+@preconcurrency import UserNotifications
 
 /// Manages the lifecycle of the Rest Timer Live Activity, handling start, update, and termination events.
 @MainActor
@@ -144,43 +144,42 @@ final class LiveActivityManager: NSObject, UNUserNotificationCenterDelegate {
     
     private func scheduleTimerNotification(duration: Int, exerciseName: String?) {
         guard duration > 0 else { return }
-        let center = UNUserNotificationCenter.current()
         
-        let schedule = {
-            // Configure notification content
-            let content = UNMutableNotificationContent()
-            content.title = "Rest Complete 💪"
+        Task {
+            let center = UNUserNotificationCenter.current()
             
-            if let name = exerciseName, !name.isEmpty {
-                content.body = "Time to hit your next set — \(name)"
-            } else {
-                content.body = "Time to hit your next set"
-            }
-            
-            content.sound = .default
-            
-            // Trigger after given duration
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(duration), repeats: false)
-            let request = UNNotificationRequest(identifier: "RestTimerNotification", content: content, trigger: trigger)
-            
-            center.add(request) { error in
-                if let error = error {
-                    print("[LiveActivity] Error scheduling notification: \(error.localizedDescription)")
+            do {
+                let settings = await center.notificationSettings()
+                
+                var isAuthorized = settings.authorizationStatus == .authorized
+                
+                if settings.authorizationStatus == .notDetermined {
+                    let granted = try await center.requestAuthorization(options: [.alert, .sound])
+                    isAuthorized = granted
                 }
-            }
-        }
-        
-        center.getNotificationSettings { settings in
-            if settings.authorizationStatus == .authorized {
-                schedule()
-            } else if settings.authorizationStatus == .notDetermined {
-                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-                    if granted {
-                        schedule()
-                    }
+                
+                guard isAuthorized else { return }
+                
+                // Configure notification content
+                let content = UNMutableNotificationContent()
+                content.title = "Rest Complete 💪"
+                
+                if let name = exerciseName, !name.isEmpty {
+                    content.body = "Time to hit your next set — \(name)"
+                } else {
+                    content.body = "Time to hit your next set"
                 }
+                
+                content.sound = .default
+                
+                // Trigger after given duration
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(duration), repeats: false)
+                let request = UNNotificationRequest(identifier: "RestTimerNotification", content: content, trigger: trigger)
+                
+                try await center.add(request)
+            } catch {
+                print("[LiveActivity] Error scheduling notification: \(error.localizedDescription)")
             }
-            // if .denied, do nothing
         }
     }
     
