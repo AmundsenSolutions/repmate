@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import StoreKit
 
 struct ActiveWorkoutView: View {
     @EnvironmentObject var store: AppDataStore
@@ -10,6 +11,9 @@ struct ActiveWorkoutView: View {
     @State private var showExitDialog = false
     @State private var showFinishConfirmation = false
     @State private var showingRestPicker = false
+    @State private var showSuccessOverlay = false
+    
+    @AppStorage("workoutsCompletedCount") private var workoutsCompletedCount = 0
     
     // Menu State
     @State private var showSaveTemplateAlert = false
@@ -62,8 +66,7 @@ struct ActiveWorkoutView: View {
                             .animation(.easeInOut(duration: 0.2), value: keyboardVisible)
                     }
                     
-                    // Finish Button (only if keyboard is hidden)
-                    if !keyboardVisible {
+                    if !keyboardVisible && !showSuccessOverlay {
                         finishButton
                             .padding(.bottom, 16)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -72,6 +75,26 @@ struct ActiveWorkoutView: View {
                 .zIndex(20) // Ensure it floats above everything
                 .animation(.easeInOut(duration: 0.2), value: keyboardVisible)
             }
+            
+            // Full-screen Success Overlay
+            if showSuccessOverlay {
+                Color.black.opacity(0.8).ignoresSafeArea()
+                    .zIndex(100)
+                
+                VStack(spacing: 20) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(themeManager.palette.accent)
+                    
+                    Text("Workout Saved!")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                .zIndex(101)
+                .transition(.scale.combined(with: .opacity))
+            }
+            
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
@@ -332,9 +355,24 @@ struct ActiveWorkoutView: View {
     }
     
     private func finishWorkout() {
-        HapticManager.shared.success()
-        store.finishActiveWorkout()
-        dismiss()
+        if store.finishActiveWorkout() {
+            HapticManager.shared.success()
+            workoutsCompletedCount += 1
+            
+            if [3, 10, 25].contains(workoutsCompletedCount) {
+                if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                    SKStoreReviewController.requestReview(in: scene)
+                }
+            }
+            
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                showSuccessOverlay = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                dismiss()
+            }
+        }
     }
     
     private func saveAsTemplate() {

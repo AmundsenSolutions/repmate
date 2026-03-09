@@ -628,8 +628,34 @@ final class AppDataStore: ObservableObject {
     }
 
     /// Finalizes active workout and saves to history.
-    func finishActiveWorkout() {
-        guard let aw = activeWorkout else { return }
+    func finishActiveWorkout() -> Bool {
+        guard var aw = activeWorkout else { return false }
+        
+        // 1. Validate and sanitize sets
+        var validExerciseIds: [UUID] = []
+        for exId in aw.exerciseIds {
+            if let rows = aw.rowsByExercise[exId] {
+                let validRows = rows.filter { row in
+                    let reps = Int(row.reps) ?? Int(Double(row.reps.replacingOccurrences(of: ",", with: ".")) ?? 0)
+                    return reps > 0
+                }
+                aw.rowsByExercise[exId] = validRows
+                if !validRows.isEmpty {
+                    validExerciseIds.append(exId)
+                }
+            }
+        }
+        
+        aw.exerciseIds = validExerciseIds
+        
+        // 2. Abort if no valid sets remain
+        if validExerciseIds.isEmpty {
+            HapticManager.shared.error()
+            return false
+        }
+        
+        // Update aw to the sanitized version
+        activeWorkout = aw
         
         let availableExerciseIds = Set(exerciseLibrary.map { $0.id })
         let result = workoutManager.generateSession(from: aw, templates: workoutTemplates, availableExerciseIds: availableExerciseIds)
@@ -644,7 +670,9 @@ final class AppDataStore: ObservableObject {
             }
             
             save()
+            return true
         }
+        return false
     }
     
     // MARK: - History Helpers

@@ -12,33 +12,51 @@ struct WorkoutHistoryCard: View {
             Text("Workout History")
                 .sectionHeader()
             
-            
-            List {
-                ForEach(store.sortedWorkoutSessions.prefix(5)) { session in
-                    WorkoutHistoryRow(session: session)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            onSelectSession(session)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                if let mainIndex = store.workoutSessions.firstIndex(where: { $0.id == session.id }) {
-                                    onDeleteSession(IndexSet(integer: mainIndex))
-                                    HapticManager.shared.success()
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            .tint(.red)
-                        }
+            if store.sortedWorkoutSessions.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "list.clipboard")
+                        .font(.system(size: 40))
+                        .foregroundColor(Theme.Colors.textDim)
+                    Text("No Workouts Yet")
+                        .font(.headline)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text("Complete a workout to see your history here.")
+                        .font(.subheadline)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
+                .padding(.vertical, 32)
+                .frame(maxWidth: .infinity)
+                .background(Theme.Colors.cardBackground)
+                .cornerRadius(Theme.Spacing.cornerRadius)
+            } else {
+                List {
+                    ForEach(store.sortedWorkoutSessions.prefix(5)) { session in
+                        WorkoutHistoryRow(session: session)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onSelectSession(session)
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    if let mainIndex = store.workoutSessions.firstIndex(where: { $0.id == session.id }) {
+                                        onDeleteSession(IndexSet(integer: mainIndex))
+                                        HapticManager.shared.success()
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: CGFloat(min(store.sortedWorkoutSessions.count, 5) * 80))
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .frame(minHeight: CGFloat(min(store.sortedWorkoutSessions.count, 5) * 80))
         }
     }
 }

@@ -68,10 +68,8 @@ struct HomeView: View {
                                 latestEntriesSection
                             }
                             
-                            // MARK: - Workout History (if sessions exist)
-                            if !store.workoutSessions.isEmpty {
-                                workoutHistorySection
-                            }
+                            // MARK: - Workout History
+                            workoutHistorySection
                             
                             // Bottom spacer for safe area + large button
                             Color.clear.frame(height: 100)

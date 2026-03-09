@@ -175,16 +175,25 @@ struct ExerciseLibraryView: View {
     }
     
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: "dumbbell.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.gray.opacity(0.3))
-            Text("No exercises found")
-                .foregroundColor(.gray)
+                .foregroundColor(Theme.Colors.textDim)
+            Text("No Exercises Found")
+                .font(.headline)
+                .foregroundColor(Theme.Colors.textPrimary)
+            Text("Create a new exercise to add it to your library.")
+                .font(.subheadline)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
         }
-        .padding(.top, 60)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
+        .background(Theme.Colors.cardBackground)
+        .cornerRadius(Theme.Spacing.cornerRadius)
         .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
     
     private func exerciseRow(for exercise: Exercise) -> some View {
