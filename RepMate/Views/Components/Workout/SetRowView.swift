@@ -57,7 +57,7 @@ struct SetRowView: View {
                     // Completed checkmark
                     Image(systemName: isPR ? "star.fill" : "checkmark.circle.fill")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(isPR ? Theme.Colors.prGold : .green)
+                        .foregroundColor(isPR ? Theme.Colors.prGold : Theme.Colors.success)
                 } else {
                     Text("\(index)")
                         .font(.caption)
@@ -82,7 +82,7 @@ struct SetRowView: View {
                 value: $weight,
                 placeholder: ghostWeight ?? "-",
                 keyboardType: .decimalPad,
-                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? .green : Theme.Colors.accent),
+                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
                 alignment: .center,
                 font: .system(size: 15, weight: .semibold, design: .monospaced),
                 backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
@@ -96,7 +96,7 @@ struct SetRowView: View {
                 value: $reps,
                 placeholder: ghostReps ?? "-",
                 keyboardType: .decimalPad,
-                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? .green : Theme.Colors.accent),
+                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
                 alignment: .center,
                 font: .system(size: 15, weight: .semibold, design: .monospaced),
                 backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
@@ -110,7 +110,7 @@ struct SetRowView: View {
                 value: $rir,
                 placeholder: ghostRir ?? "-",
                 keyboardType: .decimalPad,
-                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? .green : Theme.Colors.accent),
+                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
                 alignment: .center,
                 font: .system(size: 15, weight: .semibold, design: .monospaced),
                 backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,

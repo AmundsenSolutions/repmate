@@ -330,6 +330,7 @@ struct SettingsView: View {
                         
                         // MARK: - Advanced
                         cyberGlassSection(title: "Advanced") {
+#if DEBUG
                             Button(action: {
                                 UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
                                 HapticManager.shared.success()
@@ -347,6 +348,7 @@ struct SettingsView: View {
                             }
                             
                             divider
+#endif
                             
                             if storeManager.isPro {
                                 ShareLink(

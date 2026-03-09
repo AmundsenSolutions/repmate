@@ -204,7 +204,9 @@ struct ActiveWorkoutView: View {
         }
         .onDisappear {
             store.isViewingActiveWorkout = false
-            stopTimer()
+            // Only cancel the local Combine subscription —
+            // do NOT end the Live Activity, it should keep running on the Lock Screen.
+            cancelLocalTimer()
         }
         .onChange(of: active) { _, newValue in
             if newValue == nil { dismiss() }
@@ -219,6 +221,11 @@ struct ActiveWorkoutView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             withAnimation { keyboardVisible = false }
+        }
+        .onChange(of: store.activeWorkout?.timerTargetDate) { _, newTarget in
+            if newTarget == nil {
+                stopTimer()
+            }
         }
         // Menu Dialogs
         .alert("Save as Template", isPresented: $showSaveTemplateAlert) {
@@ -385,14 +392,37 @@ struct ActiveWorkoutView: View {
             initialTimerDuration = max(store.settings.restTime, Int(remaining))
             isTimerActive = true
             
-            // Update Live Activity (don't start a new one — just update the end time)
-            LiveActivityManager.shared.updateTimer(newEndTime: target)
+            if LiveActivityManager.shared.hasActiveTimer {
+                // Live Activity already running (e.g. came back from background) — just sync the end time
+                LiveActivityManager.shared.updateTimer(newEndTime: target)
+            } else {
+                // Live Activity was killed (app dismissed, crash, etc.) — restart it
+                var nextExerciseName: String?
+                var nextSetInfo: String?
+                outerLoop: for exId in aw.exerciseIds {
+                    if let rows = aw.rowsByExercise[exId],
+                       let index = rows.firstIndex(where: { !$0.isCompleted }),
+                       let ex = store.exerciseLibrary.first(where: { $0.id == exId }) {
+                        nextExerciseName = ex.name
+                        nextSetInfo = "Set \(index + 1) of \(rows.count)"
+                        break outerLoop
+                    }
+                }
+                LiveActivityManager.shared.startTimer(
+                    duration: Int(remaining),
+                    accentColor: themeManager.palette.accent,
+                    exerciseName: nextExerciseName ?? store.exerciseLibrary.first(where: { $0.id == aw.exerciseIds.first })?.name,
+                    setInfo: nextSetInfo,
+                    templateName: template?.name,
+                    exerciseCategory: nil
+                )
+            }
             
-            // Use date-based calculation on every tick for accuracy
             timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
                 .autoconnect()
                 .sink { [self] _ in
-                    let secondsLeft = Int(target.timeIntervalSince(Date()))
+                    guard let dynamicTarget = store.activeWorkout?.timerTargetDate else { return }
+                    let secondsLeft = Int(ceil(dynamicTarget.timeIntervalSince(Date())))
                     if secondsLeft > 0 {
                         timeRemaining = secondsLeft
                     } else {
@@ -466,7 +496,8 @@ struct ActiveWorkoutView: View {
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [self] _ in
-                let secondsLeft = Int(targetDate.timeIntervalSince(Date()))
+                guard let dynamicTarget = store.activeWorkout?.timerTargetDate else { return }
+                let secondsLeft = Int(ceil(dynamicTarget.timeIntervalSince(Date())))
                 
                 if secondsLeft > 0 {
                     timeRemaining = secondsLeft
@@ -493,6 +524,17 @@ struct ActiveWorkoutView: View {
             }
     }
     
+    /// Cancels only the local Combine timer subscription, without touching the Live Activity.
+    /// Called on view disappear so the Live Activity keeps running on the Lock Screen.
+    private func cancelLocalTimer() {
+        timerCancellable?.cancel()
+        timerCancellable = nil
+        isTimerActive = false
+        // Live Activity intentionally NOT ended here
+    }
+    
+    /// Fully stops the timer: cancels the local subscription AND ends the Live Activity.
+    /// Called when the user explicitly cancels (X button, skip, timer expires).
     private func stopTimer() {
         timerCancellable?.cancel()
         timerCancellable = nil
@@ -519,7 +561,10 @@ struct ActiveWorkoutView: View {
             aw.timerTargetDate = newTarget
             store.updateActiveWorkout(aw)
             LiveActivityManager.shared.updateTimer(newEndTime: newTarget)
-            timeRemaining = Int(newTarget.timeIntervalSince(Date()))
+            timeRemaining = Int(ceil(newTarget.timeIntervalSince(Date())))
+            if timeRemaining > initialTimerDuration {
+                initialTimerDuration = timeRemaining
+            }
         }
         
         HapticManager.shared.selection()
@@ -586,14 +631,14 @@ struct ActiveWorkoutView: View {
             }
             
             // Skip (X)
-             Button {
+            Button {
                 skipTimer()
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
                     .frame(width: 44, height: 44)
-                    .background(Color.red.opacity(0.8))
+                    .background(Theme.Colors.danger.opacity(0.9))
                     .clipShape(Circle())
             }
         }

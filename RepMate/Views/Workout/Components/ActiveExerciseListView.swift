@@ -128,6 +128,7 @@ struct ActiveExerciseListView: View {
                     .tint(.red)
                 }
             }
+            .onMove(perform: moveExercises)
             
             // Add Exercise Button (Footer)
             if !exercises.isEmpty {
@@ -476,5 +477,13 @@ struct ActiveExerciseListView: View {
             
             store.updateActiveWorkout(aw)
         }
+    }
+    
+    private func moveExercises(from source: IndexSet, to destination: Int) {
+        guard var aw = store.activeWorkout else { return }
+        aw.exerciseIds.move(fromOffsets: source, toOffset: destination)
+        aw.isDirty = true
+        store.updateActiveWorkout(aw)
+        HapticManager.shared.lightImpact()
     }
 }

@@ -14,107 +14,76 @@ struct RestTimerLiveActivity: Widget {
             DynamicIsland {
                 // MARK: - Expanded Dynamic Island
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
                         if let template = context.attributes.templateName {
                             Text(template.uppercased())
-                                .font(.system(size: 13, weight: .black, design: .default))
+                                .font(.system(size: 11, weight: .black))
                                 .foregroundColor(accentColor(from: context).opacity(0.8))
-                                .tracking(1)
+                                .tracking(1.5)
                         }
-                        
                         Text(context.attributes.exerciseName ?? "Resting")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 17, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        
+                            .minimumScaleFactor(0.4)
                         if let setInfo = context.attributes.setInfo {
                             Text(setInfo)
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.white.opacity(0.6))
                         }
                     }
                     .padding(.leading, 4)
-                    .padding(.top, 12)
+                    .padding(.vertical, 8)
                 }
-                
+
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .center, spacing: 8) {
+                    Group {
                         if context.state.endTime > Date() {
                             Text(timerInterval: Date()...context.state.endTime, countsDown: true)
                                 .font(.system(size: 34, weight: .bold, design: .monospaced))
                                 .foregroundColor(accentColor(from: context))
                                 .monospacedDigit()
-                                .shadow(color: accentColor(from: context).opacity(0.8), radius: 6, x: 0, y: 0)
+                                .frame(minWidth: 80, alignment: .trailing)
                         } else {
                             Text("0:00")
                                 .font(.system(size: 34, weight: .bold, design: .monospaced))
                                 .foregroundColor(accentColor(from: context))
                                 .monospacedDigit()
-                                .shadow(color: accentColor(from: context).opacity(0.8), radius: 6, x: 0, y: 0)
-                        }
-                        
-                        if context.state.endTime > Date() {
-                            Link(destination: URL(string: "repmate://stoptimer")!) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "square.fill")
-                                        .font(.system(size: 10))
-                                    Text("Stop")
-                                        .font(.system(size: 14, weight: .bold))
-                                }
-                                .foregroundColor(.black)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 18)
-                                .background(accentColor(from: context))
-                                .clipShape(Capsule())
-                            }
                         }
                     }
-                    .padding(.trailing, 0)
-                    .padding(.top, 8)
-                }
-                
-                DynamicIslandExpandedRegion(.center) {
-                    EmptyView()
-                }
-                
-                DynamicIslandExpandedRegion(.bottom) {
-                    EmptyView()
+                    .frame(maxHeight: .infinity)
+                    .padding(.trailing, 4)
                 }
             } compactLeading: {
                 // Compact: Single icon
                 Image(systemName: "timer")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(accentColor(from: context))
-                    .padding(.leading, 4)
+                    .padding(.leading, 2)
             } compactTrailing: {
-                // Compact: Single combined ring + timer text natively powered by ProgressView
+                // Compact: Just the countdown number
                 if context.state.endTime > Date() {
-                    ZStack {
-                        ProgressView(timerInterval: Date()...context.state.endTime, countsDown: true) { EmptyView() }
-                            .progressViewStyle(.circular)
-                            .tint(accentColor(from: context))
-                            .scaleEffect(0.9) // Shrink to prevent clipping edges
-                            .font(.system(size: 10, weight: .bold, design: .monospaced)) // Shrink font heavily
-                    }
-                    .frame(width: 26, height: 26) // Slightly smaller box
-                    .padding(.trailing, 2)
+                    Text(timerInterval: Date()...context.state.endTime, countsDown: true)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(accentColor(from: context))
+                        .monospacedDigit()
+                        .frame(maxWidth: 48)
+                        .padding(.trailing, 2)
                 } else {
                     Text("0:00")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundColor(accentColor(from: context))
+                        .monospacedDigit()
                         .padding(.trailing, 2)
                 }
             } minimal: {
                 // Minimal: Progress ring
                 if context.state.endTime > Date() {
                     ZStack {
-                        ProgressView(timerInterval: Date()...context.state.endTime, countsDown: true) { EmptyView() }
+                        ProgressView(timerInterval: context.attributes.startTime...context.state.endTime, countsDown: true) { EmptyView() }
                             .progressViewStyle(.circular)
                             .tint(accentColor(from: context))
-                            .scaleEffect(0.9)
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
                     }
-                    .frame(width: 26, height: 26)
                 } else {
                     Image(systemName: "timer")
                         .foregroundColor(accentColor(from: context))

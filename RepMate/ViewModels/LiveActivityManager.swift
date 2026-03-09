@@ -1,14 +1,22 @@
 import Foundation
 import ActivityKit
 import SwiftUI
+import UserNotifications
 
 /// Manages the lifecycle of the Rest Timer Live Activity, handling start, update, and termination events.
-final class LiveActivityManager {
+@MainActor
+final class LiveActivityManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = LiveActivityManager()
     
     private var currentActivity: Activity<RestTimerAttributes>?
     
-    private init() {}
+    private override init() {
+        super.init()
+        UNUserNotificationCenter.current().delegate = self
+    }
+    
+    /// True if there is a Live Activity currently tracking the timer.
+    var hasActiveTimer: Bool { currentActivity != nil }
     
     /// Requests a new Live Activity to track the user's rest period, injecting the upcoming exercise context for the widget UI.
     func startTimer(
@@ -27,8 +35,9 @@ final class LiveActivityManager {
         // Extract RGB components from the accent color
         let (r, g, b) = extractRGB(from: accentColor)
         
+        let now = Date()
         let attributes = RestTimerAttributes(
-            totalDuration: duration,
+            startTime: now,
             accentR: r,
             accentG: g,
             accentB: b,
@@ -38,7 +47,7 @@ final class LiveActivityManager {
             exerciseCategory: exerciseCategory
         )
         
-        let endTime = Date().addingTimeInterval(TimeInterval(duration))
+        let endTime = now.addingTimeInterval(TimeInterval(duration))
         let state = RestTimerAttributes.ContentState(
             endTime: endTime,
             isPaused: false
@@ -53,6 +62,10 @@ final class LiveActivityManager {
                 pushType: nil // No push updates needed, timer is local
             )
             // Activity started successfully
+            
+            // Schedule local notification for timer end
+            scheduleTimerNotification(duration: duration, exerciseName: exerciseName)
+            
         } catch {
             print("[LiveActivity] Failed to start: \(error.localizedDescription)")
         }
@@ -71,6 +84,13 @@ final class LiveActivityManager {
         
         Task {
             await activity.update(content)
+        }
+        
+        let newDuration = Int(newEndTime.timeIntervalSince(Date()))
+        if newDuration > 0 {
+            cancelTimerNotification()
+            scheduleTimerNotification(duration: newDuration, exerciseName: 
+            activity.attributes.exerciseName)
         }
     }
     
@@ -103,6 +123,9 @@ final class LiveActivityManager {
         }
         
         currentActivity = nil
+        
+        // Cancel any pending notifications when timer is ended manually
+        cancelTimerNotification()
     }
     
     // MARK: - Helpers
@@ -115,5 +138,60 @@ final class LiveActivityManager {
             return (Double(components[0]), Double(components[1]), Double(components[2]))
         }
         return (0, 0.83, 1.0) // Default: Clean Blue
+    }
+    
+    // MARK: - Local Notifications
+    
+    private func scheduleTimerNotification(duration: Int, exerciseName: String?) {
+        guard duration > 0 else { return }
+        let center = UNUserNotificationCenter.current()
+        
+        let schedule = {
+            // Configure notification content
+            let content = UNMutableNotificationContent()
+            content.title = "Rest Complete 💪"
+            
+            if let name = exerciseName, !name.isEmpty {
+                content.body = "Time to hit your next set — \(name)"
+            } else {
+                content.body = "Time to hit your next set"
+            }
+            
+            content.sound = .default
+            
+            // Trigger after given duration
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(duration), repeats: false)
+            let request = UNNotificationRequest(identifier: "RestTimerNotification", content: content, trigger: trigger)
+            
+            center.add(request) { error in
+                if let error = error {
+                    print("[LiveActivity] Error scheduling notification: \(error.localizedDescription)")
+                }
+            }
+        }
+        
+        center.getNotificationSettings { settings in
+            if settings.authorizationStatus == .authorized {
+                schedule()
+            } else if settings.authorizationStatus == .notDetermined {
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    if granted {
+                        schedule()
+                    }
+                }
+            }
+            // if .denied, do nothing
+        }
+    }
+    
+    private func cancelTimerNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["RestTimerNotification"])
+    }
+    
+    // MARK: - UNUserNotificationCenterDelegate
+    
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        // Suppress notification if app is in foreground
+        return []
     }
 }

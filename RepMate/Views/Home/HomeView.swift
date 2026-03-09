@@ -41,6 +41,7 @@ struct HomeView: View {
                             .fill(Theme.active.accent.opacity(0.15))
                             .frame(width: 300, height: 300)
                             .blur(radius: 100)
+                            .drawingGroup()   // Rasterise: prevents per-frame blur recalc on scroll
                             .offset(x: -100, y: -200)
                     }
                     

@@ -23,7 +23,8 @@ struct WorkoutDetailView: View {
     @State private var newCategoryName = ""
     @State private var showingAddExercise = false
     @State private var isEditingName = false
-    @State private var isReorderingMode = false // Toggle for drag-and-drop
+    @State private var showingReorderSheet = false
+    @State private var showDeleteConfirmation = false
     
     // Init with just ID, we load in onAppear
     
@@ -173,7 +174,6 @@ struct WorkoutDetailView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
-                .environment(\.editMode, isReorderingMode ? .constant(.active) : .constant(.inactive))
                     
                 // Footer
                 HStack {
@@ -221,6 +221,13 @@ struct WorkoutDetailView: View {
                             } label: {
                                 Label("Compare to: \(store.ghostDataSource.rawValue)", systemImage: "arrow.triangle.2.circlepath")
                             }
+                            // Reorder Exercises
+                            Button {
+                                showingReorderSheet = true
+                                HapticManager.shared.selection()
+                            } label: {
+                                Label("Reorder Exercises", systemImage: "arrow.up.arrow.down")
+                            }
                             
                             // Share Workout
                             if let template = store.workoutTemplates.first(where: { $0.id == templateId }),
@@ -229,6 +236,16 @@ struct WorkoutDetailView: View {
                                     Label("Share Workout", systemImage: "square.and.arrow.up")
                                 }
                             }
+                            
+                            Divider()
+                            
+                            // Delete Workout
+                            Button(role: .destructive) {
+                                showDeleteConfirmation = true
+                            } label: {
+                                Label("Delete Workout", systemImage: "trash")
+                            }
+                            .tint(.red)
                         } label: {
                             Image(systemName: "ellipsis.circle")
                                 .font(.system(size: 18))
@@ -254,6 +271,9 @@ struct WorkoutDetailView: View {
                     })
                 }
             }
+            .sheet(isPresented: $showingReorderSheet) {
+                ReorderExercisesView(templateIds: $exerciseIds)
+            }
             .alert("New Category", isPresented: $showingAddCategoryAlert) {
                 TextField("Category Name", text: $newCategoryName)
                 Button("Add", action: {
@@ -264,6 +284,17 @@ struct WorkoutDetailView: View {
                     }
                 })
                 Button("Cancel", role: .cancel) {}
+            }
+            .confirmationDialog("Delete Workout?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    saveData() // commit pending edits first
+                    store.deleteWorkoutTemplate(withId: templateId)
+                    HapticManager.shared.success()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This workout template will be permanently deleted.")
             }
             // Removed .toolbar(.hidden, for: .tabBar) to prevent pop-in glitch
             .overlay {

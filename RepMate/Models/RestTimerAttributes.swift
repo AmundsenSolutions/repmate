@@ -9,8 +9,8 @@ struct RestTimerAttributes: ActivityAttributes {
         var isPaused: Bool
     }
     
-    /// The total duration of the rest timer in seconds, used to calculate the progress ring.
-    var totalDuration: Int
+    /// When the timer was started, used to calculate correct progress ring fill.
+    var startTime: Date
     
     /// Theme accent color.
     var accentR: Double

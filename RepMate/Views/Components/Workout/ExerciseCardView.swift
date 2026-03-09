@@ -91,7 +91,7 @@ struct ExerciseCardView<Content: View>: View {
             // --- Column Headers ---
             HStack(spacing: 6) {
                 Text("SET")
-                    .frame(width: 24, alignment: .center)
+                    .frame(width: 42, alignment: .leading)
                 Text("KG")
                     .frame(maxWidth: .infinity)
                 Text("REPS")

@@ -16,119 +16,73 @@ struct WorkoutManager {
     
     // MARK: - Duration Estimation
     
-    func estimateTotalDuration(for template: WorkoutTemplate, userRestTime: Int, exerciseLibrary: [Exercise]) -> Int {
-        let exerciseCount = template.exerciseIds.count
-        guard exerciseCount > 0 else { return 0 }
-        
-        var totalSeconds = 0
-        
-        for (index, exerciseId) in template.exerciseIds.enumerated() {
-            let target = template.targets?[exerciseId]
-            let setCount = max(1, target?.sets ?? 3) // Default 3 sets if not specified
-            
-            let exercise = exerciseLibrary.first(where: { $0.id == exerciseId })
-            let setupTime = exercise?.setupTime ?? .medium
-            
-            // Transition time
-            if index > 0 {
-                totalSeconds += setupTime.transitionSeconds
-            }
-            
-            // Warmup set + specific warmup rest
-            totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
-            
-            // Work sets
-            for setIndex in 0..<setCount {
-                totalSeconds += setupTime.setDurationSeconds
-                
-                let isLastExercise = (index == exerciseCount - 1)
-                let isLastSet = (setIndex == setCount - 1)
-                if !(isLastExercise && isLastSet) {
-                    totalSeconds += userRestTime
-                }
-            }
+    /// Core per-exercise time contribution.
+    private func exerciseSeconds(
+        setupTime: SetupTime,
+        setCount: Int,
+        userRestTime: Int,
+        isFirst: Bool,
+        isLast: Bool
+    ) -> Int {
+        var seconds = 0
+        if !isFirst { seconds += setupTime.transitionSeconds }
+        seconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
+        for setIndex in 0..<setCount {
+            seconds += setupTime.setDurationSeconds
+            let isLastSet = (setIndex == setCount - 1)
+            if !(isLast && isLastSet) { seconds += userRestTime }
         }
-        
-        return totalSeconds / 60
+        return seconds
+    }
+    
+    func estimateTotalDuration(for template: WorkoutTemplate, userRestTime: Int, exerciseLibrary: [Exercise]) -> Int {
+        let ids = template.exerciseIds
+        guard !ids.isEmpty else { return 0 }
+        let exerciseMap = Dictionary(uniqueKeysWithValues: exerciseLibrary.map { ($0.id, $0) })
+        var total = 0
+        for (index, exId) in ids.enumerated() {
+            let sets = max(1, template.targets?[exId]?.sets ?? 3)
+            let setup = exerciseMap[exId]?.setupTime ?? .medium
+            total += exerciseSeconds(setupTime: setup, setCount: sets, userRestTime: userRestTime,
+                                     isFirst: index == 0, isLast: index == ids.count - 1)
+        }
+        return total / 60
     }
     
     func estimateTotalDuration(for activeWorkout: ActiveWorkout, userRestTime: Int, exerciseLibrary: [Exercise]) -> Int {
-        let exerciseIds = activeWorkout.exerciseIds
-        let exerciseCount = exerciseIds.count
-        guard exerciseCount > 0 else { return 0 }
-        
-        var totalSeconds = 0
-        
-        for (index, exerciseId) in exerciseIds.enumerated() {
-            let sets = activeWorkout.rowsByExercise[exerciseId] ?? []
-            let setCount = max(1, sets.count)
-            
-            let exercise = exerciseLibrary.first(where: { $0.id == exerciseId })
-            let setupTime = exercise?.setupTime ?? .medium
-            
-            if index > 0 {
-                totalSeconds += setupTime.transitionSeconds
-            }
-            
-            totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
-            
-            for setIndex in 0..<setCount {
-                totalSeconds += setupTime.setDurationSeconds
-                
-                let isLastExercise = (index == exerciseCount - 1)
-                let isLastSet = (setIndex == setCount - 1)
-                if !(isLastExercise && isLastSet) {
-                    totalSeconds += userRestTime
-                }
-            }
+        let ids = activeWorkout.exerciseIds
+        guard !ids.isEmpty else { return 0 }
+        let exerciseMap = Dictionary(uniqueKeysWithValues: exerciseLibrary.map { ($0.id, $0) })
+        var total = 0
+        for (index, exId) in ids.enumerated() {
+            let sets = max(1, activeWorkout.rowsByExercise[exId]?.count ?? 1)
+            let setup = exerciseMap[exId]?.setupTime ?? .medium
+            total += exerciseSeconds(setupTime: setup, setCount: sets, userRestTime: userRestTime,
+                                     isFirst: index == 0, isLast: index == ids.count - 1)
         }
-        
-        return totalSeconds / 60
+        return total / 60
     }
     
     func estimateRemainingDuration(for activeWorkout: ActiveWorkout, userRestTime: Int, exerciseLibrary: [Exercise], overtimeSeconds: Int = 0) -> Int {
         let exerciseIds = activeWorkout.exerciseIds
         guard !exerciseIds.isEmpty else { return 0 }
+        let exerciseMap = Dictionary(uniqueKeysWithValues: exerciseLibrary.map { ($0.id, $0) })
         
-        var remainingSetsByExercise: [(exerciseId: UUID, remaining: Int)] = []
-        for exerciseId in exerciseIds {
-            let rows = activeWorkout.rowsByExercise[exerciseId] ?? []
-            let remaining = rows.filter { !$0.isCompleted }.count
-            remainingSetsByExercise.append((exerciseId, remaining))
+        // Build list of remaining (exerciseId, count) — skip fully completed
+        let remaining: [(id: UUID, sets: Int)] = exerciseIds.compactMap { exId in
+            let rem = (activeWorkout.rowsByExercise[exId] ?? []).filter { !$0.isCompleted }.count
+            return rem > 0 ? (exId, rem) : nil
+        }
+        guard !remaining.isEmpty else { return 0 }
+        
+        var total = 0
+        for (offset, item) in remaining.enumerated() {
+            let setup = exerciseMap[item.id]?.setupTime ?? .medium
+            total += exerciseSeconds(setupTime: setup, setCount: item.sets, userRestTime: userRestTime,
+                                     isFirst: offset == 0, isLast: offset == remaining.count - 1)
         }
         
-        guard let firstIncompleteIndex = remainingSetsByExercise.firstIndex(where: { $0.remaining > 0 }) else {
-            return 0
-        }
-        
-        var totalSeconds = 0
-        let totalExercises = remainingSetsByExercise.count
-        
-        for (offsetIndex, item) in remainingSetsByExercise.enumerated() {
-            if item.remaining == 0 { continue }
-            
-            let exercise = exerciseLibrary.first(where: { $0.id == item.exerciseId })
-            let setupTime = exercise?.setupTime ?? .medium
-            
-            let isFirstRemaining = (offsetIndex == firstIncompleteIndex)
-            let isLastExercise = (offsetIndex == totalExercises - 1)
-            
-            if !isFirstRemaining {
-                totalSeconds += setupTime.transitionSeconds
-                totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
-            }
-            
-            for setIndex in 0..<item.remaining {
-                totalSeconds += setupTime.setDurationSeconds
-                
-                let isLastSetOfExercise = (setIndex == item.remaining - 1)
-                if !(isLastExercise && isLastSetOfExercise) {
-                    totalSeconds += userRestTime
-                }
-            }
-        }
-        
-        return max(1, (totalSeconds + overtimeSeconds) / 60)
+        return max(1, max(0, total - overtimeSeconds) / 60)
     }
     
     // MARK: - Session Generation
@@ -475,7 +429,7 @@ struct WorkoutManager {
         
         var lastTrained: [String: Date] = [:]
         
-        for session in sessions.sorted(by: { $0.date > $1.date }) {
+        for session in sessions {
             let day = calendar.startOfDay(for: session.date)
             for set in session.sets {
                 if let cats = categoryMap[set.exerciseId] {

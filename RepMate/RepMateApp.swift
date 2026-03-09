@@ -36,7 +36,9 @@ struct RepMateApp: App {
             }
             // MARK: - Deep Link Import Handler
             .onOpenURL { url in
-                if let shareable = ShareableTemplate.fromURL(url) {
+                if url.scheme == "repmate" && url.host == "stoptimer" {
+                    store.stopRestTimer()
+                } else if let shareable = ShareableTemplate.fromURL(url) {
                     pendingImport = shareable
                     showImportAlert = true
                 }

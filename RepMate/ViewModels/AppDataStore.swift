@@ -47,6 +47,8 @@ final class AppDataStore: ObservableObject {
     let workoutManager = WorkoutManager()
 
     private let fileName = "repmate_data.json"
+    /// Debounce task for silentUpdateActiveWorkout — prevents per-keystroke disk writes.
+    private var silentSaveTask: Task<Void, Never>?
 
     init() {
         // Migrate old vext_data.json to repmate_data.json to prevent data loss on update
@@ -77,9 +79,8 @@ final class AppDataStore: ObservableObject {
     }
     
     @objc private func dayChanged() {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.currentDate = Date()
-            // Force re-evaluation of computed properties like streaks
             self.objectWillChange.send()
         }
     }
@@ -252,12 +253,27 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
+    /// Deletes a workout template by ID.
+    func deleteWorkoutTemplate(withId id: UUID) {
+        guard let index = workoutTemplates.firstIndex(where: { $0.id == id }) else { return }
+        deleteWorkoutTemplate(at: IndexSet(integer: index))
+    }
+
     /// Updates an existing workout template.
     func updateWorkoutTemplate(_ template: WorkoutTemplate) {
         if let index = workoutTemplates.firstIndex(where: { $0.id == template.id }) {
             workoutTemplates[index] = template
             save()
         }
+    }
+
+    /// Stops any active rest timers. Called via deep link or UI.
+    func stopRestTimer() {
+        if var aw = activeWorkout {
+            aw.timerTargetDate = nil
+            updateActiveWorkout(aw)
+        }
+        LiveActivityManager.shared.endTimer()
     }
 
     func moveWorkoutTemplate(from source: IndexSet, to destination: Int) {
@@ -316,20 +332,14 @@ final class AppDataStore: ObservableObject {
             self.ghostDataSource = decoded.ghostDataSource ?? .latest
             self.customBarcodes = decoded.customBarcodes ?? [:]
             
-            // Seed defaults if missing
-            seedDefaultWorkouts()
-            
-            // One-time migration: Auto-populate secondary muscles for existing exercises
-            migrateSecondaryMuscles()
-            
-            // One-time migration: Auto-populate setupTime for existing exercises
-            migrateSetupTimes()
-            
-            // One-time migration: Convert Arms to Biceps/Triceps
-            migrateArmsToBicepsTriceps()
-            
-            // One-time migration: Convert Legs to Quads/Hamstrings/Glutes/Calves
-            migrateLegsToGranularCategories()
+            // Run all seeds and migrations, consolidate into a single save
+            var needsSave = false
+            needsSave = seedDefaultWorkouts() || needsSave
+            needsSave = migrateSecondaryMuscles() || needsSave
+            needsSave = migrateSetupTimes() || needsSave
+            needsSave = migrateArmsToBicepsTriceps() || needsSave
+            needsSave = migrateLegsToGranularCategories() || needsSave
+            if needsSave { save() }
         } catch PersistenceError.fileNotFound {
             print("First launch: Seeding defaults.")
             // Defaults
@@ -605,10 +615,16 @@ final class AppDataStore: ObservableObject {
     }
     
     /// Updates active workout without triggering UI stutters.
+    /// Disk write is debounced: in-memory update is immediate, save fires 1.5s after the last call.
     func silentUpdateActiveWorkout(_ workout: ActiveWorkout) {
-        // Directly update backing storage, bypassing the setter that calls objectWillChange
-        _activeWorkoutStorage = workout
-        save()
+        _activeWorkoutStorage = workout   // instant, no objectWillChange
+        silentSaveTask?.cancel()
+        silentSaveTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s debounce
+            guard !Task.isCancelled else { return }
+            self.save()
+        }
     }
 
     /// Finalizes active workout and saves to history.
@@ -704,10 +720,8 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Seeding
     
-    private func seedDefaultWorkouts() {
-        // CHANGED: Always ensure default templates exist, even if user deleted them
-        // We check if each default exists by name, and recreate if missing
-        
+    @discardableResult
+    private func seedDefaultWorkouts() -> Bool {
         let defaults = DefaultData.workouts
         
         var hasChanges = false
@@ -782,42 +796,33 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        // Always save if we made changes to templates
-        if hasChanges {
-            save()
-        }
         
         // Seed categories if empty or missing defaults
         let defaultCats = defaultCategories()
-        var catChanged = false
         for cat in defaultCats {
             if !categories.contains(cat) {
                 categories.append(cat)
-                catChanged = true
+                hasChanges = true
             }
-        }
-        if catChanged {
-            save()
         }
         
         // Seed workout categories if empty or missing defaults
         let defaultWorkoutCats = defaultWorkoutCategories()
-        var workoutCatChanged = false
         for cat in defaultWorkoutCats {
             if !workoutCategories.contains(cat) {
                 workoutCategories.append(cat)
-                workoutCatChanged = true
+                hasChanges = true
             }
         }
-        if workoutCatChanged {
-            save()
-        }
+        
+        return hasChanges
     }
     
     // MARK: - Migrations
     
     /// Auto-fills secondary muscles for older exercises.
-    private func migrateSecondaryMuscles() {
+    @discardableResult
+    private func migrateSecondaryMuscles() -> Bool {
         var hasChanges = false
         
         for index in exerciseLibrary.indices {
@@ -834,18 +839,17 @@ final class AppDataStore: ObservableObject {
         
         if hasChanges {
             print("Migration: Auto-populated secondary muscles for \(exerciseLibrary.filter { $0.secondaryMuscle != nil }.count) exercises")
-            save()
         }
+        return hasChanges
     }
     
     /// Auto-fills setup times for older exercises.
-    private func migrateSetupTimes() {
+    @discardableResult
+    private func migrateSetupTimes() -> Bool {
         var hasChanges = false
         var counts: [SetupTime: Int] = [.fast: 0, .medium: 0, .slow: 0]
         
         for index in exerciseLibrary.indices {
-            // Only migrate exercises that still have the default .medium
-            // We detect "not yet migrated" by checking if the suggested differs
             let suggested = SetupTimeMapping.suggestSetupTime(exerciseName: exerciseLibrary[index].name)
             if exerciseLibrary[index].setupTime != suggested {
                 exerciseLibrary[index].setupTime = suggested
@@ -856,12 +860,13 @@ final class AppDataStore: ObservableObject {
         
         if hasChanges {
             print("Migration: Updated setupTimes - Fast: \(counts[.fast]!), Medium: \(counts[.medium]!), Slow: \(counts[.slow]!)")
-            save()
         }
+        return hasChanges
     }
     
     /// Converts 'Arms' category to Biceps/Triceps.
-    private func migrateArmsToBicepsTriceps() {
+    @discardableResult
+    private func migrateArmsToBicepsTriceps() -> Bool {
         var hasChanges = false
         var counts: [String: Int] = ["Biceps": 0, "Triceps": 0]
         
@@ -875,7 +880,6 @@ final class AppDataStore: ObservableObject {
                 } else if name.contains("extension") || name.contains("tricep") || name.contains("skull") || name.contains("dip") || name.contains("pushdown") || name.contains("press") {
                     newCategory = "Triceps"
                 } else {
-                    // Use Triceps as fallback
                     newCategory = "Triceps"
                 }
                 
@@ -887,12 +891,13 @@ final class AppDataStore: ObservableObject {
         
         if hasChanges {
             print("Migration: Converted Arms -> Biceps: \(counts["Biceps"]!), Triceps: \(counts["Triceps"]!)")
-            save()
         }
+        return hasChanges
     }
     
     /// Converts 'Legs' category to specific leg muscles.
-    private func migrateLegsToGranularCategories() {
+    @discardableResult
+    private func migrateLegsToGranularCategories() -> Bool {
         var hasChanges = false
         var counts: [String: Int] = ["Quads": 0, "Hamstrings": 0, "Glutes": 0, "Calves": 0]
         
@@ -908,7 +913,6 @@ final class AppDataStore: ObservableObject {
                 } else if name.contains("glute") || name.contains("hip thrust") || name.contains("bridge") {
                     newCategory = "Glutes"
                 } else {
-                    // Default to Quads for Squats, Leg Press, Extensions, lunges, etc.
                     newCategory = "Quads"
                 }
                 
@@ -920,7 +924,7 @@ final class AppDataStore: ObservableObject {
         
         if hasChanges {
             print("Migration: Converted Legs -> Quads: \(counts["Quads"]!), Hamstrings: \(counts["Hamstrings"]!), Glutes: \(counts["Glutes"]!), Calves: \(counts["Calves"]!)")
-            save()
         }
+        return hasChanges
     }
 }

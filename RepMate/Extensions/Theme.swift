@@ -14,6 +14,8 @@ struct Theme {
         static let prGold = Color.yellow // Keep static Gold for PRs
         static let error = Color.red
         static let cyberRed = Color.red
+        static let success = Color(red: 0.18, green: 0.8, blue: 0.44)  // Emerald green
+        static let danger  = Color(red: 1.0, green: 0.27, blue: 0.27)  // Vivid red
         
         static let textPrimary = Color.white
         static let textSecondary = Color.secondary

@@ -4,6 +4,9 @@ struct ReorderExercisesView: View {
     @EnvironmentObject var store: AppDataStore
     @Environment(\.dismiss) private var dismiss
     
+    // Optional binding for templates. If nil, uses store.activeWorkout
+    var templateIds: Binding<[UUID]>? = nil
+    
     // Local state for the editable list
     @State private var exerciseIds: [UUID] = []
     
@@ -15,10 +18,24 @@ struct ReorderExercisesView: View {
                 List {
                     ForEach(exerciseIds, id: \.self) { id in
                         if let exercise = store.exerciseLibrary.first(where: { $0.id == id }) {
-                            Text(exercise.name)
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .listRowBackground(Theme.Colors.cardBackground)
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(exercise.name)
+                                        .font(.headline)
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                }
+                                Spacer()
+                                // The system provides the drag handle automatically, but we ensure content doesn't push it out
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 4)
+                            .listRowBackground(
+                                Theme.Colors.cardBackground
+                                    .cornerRadius(Theme.Spacing.cornerRadius)
+                                    .padding(.vertical, 4)
+                            )
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         }
                     }
                     .onMove(perform: moveExercises)
@@ -46,7 +63,9 @@ struct ReorderExercisesView: View {
             }
         }
         .onAppear {
-            if let aw = store.activeWorkout {
+            if let templateIds = templateIds {
+                self.exerciseIds = templateIds.wrappedValue
+            } else if let aw = store.activeWorkout {
                 self.exerciseIds = aw.exerciseIds
             }
         }
@@ -61,6 +80,12 @@ struct ReorderExercisesView: View {
     }
     
     private func saveChanges() {
+        if let templateIds = templateIds {
+            templateIds.wrappedValue = exerciseIds
+            HapticManager.shared.success()
+            return
+        }
+        
         guard var aw = store.activeWorkout else { return }
         aw.exerciseIds = exerciseIds
         
