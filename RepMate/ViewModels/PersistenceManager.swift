@@ -29,7 +29,6 @@ class PersistenceManager {
         do {
             return try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         } catch {
-            print("CRITICAL: Falling back to temporary directory due to: \(error)")
             return fileManager.temporaryDirectory
         }
     }
@@ -74,20 +73,16 @@ class PersistenceManager {
             do {
                 return try loadFrom(url)
             } catch {
-                print("⚠️ Primary data file corrupted: \(error). Attempting backup restore...")
                 
                 // 2. Try backup file
                 if fileManager.fileExists(atPath: backupUrl.path) {
                     do {
                         let backupData = try loadFrom(backupUrl)
-                        print("✅ Backup restored successfully.")
                         return backupData
                     } catch {
-                        print("❌ Backup also corrupted or unreadable: \(error)")
                         throw PersistenceError.decodingFailed(error)
                     }
                 } else {
-                    print("❌ No backup file found.")
                     throw PersistenceError.decodingFailed(error)
                 }
             }

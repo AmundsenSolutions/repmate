@@ -104,6 +104,7 @@ struct AddProteinEntryView: View {
                                 .padding(.vertical, 14)
                                 .background(isValidManualEntry ? Theme.Colors.accent : Theme.Colors.cardBackground)
                                 .cornerRadius(Theme.Spacing.cornerRadius)
+                                .contentShape(Rectangle())
                         }
                         .disabled(!isValidManualEntry)
                         .padding(.horizontal)
@@ -333,6 +334,7 @@ struct AddProteinEntryView: View {
                             .background(Theme.Colors.accent)
                             .cornerRadius(16)
                             .shadow(color: Theme.Colors.accent.opacity(0.4), radius: 8, x: 0, y: 4)
+                            .contentShape(Rectangle())
                     }
                     .padding(.horizontal)
                     .disabled(newProductName.trimmingCharacters(in: .whitespaces).isEmpty || newProductProtein.isEmpty)

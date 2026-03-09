@@ -247,7 +247,6 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
             }
             device.unlockForConfiguration()
         } catch {
-            print("Failed to lock camera for autofocus optimization")
         }
         
         guard let input = try? AVCaptureDeviceInput(device: device) else { return }

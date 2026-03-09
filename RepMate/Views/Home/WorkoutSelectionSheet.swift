@@ -3,8 +3,11 @@ import SwiftUI
 struct WorkoutSelectionSheet: View {
     @EnvironmentObject var store: AppDataStore
     @EnvironmentObject var themeManager: ThemeManager // Theme reactivity
+    @EnvironmentObject var storeManager: StoreManager
     @Binding var isPresented: Bool
     var onCreateNewTemplate: ((UUID) -> Void)? = nil // Callback to navigate to template editor
+    
+    @State private var showPaywall = false
     
     // Grid layout for template capsules
     private let columns = [
@@ -98,6 +101,9 @@ struct WorkoutSelectionSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .shadow(color: .black.opacity(0.5), radius: 20, x: 0, y: -5)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
     }
     
     // MARK: - Actions
@@ -108,6 +114,12 @@ struct WorkoutSelectionSheet: View {
     }
     
     private func startNewWorkout() {
+        if !storeManager.isPro && store.workoutTemplates.count >= 3 {
+            showPaywall = true
+            HapticManager.shared.lightImpact()
+            return
+        }
+        
         // Create a new template and navigate to the template editor
         let newTemplate = WorkoutTemplate(id: UUID(), name: "New Workout", exerciseIds: [])
         store.addWorkoutTemplate(newTemplate)

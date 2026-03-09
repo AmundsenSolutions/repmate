@@ -3,7 +3,7 @@ import Foundation
 struct DefaultData {
     static let categories = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core"]
     
-    static let workoutCategories = ["Full Body", "Upper", "Lower", "Push", "Pull", "Cardio", "Other"]
+    static let workoutCategories = ["Upper", "Lower", "Push", "Pull", "Cardio", "Other"]
     
     static let exercises: [Exercise] = [
         // --- Chest ---
@@ -58,24 +58,6 @@ struct DefaultData {
     ]
     
     static let workouts: [(name: String, category: String, note: String?, exercises: [(name: String, cat: String, sets: Int, reps: String, rir: String)])] = [
-        (
-            name: "FULLBODY",
-            category: "Full Body",
-            note: nil,
-            exercises: [
-                ("Incline chest press", "Chest", 1, "6-10", "0-1"),
-                ("Pec deck", "Chest", 1, "8-12", "0-1"),
-                ("Wide grip pulldown", "Back", 1, "6-10", "0-1"),
-                ("Chest-supported row", "Back", 1, "6-10", "0-1"),
-                ("Shoulder press", "Shoulders", 1, "6-10", "0-1"),
-                ("Preacher dumbbell curl", "Biceps", 1, "8-12", "0-1"),
-                ("Cable extension", "Triceps", 1, "8-12", "0-1"),
-                ("Stiff-leg deadlift", "Hamstrings", 1, "8-12", "0-1"),
-                ("Leg extension", "Quads", 1, "10-15", "0-1"),
-                ("Seated leg curl", "Hamstrings", 1, "6-10", "0-1"),
-                ("Standing calf raise", "Calves", 1, "6-10", "0-1")
-            ]
-        ),
         (
             name: "UPPER",
             category: "Upper",

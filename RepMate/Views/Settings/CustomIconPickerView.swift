@@ -110,8 +110,7 @@ struct CustomIconPickerView: View {
         HapticManager.shared.success()
         
         UIApplication.shared.setAlternateIconName(iconName) { error in
-            if let error = error {
-                print("Note: Icon setting returned an error (common in Simulator): \(error.localizedDescription)")
+            if error != nil {
             }
         }
     }

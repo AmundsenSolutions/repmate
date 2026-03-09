@@ -121,6 +121,8 @@ struct OnboardingNextButton: View {
                     Image(systemName: icon)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .glowingPanelButton()
         .padding(.horizontal, 24)

@@ -67,7 +67,7 @@ final class LiveActivityManager: NSObject, UNUserNotificationCenterDelegate {
             scheduleTimerNotification(duration: duration, exerciseName: exerciseName)
             
         } catch {
-            print("[LiveActivity] Failed to start: \(error.localizedDescription)")
+// Error log removed for production
         }
     }
     
@@ -178,7 +178,7 @@ final class LiveActivityManager: NSObject, UNUserNotificationCenterDelegate {
                 
                 try await center.add(request)
             } catch {
-                print("[LiveActivity] Error scheduling notification: \(error.localizedDescription)")
+// Error log removed for production
             }
         }
     }

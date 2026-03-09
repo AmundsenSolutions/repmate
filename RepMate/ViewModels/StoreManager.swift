@@ -32,7 +32,6 @@ class StoreManager: ObservableObject {
             let storeProducts = try await Product.products(for: [proProductID])
             self.products = storeProducts
         } catch {
-            print("Failed product request from App Store server: \(error)")
             self.errorMessage = "Failed to load store products."
         }
     }
@@ -69,7 +68,6 @@ class StoreManager: ObservableObject {
                     }
                 }
             } catch {
-                print("Failed to sync purchases: \(error)")
                 DispatchQueue.main.async {
                     self.restoreMessage = "Failed to restore: \(error.localizedDescription)"
                 }
@@ -91,7 +89,6 @@ class StoreManager: ObservableObject {
                     purchasedIDs.insert(transaction.productID)
                 }
             } catch {
-                print("Transaction failed verification: \(error)")
             }
         }
         
@@ -115,7 +112,6 @@ class StoreManager: ObservableObject {
                     await transaction.finish()
                     await self.updateCustomerProductStatus()
                 } catch {
-                    print("Transaction failed verification: \(error)")
                 }
             }
         }

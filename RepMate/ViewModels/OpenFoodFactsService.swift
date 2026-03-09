@@ -70,7 +70,6 @@ struct OpenFoodFactsService {
                 proteinPerServing: proteinPerServing
             )
         } catch {
-            print("[OpenFoodFacts] Error fetching product: \(error)")
             return nil
         }
     }

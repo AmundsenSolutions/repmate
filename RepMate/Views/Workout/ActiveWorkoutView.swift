@@ -325,6 +325,7 @@ struct ActiveWorkoutView: View {
                     .fill(store.hasValidActiveSets ? themeManager.palette.accent : Color.gray.opacity(0.3))
             )
             .foregroundColor(store.hasValidActiveSets ? .black : .gray)
+            .contentShape(Rectangle())
         }
         .disabled(!store.hasValidActiveSets)
         .confirmationDialog(

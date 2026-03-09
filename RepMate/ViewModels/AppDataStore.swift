@@ -229,7 +229,6 @@ final class AppDataStore: ObservableObject {
             
             // Safety Check 1: Is this template currently active?
             if let aw = activeWorkout, aw.templateId == template.id {
-                print("Blocked deletion of active template: \(template.name)")
                 blockedCount += 1
                 blockedReason = "Cannot delete a workout template while it is active."
                 continue
@@ -237,7 +236,6 @@ final class AppDataStore: ObservableObject {
             
             // Safety Check 2: Is this template used in any saved workout session?
             if sessionUsedTemplateIds.contains(template.id) {
-                print("Blocked deletion of template used in history: \(template.name)")
                 blockedCount += 1
                 blockedReason = "Cannot delete a workout template that has saved sessions in history."
                 continue
@@ -341,7 +339,6 @@ final class AppDataStore: ObservableObject {
             needsSave = migrateLegsToGranularCategories() || needsSave
             if needsSave { save() }
         } catch PersistenceError.fileNotFound {
-            print("First launch: Seeding defaults.")
             // Defaults
             activeWorkout = nil
             proteinEntries = []
@@ -356,7 +353,6 @@ final class AppDataStore: ObservableObject {
             
             seedDefaultWorkouts()
         } catch {
-            print("CRITICAL: Error loading data: \(error)")
             lastErrorMessage = "Failed to load data. Resetting to defaults."
             
             // Reset to defaults on corruption
@@ -454,8 +450,7 @@ final class AppDataStore: ObservableObject {
         )
 
         PersistenceManager.shared.save(payload, to: fileName) { [weak self] result in
-            if case .failure(let error) = result {
-                print("Error saving data: \(error)")
+            if case .failure = result {
                 DispatchQueue.main.async {
                     self?.lastErrorMessage = "Failed to save data."
                 }
@@ -572,7 +567,6 @@ final class AppDataStore: ObservableObject {
             // Check if any exercise uses this category
             let usedCount = exerciseLibrary.filter { $0.category == categoryName }.count
             if usedCount > 0 {
-                print("Blocked deletion of category used by exercises: \(categoryName)")
                 blockedCount += 1
                 blockedReason = "Cannot delete category '\(categoryName)' because it contains \(usedCount) exercises."
                 continue
@@ -760,7 +754,6 @@ final class AppDataStore: ObservableObject {
                 // Self-Healing: If existing template has 0 exercises, it's considered broken/empty.
                 // We overwrite it with the default definition.
                 if workoutTemplates[index].exerciseIds.isEmpty {
-                    print("Seeding: Repairing empty template '\(def.name)'")
                     
                     var exerciseIds: [UUID] = []
                     var targets: [UUID: TemplateTarget] = [:]
@@ -865,9 +858,6 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        if hasChanges {
-            print("Migration: Auto-populated secondary muscles for \(exerciseLibrary.filter { $0.secondaryMuscle != nil }.count) exercises")
-        }
         return hasChanges
     }
     
@@ -886,9 +876,6 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        if hasChanges {
-            print("Migration: Updated setupTimes - Fast: \(counts[.fast]!), Medium: \(counts[.medium]!), Slow: \(counts[.slow]!)")
-        }
         return hasChanges
     }
     
@@ -917,9 +904,6 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        if hasChanges {
-            print("Migration: Converted Arms -> Biceps: \(counts["Biceps"]!), Triceps: \(counts["Triceps"]!)")
-        }
         return hasChanges
     }
     
@@ -950,9 +934,6 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        if hasChanges {
-            print("Migration: Converted Legs -> Quads: \(counts["Quads"]!), Hamstrings: \(counts["Hamstrings"]!), Glutes: \(counts["Glutes"]!), Calves: \(counts["Calves"]!)")
-        }
         return hasChanges
     }
 }

@@ -45,7 +45,6 @@ class BackupManager {
             do {
                 try fileManager.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
             } catch {
-                print("BackupManager: Failed to create backup directory: \(error)")
                 return
             }
         }
@@ -75,9 +74,7 @@ class BackupManager {
         do {
             try fileManager.copyItem(at: sourceURL, to: backupURL)
             lastBackupTime = Date() // Update throttle timer on success
-            print("BackupManager: Created backup at \(backupURL.path)")
         } catch {
-            print("BackupManager: Failed to create backup: \(error)")
         }
         
         // 5. Prune Old Backups
@@ -100,11 +97,9 @@ class BackupManager {
                 let filesToDelete = sortedFiles.suffix(from: maxBackups)
                 for fileURL in filesToDelete {
                     try fileManager.removeItem(at: fileURL)
-                    print("BackupManager: Pruned old backup \(fileURL.lastPathComponent)")
                 }
             }
         } catch {
-            print("BackupManager: Error pruning backups: \(error)")
         }
     }
 }

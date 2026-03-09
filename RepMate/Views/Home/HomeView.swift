@@ -91,6 +91,7 @@ struct HomeView: View {
                                     Image(systemName: "bolt.fill")
                                     Text("Log Protein")
                                 }
+                                .contentShape(Rectangle())
                             }
                             .glowingPanelButton()
                             .padding(.horizontal, 16)
@@ -211,6 +212,8 @@ struct HomeView: View {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 14, weight: .bold))
                 }
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
             .glassCapsuleButton()
         }
@@ -264,8 +267,10 @@ struct HomeView: View {
                         .foregroundColor(.white)
                 }
             }
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.vertical, 20)
+            .contentShape(Rectangle())
             .glassCard(style: .secondary)
         }
         .buttonStyle(.plain)
