@@ -11,7 +11,7 @@ struct ActiveWorkoutView: View {
     @State private var showExitDialog = false
     @State private var showFinishConfirmation = false
     @State private var showingRestPicker = false
-    @State private var showSuccessOverlay = false
+    @State private var showWorkoutSavedOverlay = false
     
     @AppStorage("workoutsCompletedCount") private var workoutsCompletedCount = 0
     
@@ -66,7 +66,7 @@ struct ActiveWorkoutView: View {
                             .animation(.easeInOut(duration: 0.2), value: keyboardVisible)
                     }
                     
-                    if !keyboardVisible && !showSuccessOverlay {
+                    if !keyboardVisible && !showWorkoutSavedOverlay {
                         finishButton
                             .padding(.bottom, 16)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -76,23 +76,22 @@ struct ActiveWorkoutView: View {
                 .animation(.easeInOut(duration: 0.2), value: keyboardVisible)
             }
             
-            // Full-screen Success Overlay
-            if showSuccessOverlay {
-                Color.black.opacity(0.8).ignoresSafeArea()
-                    .zIndex(100)
-                
-                VStack(spacing: 20) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(themeManager.palette.accent)
-                    
-                    Text("Workout Saved!")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
+            if showWorkoutSavedOverlay {
+                ZStack {
+                    Color.black.opacity(0.85)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 72))
+                            .foregroundColor(Theme.Colors.accent)
+                        // Fixed typo: removed nested Text
+                        Text("Workout Complete! 💪")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+                    }
                 }
-                .zIndex(101)
-                .transition(.scale.combined(with: .opacity))
+                .transition(.opacity)
+                .zIndex(100)
             }
             
         }
@@ -355,8 +354,8 @@ struct ActiveWorkoutView: View {
     }
     
     private func finishWorkout() {
+        HapticManager.shared.success()
         if store.finishActiveWorkout() {
-            HapticManager.shared.success()
             workoutsCompletedCount += 1
             
             if [3, 10, 25].contains(workoutsCompletedCount) {
@@ -364,14 +363,15 @@ struct ActiveWorkoutView: View {
                     SKStoreReviewController.requestReview(in: scene)
                 }
             }
-            
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                showSuccessOverlay = true
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                dismiss()
-            }
+        }
+        
+        withAnimation(.easeIn(duration: 0.2)) {
+            showWorkoutSavedOverlay = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            guard showWorkoutSavedOverlay else { return }
+            dismiss()
         }
     }
     
