@@ -47,9 +47,9 @@ struct ActiveWorkoutView: View {
                     hideKeyboard()
                 }
             
-            if active == nil {
+            if active == nil && !showWorkoutSavedOverlay {
                 emptyStateView
-            } else {
+            } else if !showWorkoutSavedOverlay {
                 activeWorkoutContent
                 
                 // Bottom Floating Area: Timer + Finish Button
@@ -84,9 +84,8 @@ struct ActiveWorkoutView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 72))
                             .foregroundColor(Theme.Colors.accent)
-                        // Fixed typo: removed nested Text
                         Text("Workout Complete! 💪")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 24, weight: .medium))
                             .foregroundColor(.white)
                     }
                 }
@@ -231,7 +230,7 @@ struct ActiveWorkoutView: View {
             cancelLocalTimer()
         }
         .onChange(of: active) { _, newValue in
-            if newValue == nil { dismiss() }
+            if newValue == nil && !showWorkoutSavedOverlay { dismiss() }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
