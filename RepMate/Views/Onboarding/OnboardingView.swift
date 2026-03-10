@@ -125,6 +125,7 @@ struct OnboardingNextButton: View {
             .contentShape(Rectangle())
         }
         .glowingPanelButton()
+        .frame(maxWidth: 600)
         .padding(.horizontal, 24)
         .padding(.bottom, 24) // Leaves room for custom pagination dots
     }
@@ -162,7 +163,6 @@ struct OnboardingNextButton: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 24)
-                .padding(.horizontal, 24)
                 
                 Spacer()
                 
@@ -284,7 +284,7 @@ struct OnboardingNextButton: View {
                 }
                 .padding(.vertical, 32)
                 .padding(.horizontal, 24)
-                .padding(.horizontal, 24)
+                .frame(maxWidth: 600)
                 
                 Spacer()
                 
@@ -359,7 +359,9 @@ struct OnboardingNextButton: View {
                                         RoundedRectangle(cornerRadius: 12)
                                             .strokeBorder(isActive ? Theme.active.accent.opacity(0.8) : Color.clear, lineWidth: 1.5)
                                     )
+                                    .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                             .id(preset) // Enable scroll to
                         }
                     }
@@ -407,7 +409,7 @@ struct OnboardingNextButton: View {
                     arrowsCard
                 }
                 .padding(24)
-                .padding(.horizontal, 24)
+                .frame(maxWidth: 600)
                 
                 Spacer(minLength: 20)
                 
@@ -428,7 +430,7 @@ struct OnboardingNextButton: View {
                         Text("Ghost Data")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
-                        Text("Grey numbers show your last session.")
+                        Text("Grey numbers show your last session.").fixedSize(horizontal: false, vertical: true)
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
@@ -436,8 +438,7 @@ struct OnboardingNextButton: View {
                 
                 GhostDataDemoRow()
             }
-            .padding(16)
-            .padding(.horizontal, 24)
+            .padding(.vertical, 4)
         }
         
         private var swipeCard: some View {
@@ -452,7 +453,7 @@ struct OnboardingNextButton: View {
                         Text("Swipe to Delete")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
-                        Text("Swipe left on any row to remove it.")
+                        Text("Swipe left on any row to remove it.").fixedSize(horizontal: false, vertical: true)
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
@@ -460,8 +461,7 @@ struct OnboardingNextButton: View {
                 
                 SwipeDeleteDemoRow()
             }
-            .padding(16)
-            .padding(.horizontal, 24)
+            .padding(.vertical, 4)
         }
         
         private var arrowsCard: some View {
@@ -476,7 +476,7 @@ struct OnboardingNextButton: View {
                         Text("Target Rep Range")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
-                        Text("Arrows guide weight adjustments.")
+                        Text("Arrows guide weight adjustments.").fixedSize(horizontal: false, vertical: true)
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
@@ -484,8 +484,7 @@ struct OnboardingNextButton: View {
                 
                 ArrowsDemoRow()
             }
-            .padding(16)
-            .padding(.horizontal, 24)
+            .padding(.vertical, 4)
         }
     }
     
@@ -664,7 +663,6 @@ struct OnboardingNextButton: View {
                         .foregroundColor(.white.opacity(0.8))
                 }
                 .padding(.vertical, 40)
-                .padding(.horizontal, 24)
                 .padding(.horizontal, 24)
                 
                 Spacer()

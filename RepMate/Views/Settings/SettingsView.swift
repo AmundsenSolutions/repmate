@@ -290,6 +290,9 @@ struct SettingsView: View {
                             } message: {
                                 Text("How would you like to send your feedback?")
                             }
+                            
+                            divider
+                            
                             Button(action: {
                                 requestReview()
                                 HapticManager.shared.lightImpact()
@@ -299,12 +302,14 @@ struct SettingsView: View {
                             
                             divider
                             
-                            Link(destination: URL(string: "https://docs.google.com/document/d/e/2PACX-1vQOo5BJxVsGS-ZOoDh6kFxdNrhkl_my0ZC0e4ICmZSAPdyXLhYN6S1rZG3r2HUIELKQRl0BBJa1h_J5/pub")!) {
-                                navRow(title: "Privacy Policy", icon: "hand.raised.fill", isExternal: true)
+                            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/")!) {
+                                navRow(title: "Support & Feedback", icon: "questionmark.circle.fill", isExternal: true)
                             }
+                            
                             divider
-                            Link(destination: URL(string: "https://docs.google.com/document/d/e/2PACX-1vQOo5BJxVsGS-ZOoDh6kFxdNrhkl_my0ZC0e4ICmZSAPdyXLhYN6S1rZG3r2HUIELKQRl0BBJa1h_J5/pub")!) {
-                                navRow(title: "Terms of Service", icon: "doc.text.fill", isExternal: true)
+                            
+                            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/privacy.html")!) {
+                                navRow(title: "Privacy & Terms", icon: "doc.text.fill", isExternal: true)
                             }
                             
                             divider
@@ -469,6 +474,7 @@ struct SettingsView: View {
             } icon: {
                 Image(systemName: icon)
                     .foregroundColor(themeManager.palette.accent)
+                    .frame(width: 24, alignment: .center)
             }
             Spacer()
             content()
@@ -486,6 +492,7 @@ struct SettingsView: View {
             } icon: {
                 Image(systemName: icon)
                     .foregroundColor(themeManager.palette.accent)
+                    .frame(width: 24, alignment: .center)
             }
             Spacer()
             Image(systemName: isExternal ? "arrow.up.right" : "chevron.right")

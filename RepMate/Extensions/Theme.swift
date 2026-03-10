@@ -81,6 +81,7 @@ extension View {
             .background(Theme.active.verticalGradient)
             .cornerRadius(Theme.Spacing.cornerRadius)
             .shadow(color: Theme.active.accent.opacity(0.3), radius: 8, x: 0, y: 4)
+            .contentShape(Rectangle())
     }
     
     /// Secondary action button.
@@ -92,6 +93,7 @@ extension View {
             .frame(height: 50)
             .background(Theme.Colors.cardBackground)
             .cornerRadius(Theme.Spacing.cornerRadius)
+            .contentShape(Rectangle())
     }
     
     /// Section header.
@@ -112,6 +114,7 @@ extension View {
             .background(backgroundColor)
             .foregroundColor(foregroundColor)
             .cornerRadius(20) // Full pill
+            .contentShape(Rectangle()) // Entire pill area is tappable
     }
     
     // MARK: - Heavy Glass Modifiers
@@ -233,6 +236,7 @@ extension View {
                     )
             )
             .shadow(color: Theme.active.accent.opacity(0.4), radius: 12, x: 0, y: 0) // External glow
+            .contentShape(Rectangle()) // Full button surface is tappable
     }
     
     /// Tab bar glass effect.

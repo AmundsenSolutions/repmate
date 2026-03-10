@@ -4,6 +4,7 @@ import Charts
 struct ProteinSummaryCard: View {
     @EnvironmentObject var store: AppDataStore
     @EnvironmentObject var themeManager: ThemeManager // Theme reactivity
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     // Animation state for the "Today" bar pulse
     @State private var todayPulse = false
@@ -59,13 +60,15 @@ struct ProteinSummaryCard: View {
             
             // 3. 7-Day Bar Chart
             weeklyBarChart
-                .frame(height: 100)
+                .frame(height: horizontalSizeClass == .regular ? 140 : 100)
             
             // 4. Day labels
             dayLabels
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
+        .frame(maxWidth: 600)
+        .frame(maxWidth: .infinity)
         .glassCard(style: .primary)
         .onAppear {
             cachedWeeklyData = getWeeklyData()
@@ -105,7 +108,7 @@ struct ProteinSummaryCard: View {
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
             // Main number with heavy glow
             Text("\(total)")
-                .font(.system(size: 64, weight: .regular, design: .rounded)) // Slightly lighter weight
+                .font(.system(size: min(64, UIScreen.main.bounds.width * 0.15), weight: .regular, design: .rounded))
                 .foregroundColor(.white)
                 .shadow(color: Theme.active.accent.opacity(0.8), radius: 10, x: 0, y: 0) // Direct text glow
             
@@ -317,6 +320,7 @@ struct QuickAddButton: View {
                     .foregroundColor(.secondary)
             }
             .pillButton()
+            .contentShape(Rectangle())
         }
         .contextMenu {
             if isFavorite {

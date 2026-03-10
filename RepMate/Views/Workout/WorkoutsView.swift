@@ -107,6 +107,7 @@ struct WorkoutsView: View {
                                 backgroundColor: (selectedFilter == filter || (selectedFilter == nil && filter == "All")) ? themeManager.palette.accent : Theme.Colors.cardBackground,
                                 foregroundColor: (selectedFilter == filter || (selectedFilter == nil && filter == "All")) ? .black : .white
                             )
+                            .contentShape(Rectangle())
                     }
                     .contextMenu {
                         if filter != "All" {
@@ -133,6 +134,7 @@ struct WorkoutsView: View {
                             backgroundColor: Theme.Colors.cardBackground,
                             foregroundColor: themeManager.palette.accent
                         )
+                        .contentShape(Rectangle())
                 }
             }
             .padding(.horizontal)

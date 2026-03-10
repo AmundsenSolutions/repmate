@@ -112,6 +112,8 @@ struct AddProteinEntryView: View {
                     }
                     .padding(.top, 20)
                     .padding(.bottom, 24)
+                    .frame(maxWidth: 600)
+                    .frame(maxWidth: .infinity)
                     
                     // Filter Chips
                     HStack(spacing: 12) {

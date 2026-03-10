@@ -10,9 +10,11 @@ struct BarcodeScannerView: View {
     
     @State private var scannedCode: String?
     @State private var hasScanned = false
-    @State private var scanLineOffset: CGFloat = -100
+    @State private var isAnimatingScanLine = false
     @State private var cameraPermissionGranted = false
     @State private var showPermissionDenied = false
+    @State private var isFlashOn = false
+    @State private var currentScanRect: CGRect = .zero
     
     var body: some View {
         ZStack {
@@ -41,7 +43,7 @@ struct BarcodeScannerView: View {
             .zIndex(1)
             #else
             if cameraPermissionGranted {
-                CameraPreview(onBarcodeDetected: handleScan)
+                CameraPreview(scanRect: $currentScanRect, onBarcodeDetected: handleScan)
                     .ignoresSafeArea()
             } else {
                 Color.black.ignoresSafeArea()
@@ -50,8 +52,8 @@ struct BarcodeScannerView: View {
             
             // Dark overlay with cutout
             GeometryReader { geo in
-                let scanWidth = geo.size.width * 0.75
-                let scanHeight: CGFloat = 200
+                let scanWidth = min(geo.size.width * 0.75, 400)
+                let scanHeight = min(geo.size.height * 0.25, 220)
                 let scanRect = CGRect(
                     x: (geo.size.width - scanWidth) / 2,
                     y: (geo.size.height - scanHeight) / 2 - 40,
@@ -92,29 +94,48 @@ struct BarcodeScannerView: View {
                         )
                     )
                     .frame(width: scanRect.width - 20, height: 2)
-                    .position(x: scanRect.midX, y: scanRect.midY + scanLineOffset)
+                    .position(x: scanRect.midX, y: scanRect.midY + (isAnimatingScanLine ? (scanHeight / 2 - 10) : -(scanHeight / 2 - 10)))
                     .onAppear {
+                        isAnimatingScanLine = false
                         withAnimation(
                             .easeInOut(duration: 2.0)
                             .repeatForever(autoreverses: true)
                         ) {
-                            scanLineOffset = 100
+                            isAnimatingScanLine = true
                         }
+                        currentScanRect = scanRect
+                    }
+                    .onChange(of: scanRect) { _, newRect in
+                        currentScanRect = newRect
                     }
             }
             
             // UI Elements
             VStack {
-                // Close button
+                // Top buttons (Flash & Close)
                 HStack {
+                    Button {
+                        toggleFlash()
+                    } label: {
+                        Image(systemName: isFlashOn ? "bolt.fill" : "bolt.slash.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(isFlashOn ? .yellow : .white)
+                            .frame(width: 44, height: 44)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                    .padding(.leading, 20)
+                    .padding(.top, 16)
+                    
                     Spacer()
+                    
                     Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 44, height: 44)
                             .background(.ultraThinMaterial)
                             .clipShape(Circle())
                     }
@@ -200,12 +221,26 @@ struct BarcodeScannerView: View {
             dismiss()
         }
     }
+    
+    private func toggleFlash() {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }
+        do {
+            try device.lockForConfiguration()
+            device.torchMode = isFlashOn ? .off : .on
+            device.unlockForConfiguration()
+            isFlashOn.toggle()
+            HapticManager.shared.lightImpact()
+        } catch {
+            print("Torch could not be used")
+        }
+    }
 }
 
 // MARK: - Camera Preview (UIKit Bridge)
 
 #if !targetEnvironment(simulator)
 struct CameraPreview: UIViewControllerRepresentable {
+    @Binding var scanRect: CGRect
     var onBarcodeDetected: (String) -> Void
     
     func makeUIViewController(context: Context) -> CameraViewController {
@@ -214,7 +249,11 @@ struct CameraPreview: UIViewControllerRepresentable {
         return vc
     }
     
-    func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {
+        if scanRect != .zero {
+            uiViewController.updateRectOfInterest(with: scanRect)
+        }
+    }
 }
 
 class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
@@ -222,6 +261,7 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
     
     private let captureSession = AVCaptureSession()
     private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var metadataOutput: AVCaptureMetadataOutput?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -237,13 +277,11 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
         guard let device = AVCaptureDevice.default(for: .video) else { return }
         
         // Optimizing Autofocus for macro/barcode scanning speed
+        captureSession.sessionPreset = .high
         do {
             try device.lockForConfiguration()
             if device.isFocusModeSupported(.continuousAutoFocus) {
                 device.focusMode = .continuousAutoFocus
-            }
-            if device.isAutoFocusRangeRestrictionSupported {
-                device.autoFocusRangeRestriction = .near // Forces macro-focus priority
             }
             device.unlockForConfiguration()
         } catch {
@@ -256,10 +294,12 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
         }
         
         let output = AVCaptureMetadataOutput()
+        self.metadataOutput = output
+        
         if captureSession.canAddOutput(output) {
             captureSession.addOutput(output)
             output.setMetadataObjectsDelegate(self, queue: .main)
-            output.metadataObjectTypes = [.ean13, .ean8, .upce, .code128]
+            output.metadataObjectTypes = [.ean13, .ean8, .upce, .code128, .code39, .code93, .pdf417, .qr, .aztec, .interleaved2of5]
         }
         
         let layer = AVCaptureVideoPreviewLayer(session: captureSession)
@@ -282,11 +322,16 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
         view.layer.addSublayer(layer)
         self.previewLayer = layer
         
-        // Maximize the rectOfInterest to scan anywhere on screen
-        output.rectOfInterest = CGRect(x: 0, y: 0, width: 1, height: 1)
-        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.captureSession.startRunning()
+        }
+    }
+    
+    func updateRectOfInterest(with rect: CGRect) {
+        guard let layer = previewLayer, let output = metadataOutput else { return }
+        // Converting UIKit coordinates to AVFoundation normalized coordinate space
+        DispatchQueue.main.async {
+            output.rectOfInterest = layer.metadataOutputRectConverted(fromLayerRect: rect)
         }
     }
     

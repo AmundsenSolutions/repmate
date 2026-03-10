@@ -79,6 +79,8 @@
 		<string>ms-outlook</string>
 		<string>ymail</string>
 	</array>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>RepMate uses notifications to let you know when your rest timer is finished.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
@@ -86,7 +88,5 @@
 		<key>UIImageName</key>
 		<string>LaunchLogo</string>
 	</dict>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>RepMate uses notifications to let you know when your rest timer is finished.</string>
 </dict>
 </plist>

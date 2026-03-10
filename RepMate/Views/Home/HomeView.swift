@@ -76,6 +76,8 @@ struct HomeView: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.top, 8)
+                        .frame(maxWidth: 600)
+                        .frame(maxWidth: .infinity)
                     }
                     .scrollIndicators(.hidden)
                     
@@ -91,9 +93,11 @@ struct HomeView: View {
                                     Image(systemName: "bolt.fill")
                                     Text("Log Protein")
                                 }
+                                .frame(maxWidth: .infinity)
                                 .contentShape(Rectangle())
                             }
                             .glowingPanelButton()
+                            .frame(maxWidth: 600)
                             .padding(.horizontal, 16)
                             .padding(.bottom, store.activeWorkout != nil ? 80 : 16)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -316,6 +320,7 @@ struct HomeView: View {
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Theme.active.accent.opacity(0.3), lineWidth: 1)
                             )
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }

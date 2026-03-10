@@ -45,6 +45,8 @@ struct WorkoutSelectionSheet: View {
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundColor(Color.white.opacity(0.3))
                             }
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
                             .padding(.vertical, 18)
                             .padding(.horizontal, 24)
                             .background(Color(white: 0.1)) // Dark, neutral background
@@ -74,6 +76,7 @@ struct WorkoutSelectionSheet: View {
                     Image(systemName: "plus")
                 }
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
             .glowingPanelButton() // Uses Theme.active.accent internally
             .padding(.bottom, 100) // Clear tab bar completely
