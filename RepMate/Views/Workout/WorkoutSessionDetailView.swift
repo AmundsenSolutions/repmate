@@ -113,28 +113,27 @@ struct WorkoutSessionDetailView: View {
                             exerciseName: exercise.name,
                             targetRir: template?.targets?[exercise.id]?.rir, // Show valid targets if we have them
                             targetRest: template?.targets?[exercise.id]?.rest ?? 0,
-                            content: {
-                                VStack(spacing: 6) {
-                                    ForEach(sets) { set in
-                                        editableSetRow(set: set, exerciseId: exercise.id)
-                                    }
-                                    
-                                    // Add Set Button
-                                    Button {
-                                        addSet(for: exercise.id, afterIndex: sets.last?.setIndex ?? 0)
-                                    } label: {
-                                        Image(systemName: "plus.circle.fill")
-                                            .font(.title2)
-                                            .foregroundColor(themeManager.palette.accent)
-                                            .padding(.top, 4)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .buttonStyle(.plain)
-                                }
-                            },
                             note: bindingExerciseNote(for: exercise.id),
                             ghostNote: nil
-                        )
+                        ) {
+                            VStack(spacing: 6) {
+                                ForEach(sets) { set in
+                                    editableSetRow(set: set, exerciseId: exercise.id)
+                                }
+                                
+                                // Add Set Button
+                                Button {
+                                    addSet(for: exercise.id, afterIndex: sets.last?.setIndex ?? 0)
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(themeManager.palette.accent)
+                                        .padding(.top, 4)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .buttonStyle(.plain)
+                            }
+                        }
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))

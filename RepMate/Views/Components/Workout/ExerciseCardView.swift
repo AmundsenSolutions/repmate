@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ExerciseCardView<Content: View>: View {
+struct ExerciseCardView<Content: View, MenuContent: View>: View {
     let index: Int
     let exerciseName: String
     
@@ -12,14 +12,36 @@ struct ExerciseCardView<Content: View>: View {
     var overloadStatus: OverloadDirection = .none
     
     // Actions
-    var onMenu: (() -> AnyView)? = nil
+    var menuContent: MenuContent
     
     // Injected Content (The rows)
-    @ViewBuilder let content: Content
+    var content: Content
     
     // Note State
     @Binding var note: String
     var ghostNote: String? = nil
+    
+    init(
+        index: Int,
+        exerciseName: String,
+        targetRir: String? = nil,
+        targetRest: Int = 0,
+        overloadStatus: OverloadDirection = .none,
+        note: Binding<String>,
+        ghostNote: String? = nil,
+        @ViewBuilder menuContent: () -> MenuContent,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.index = index
+        self.exerciseName = exerciseName
+        self.targetRir = targetRir
+        self.targetRest = targetRest
+        self.overloadStatus = overloadStatus
+        self._note = note
+        self.ghostNote = ghostNote
+        self.menuContent = menuContent()
+        self.content = content()
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) { // Compact spacing
@@ -77,9 +99,7 @@ struct ExerciseCardView<Content: View>: View {
                 Spacer()
                 
                 // Menu (Optional)
-                if let onMenu = onMenu {
-                    onMenu()
-                }
+                menuContent
             }
             
             // --- Note ---
@@ -115,5 +135,28 @@ struct ExerciseCardView<Content: View>: View {
         .padding(12)
         .background(Theme.Colors.cardBackground) // Dark gray card background on black
         .cornerRadius(Theme.Spacing.cornerRadius)
+    }
 }
+
+extension ExerciseCardView where MenuContent == EmptyView {
+    init(
+        index: Int,
+        exerciseName: String,
+        targetRir: String? = nil,
+        targetRest: Int = 0,
+        overloadStatus: OverloadDirection = .none,
+        note: Binding<String>,
+        ghostNote: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.index = index
+        self.exerciseName = exerciseName
+        self.targetRir = targetRir
+        self.targetRest = targetRest
+        self.overloadStatus = overloadStatus
+        self._note = note
+        self.ghostNote = ghostNote
+        self.menuContent = EmptyView()
+        self.content = content()
+    }
 }

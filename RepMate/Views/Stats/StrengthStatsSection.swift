@@ -136,7 +136,7 @@ struct StrengthStatsSection: View {
         }
         .onAppear {
             if selectedExerciseId == nil {
-                selectedExerciseId = getMostFrequentExerciseId()
+                loadMostFrequentExerciseId()
             }
         }
         .onChange(of: days) { _, _ in
@@ -147,40 +147,39 @@ struct StrengthStatsSection: View {
     
     // MARK: - Logic
     
-    private func getMostFrequentExerciseId() -> UUID? {
-        let calendar = Calendar.current
-        let startDate = calendar.date(byAdding: .day, value: -days, to: store.currentDate) ?? Date.distantPast
+    private func loadMostFrequentExerciseId() {
+        let sessions = store.workoutSessions
+        let library = store.exerciseLibrary
+        let currentDate = store.currentDate
+        let currentDays = days
         
-        // Count frequencies of exercises in the active timeframe
-        var counts: [UUID: Int] = [:]
-        
-        for session in store.workoutSessions where (session.endedAt ?? session.date) > startDate {
-            let uniqueExercises = Set(session.sets.map { $0.exerciseId })
-            for exerciseId in uniqueExercises {
-                counts[exerciseId, default: 0] += 1
+        Task.detached {
+            let calendar = Calendar.current
+            let startDate = calendar.date(byAdding: .day, value: -currentDays, to: currentDate) ?? Date.distantPast
+            
+            var counts: [UUID: Int] = [:]
+            var allTimeCounts: [UUID: Int] = [:]
+            
+            for session in sessions {
+                let uniqueExercises = Set(session.sets.map { $0.exerciseId })
+                if (session.endedAt ?? session.date) > startDate {
+                    for exerciseId in uniqueExercises {
+                        counts[exerciseId, default: 0] += 1
+                    }
+                }
+                for exerciseId in uniqueExercises {
+                    allTimeCounts[exerciseId, default: 0] += 1
+                }
+            }
+            
+            let id = counts.max(by: { $0.value < $1.value })?.key 
+                     ?? allTimeCounts.max(by: { $0.value < $1.value })?.key 
+                     ?? library.first?.id
+            
+            await MainActor.run {
+                self.selectedExerciseId = id
             }
         }
-        
-        // Find the one with the highest count
-        if let topExerciseId = counts.max(by: { $0.value < $1.value })?.key {
-            return topExerciseId
-        }
-        
-        // Fallback to absolute most frequent of all time if nothing in timeframe
-        var allTimeCounts: [UUID: Int] = [:]
-        for session in store.workoutSessions {
-            let uniqueExercises = Set(session.sets.map { $0.exerciseId })
-            for exerciseId in uniqueExercises {
-                allTimeCounts[exerciseId, default: 0] += 1
-            }
-        }
-        
-        if let topAllTimeId = allTimeCounts.max(by: { $0.value < $1.value })?.key {
-            return topAllTimeId
-        }
-        
-        // Absolute fallback to first in library
-        return store.exerciseLibrary.first?.id
     }
     
     // MARK: - Subviews
@@ -263,10 +262,10 @@ struct StrengthStatsSection: View {
                 .foregroundColor(.gray)
             
             Chart {
-                BarMark(x: .value("D", "Mon"), y: .value("V", 100))
-                BarMark(x: .value("D", "Tue"), y: .value("V", 150))
-                BarMark(x: .value("D", "Wed"), y: .value("V", 120))
-                BarMark(x: .value("D", "Thu"), y: .value("V", 200))
+                BarMark(x: .value("D", "Man"), y: .value("V", 100))
+                BarMark(x: .value("D", "Tir"), y: .value("V", 150))
+                BarMark(x: .value("D", "Ons"), y: .value("V", 120))
+                BarMark(x: .value("D", "Tor"), y: .value("V", 200))
             }
             .foregroundStyle(themeManager.palette.accent.opacity(0.5))
             .frame(height: 180)
@@ -284,8 +283,8 @@ struct OneRMCalculatorCard: View {
     @State private var reps: String = ""
     
     private var estimated1RM: Double? {
-        guard let w = Double(weight.replacingOccurrences(of: ",", with: ".")),
-              let r = Int(reps), r > 0 else { return nil }
+        guard let w = weight.parseDoubleFlexible(),
+              let r = reps.parseIntFlexible(), r > 0 else { return nil }
         return store.workoutManager.calculate1RM(weight: w, reps: r)
     }
     

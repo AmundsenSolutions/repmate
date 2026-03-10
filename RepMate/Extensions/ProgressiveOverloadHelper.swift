@@ -31,6 +31,8 @@ struct ProgressiveOverloadHelper {
         // Criteria 1: RIR >= 3 on any set (set was too easy)
         let rirValues = lastSessionSets.compactMap { set -> Int? in
             guard let rir = set.rir else { return nil }
+            // Note: Users might input values like "2 - 3" with spaces. We remove spaces 
+            // so we can reliably detect ranges using the "-" delimiter logic below.
             let cleaned = rir.replacingOccurrences(of: " ", with: "")
             if cleaned.contains("-") {
                 let parts = cleaned.split(separator: "-").compactMap { Int($0) }

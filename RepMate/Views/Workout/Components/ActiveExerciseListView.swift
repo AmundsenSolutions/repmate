@@ -8,26 +8,13 @@
 import SwiftUI
 import Combine
 
-/// Parses numbers from strings, supporting both . and , decimals.
-private func parseIntFlexible(_ s: String) -> Int? {
-    if let i = Int(s) { return i }
-    let normalized = s.replacingOccurrences(of: ",", with: ".")
-    if let d = Double(normalized) { return Int(d) }
-    return nil
-}
-
-/// Parses decimals handling both . and , separators.
-private func parseDoubleFlexible(_ s: String) -> Double? {
-    let normalized = s.replacingOccurrences(of: ",", with: ".")
-    return Double(normalized)
-}
-
 struct ActiveExerciseListView: View {
     @EnvironmentObject var store: AppDataStore
     
     // Local Sheet States
     @State private var showingAddExercise = false
     @State private var replacingExercise: Exercise?
+    @State private var prCache: [UUID: Bool] = [:]
 
     private var active: ActiveWorkout? { store.activeWorkout }
     
@@ -66,32 +53,32 @@ struct ActiveExerciseListView: View {
                         in: store.workoutSessions,
                         settings: store.settings
                     ),
-                    onMenu: {
-                        AnyView(
-                            Menu {
-                                Button {
-                                    replacingExercise = exercise
-                                } label: {
-                                    Label("Replace", systemImage: "arrow.triangle.2.circlepath")
-                                }
-                                Button(role: .destructive) {
-                                    removeExercise(exercise)
-                                } label: {
-                                    Label {
-                                        Text("Remove")
-                                    } icon: {
-                                        Image(systemName: "trash")
-                                            .tint(.red) // Red Rule
-                                    }
-                                    .foregroundColor(.red) // Red Rule
-                                }
+                    note: bindingNote(for: exercise.id),
+                    ghostNote: store.ghostExerciseNote(for: exercise.id),
+                    menuContent: {
+                        Menu {
+                            Button {
+                                replacingExercise = exercise
                             } label: {
-                                Image(systemName: "ellipsis")
-                                    .foregroundColor(Theme.Colors.textSecondary)
-                                    .frame(width: 30, height: 30)
-                                    .contentShape(Rectangle())
+                                Label("Replace", systemImage: "arrow.triangle.2.circlepath")
                             }
-                        )
+                            Button(role: .destructive) {
+                                removeExercise(exercise)
+                            } label: {
+                                Label {
+                                    Text("Remove")
+                                } icon: {
+                                    Image(systemName: "trash")
+                                        .tint(.red)
+                                }
+                                .foregroundColor(.red)
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .frame(width: 30, height: 30)
+                                .contentShape(Rectangle())
+                        }
                     },
                     content: {
                         VStack(spacing: 6) {
@@ -112,9 +99,7 @@ struct ActiveExerciseListView: View {
                             .frame(maxWidth: .infinity)
                             .buttonStyle(.plain)
                         }
-                    },
-                    note: bindingNote(for: exercise.id),
-                    ghostNote: store.ghostExerciseNote(for: exercise.id)
+                    }
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -170,6 +155,11 @@ struct ActiveExerciseListView: View {
             }
         }
         // Sheet Management
+        .onAppear {
+            for exercise in exercises {
+                recalculatePRStatus(for: exercise.id)
+            }
+        }
         .sheet(isPresented: $showingAddExercise) {
             NavigationView {
                 ExerciseLibraryView(onSelect: { exercise in
@@ -216,7 +206,7 @@ struct ActiveExerciseListView: View {
                 reps: bindingReps(exerciseId: exerciseId, rowId: row.id),
                 rir: bindingRir(exerciseId: exerciseId, rowId: row.id),
                 isCompleted: bindingIsCompleted(exerciseId: exerciseId, rowId: row.id),
-                isPR: checkIsPR(exerciseId: exerciseId, row: row),
+                isPR: prCache[row.id] ?? false,
                 ghostWeight: ghostWeight,
                 ghostReps: ghostReps,
                 ghostRir: ghostRir
@@ -242,7 +232,7 @@ struct ActiveExerciseListView: View {
                 store.updateActiveWorkout(aw)
                 
                 if newValue {
-                     if self.checkIsPR(exerciseId: exerciseId, row: rows[index]) {
+                     if prCache[rowId] == true {
                          HapticManager.shared.heavyImpact()
                      } else {
                          HapticManager.shared.success()
@@ -268,6 +258,7 @@ struct ActiveExerciseListView: View {
                 store.silentUpdateActiveWorkout(aw)
                 
                 checkAutoComplete(exerciseId: exerciseId, index: index, wasCompleted: wasCompleted)
+                recalculatePRStatus(for: exerciseId)
             }
         )
     }
@@ -287,6 +278,7 @@ struct ActiveExerciseListView: View {
                 store.silentUpdateActiveWorkout(aw)
                 
                 checkAutoComplete(exerciseId: exerciseId, index: index, wasCompleted: wasCompleted)
+                recalculatePRStatus(for: exerciseId)
             }
         )
     }
@@ -332,8 +324,8 @@ struct ActiveExerciseListView: View {
         
         // Logic: Weight + Reps required, RIR is optional
         let row = rows[index]
-        let weight = parseDoubleFlexible(row.weight) ?? 0
-        let reps = parseIntFlexible(row.reps) ?? 0
+        let weight = row.weight.parseDoubleFlexible() ?? 0
+        let reps = row.reps.parseIntFlexible() ?? 0
         
         let shouldBeComplete = weight > 0 && reps > 0
         
@@ -347,7 +339,7 @@ struct ActiveExerciseListView: View {
             store.silentUpdateActiveWorkout(aw)
             store.objectWillChange.send()
             
-            if self.checkIsPR(exerciseId: exerciseId, row: rows[index]) {
+            if prCache[rows[index].id] == true {
                 HapticManager.shared.heavyImpact()
             } else {
                 HapticManager.shared.success()
@@ -364,33 +356,36 @@ struct ActiveExerciseListView: View {
         }
     }
     
-    private func checkIsPR(exerciseId: UUID, row: ActiveSetRow) -> Bool {
-        guard let weight = parseDoubleFlexible(row.weight), let reps = parseIntFlexible(row.reps), weight > 0, reps > 0 else { return false }
+    private func recalculatePRStatus(for exerciseId: UUID) {
+        guard let rows = store.activeWorkout?.rowsByExercise[exerciseId] else { return }
         
-        let est1RM = store.workoutManager.calculate1RM(weight: weight, reps: reps)
-        
-        // 1. Must have previous history to compare against (no PR on first time doing an exercise)
         let previousPRRecord = store.workoutManager.currentPR(sessions: store.workoutSessions, exerciseId: exerciseId)
-        guard let previousPR = previousPRRecord?.estimated1RM, previousPR > 0 else {
+        let previousPR = previousPRRecord?.estimated1RM ?? 0
+        
+        if previousPR <= 0 {
             // No previous history = first time doing this exercise = not a PR
-            return false
+            for row in rows {
+                prCache[row.id] = false
+            }
+            return
         }
         
-        // 2. Must beat historical PR
-        guard est1RM > previousPR else { return false }
+        var maxSession1RM: Double = 0
+        for row in rows {
+            if let w = row.weight.parseDoubleFlexible(), let rp = row.reps.parseIntFlexible(), w > 0, rp > 0 {
+                let est1RM = store.workoutManager.calculate1RM(weight: w, reps: rp)
+                maxSession1RM = max(maxSession1RM, est1RM)
+            }
+        }
         
-        // 3. Must be the BEST set in the CURRENT session so far
-        // We find the max 1RM of all *other* completed sets in this session
-        // If this set ties the max, it counts as PR.
-        guard let rows = store.activeWorkout?.rowsByExercise[exerciseId] else { return true }
-        
-        let sessionMax1RM = rows.compactMap { r -> Double? in
-            guard let w = parseDoubleFlexible(r.weight), let rp = parseIntFlexible(r.reps), w > 0, rp > 0 else { return nil }
-            return store.workoutManager.calculate1RM(weight: w, reps: rp)
-        }.max() ?? 0
-        
-        // Return true if we are >= sessionMax (meaning we ARE the session max, or tied for it)
-        return est1RM >= sessionMax1RM
+        for row in rows {
+            if let w = row.weight.parseDoubleFlexible(), let rp = row.reps.parseIntFlexible(), w > 0, rp > 0 {
+                let est1RM = store.workoutManager.calculate1RM(weight: w, reps: rp)
+                prCache[row.id] = (est1RM > previousPR) && (est1RM >= maxSession1RM)
+            } else {
+                prCache[row.id] = false
+            }
+        }
     }
     
     private func ensureAtLeastOneRow(_ aw: inout ActiveWorkout, for exerciseId: UUID) {
