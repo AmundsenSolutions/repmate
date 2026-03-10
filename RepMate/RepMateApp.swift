@@ -24,6 +24,7 @@ struct RepMateApp: App {
             }
             .environmentObject(store)
             .environmentObject(storeManager)
+            .environmentObject(NotificationManager.shared)
             .environmentObject(ThemeManager.shared) // Global Theme Injection
             .preferredColorScheme(.dark) // Force dark mode globally (keyboard, alerts, etc.)
             .alert("Error", isPresented: Binding<Bool>(

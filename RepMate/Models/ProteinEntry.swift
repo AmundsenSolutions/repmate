@@ -74,6 +74,38 @@ struct AppSettings: Codable {
     
     var hasSeededDefaults: Bool = false
     
+    // Reminders
+    var optWorkoutReminderEnabled: Bool?
+    var optWorkoutReminderTime: Date?
+    var optWorkoutReminderDays: [Int]?
+    var optProteinReminderEnabled: Bool?
+    var optProteinReminderTime: Date?
+    
+    var workoutReminderEnabled: Bool {
+        get { optWorkoutReminderEnabled ?? false }
+        set { optWorkoutReminderEnabled = newValue }
+    }
+    
+    var workoutReminderTime: Date {
+        get { optWorkoutReminderTime ?? Calendar.current.date(from: DateComponents(hour: 17, minute: 0)) ?? Date() }
+        set { optWorkoutReminderTime = newValue }
+    }
+    
+    var workoutReminderDays: [Int] {
+        get { optWorkoutReminderDays ?? [] }
+        set { optWorkoutReminderDays = newValue }
+    }
+    
+    var proteinReminderEnabled: Bool {
+        get { optProteinReminderEnabled ?? false }
+        set { optProteinReminderEnabled = newValue }
+    }
+    
+    var proteinReminderTime: Date {
+        get { optProteinReminderTime ?? Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date() }
+        set { optProteinReminderTime = newValue }
+    }
+    
     /// Fallback settings for first launch.
     static let `default` = AppSettings(
         dailyProteinTarget: 150,

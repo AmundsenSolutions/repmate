@@ -182,6 +182,10 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Settings
 
+    func saveSettings() {
+        save()
+    }
+
     /// Updates the daily protein target and persists settings.
     func updateDailyProteinTarget(_ grams: Int) {
         settings.dailyProteinTarget = grams

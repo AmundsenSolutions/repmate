@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var showEmailOptions = false
     @State private var showRepRangeSheet = false
     @EnvironmentObject var storeManager: StoreManager
+    @EnvironmentObject var notificationManager: NotificationManager
     @State private var showPaywall = false
     
     @Environment(\.openURL) var openURL
@@ -233,6 +234,147 @@ struct SettingsView: View {
                                 }
                             }
                             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: calculatedProtein)
+                        }
+                        
+                        // MARK: - Reminders
+                        cyberGlassSection(title: "Reminders") {
+                            // Workout Reminder
+                            settingsRow(title: "Workout Reminder", icon: "bell.fill") {
+                                Toggle("", isOn: Binding(
+                                    get: { store.settings.workoutReminderEnabled },
+                                    set: { newValue in
+                                        store.settings.workoutReminderEnabled = newValue
+                                        if newValue {
+                                            notificationManager.scheduleWorkoutReminders(
+                                                on: store.settings.workoutReminderDays,
+                                                at: store.settings.workoutReminderTime
+                                            )
+                                        } else {
+                                            notificationManager.cancelWorkoutReminders()
+                                        }
+                                        store.saveSettings()
+                                    }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
+                            }
+                            
+                            if store.settings.workoutReminderEnabled {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Text("Time")
+                                            .font(Theme.Fonts.body)
+                                            .foregroundColor(.white)
+                                        Spacer()
+                                        DatePicker("", selection: Binding(
+                                            get: { store.settings.workoutReminderTime },
+                                            set: { newValue in
+                                                store.settings.workoutReminderTime = newValue
+                                                notificationManager.scheduleWorkoutReminders(
+                                                    on: store.settings.workoutReminderDays,
+                                                    at: newValue
+                                                )
+                                                store.saveSettings()
+                                            }
+                                        ), displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
+                                    }
+                                    
+                                    HStack(spacing: 8) {
+                                        let days = [("S", 1), ("M", 2), ("T", 3), ("O", 4), ("T", 5), ("F", 6), ("L", 7)]
+                                        ForEach(days, id: \.1) { label, day in
+                                            let isSelected = store.settings.workoutReminderDays.contains(day)
+                                            Button {
+                                                if isSelected {
+                                                    store.settings.workoutReminderDays.removeAll { $0 == day }
+                                                } else {
+                                                    store.settings.workoutReminderDays.append(day)
+                                                }
+                                                notificationManager.scheduleWorkoutReminders(
+                                                    on: store.settings.workoutReminderDays,
+                                                    at: store.settings.workoutReminderTime
+                                                )
+                                                store.saveSettings()
+                                                HapticManager.shared.lightImpact()
+                                            } label: {
+                                                Text(label)
+                                                    .font(Theme.Fonts.body.weight(.bold))
+                                                    .frame(width: 32, height: 32)
+                                                    .background(isSelected ? themeManager.palette.accent : Theme.Colors.cardBackground)
+                                                    .foregroundColor(isSelected ? .black : .white)
+                                                    .clipShape(Circle())
+                                                    .overlay(
+                                                        Circle()
+                                                            .stroke(Color.white.opacity(0.1), lineWidth: isSelected ? 0 : 1)
+                                                    )
+                                            }
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 4)
+                                    
+                                    Button {
+                                        store.settings.workoutReminderDays = suggestedWorkoutDays
+                                        notificationManager.scheduleWorkoutReminders(
+                                            on: store.settings.workoutReminderDays,
+                                            at: store.settings.workoutReminderTime
+                                        )
+                                        store.saveSettings()
+                                        HapticManager.shared.success()
+                                    } label: {
+                                        Text("Use my usual days")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 8)
+                                            .background(Color.white.opacity(0.1))
+                                            .cornerRadius(16)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                }
+                                .padding(.top, 4)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                            
+                            divider
+                            
+                            // Protein Reminder
+                            settingsRow(title: "Protein Reminder", icon: "bell.fill") {
+                                Toggle("", isOn: Binding(
+                                    get: { store.settings.proteinReminderEnabled },
+                                    set: { newValue in
+                                        store.settings.proteinReminderEnabled = newValue
+                                        if newValue {
+                                            notificationManager.scheduleProteinReminder(at: store.settings.proteinReminderTime)
+                                        } else {
+                                            notificationManager.cancelProteinReminder()
+                                        }
+                                        store.saveSettings()
+                                    }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
+                            }
+                            
+                            if store.settings.proteinReminderEnabled {
+                                HStack {
+                                    Text("Time")
+                                        .font(Theme.Fonts.body)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    DatePicker("", selection: Binding(
+                                        get: { store.settings.proteinReminderTime },
+                                        set: { newValue in
+                                            store.settings.proteinReminderTime = newValue
+                                            notificationManager.scheduleProteinReminder(at: newValue)
+                                            store.saveSettings()
+                                        }
+                                    ), displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                }
+                                .padding(.top, 4)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                         }
                         
                         // MARK: - Management
@@ -603,6 +745,20 @@ struct SettingsView: View {
     
     // MARK: - Helpers
     
+    private var suggestedWorkoutDays: [Int] {
+        // Tell opp hvilke ukedager brukeren historisk har trent
+        var counts: [Int: Int] = [:]
+        for session in store.workoutSessions {
+            let weekday = Calendar.current.component(.weekday, from: session.date)
+            counts[weekday, default: 0] += 1
+        }
+        if counts.isEmpty {
+            return [2, 4, 6] // Man, Ons, Fre som default
+        }
+        // Returner topp 4 mest trente dager sortert
+        return counts.sorted { $0.value > $1.value }.prefix(4).map { $0.key }.sorted()
+    }
+    
     private func calculateProtein() {
         let sanitized = weightString.replacingOccurrences(of: ",", with: ".")
         guard let weight = Double(sanitized) else { return }
@@ -646,4 +802,5 @@ struct SettingsCard<Content: View>: View {
         .environmentObject(AppDataStore())
         .environmentObject(ThemeManager.shared)
         .environmentObject(StoreManager())
+        .environmentObject(NotificationManager.shared)
 }
