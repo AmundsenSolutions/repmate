@@ -59,14 +59,14 @@ struct NutritionStatsSection: View {
                             showPaywall = true
                             HapticManager.shared.lightImpact()
                         }) {
-                            StatCard(title: "Streak", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                            StatCard(title: "Streak", value: "Pro", icon: "crown.fill", color: .yellow)
                         }
                         
                         Button(action: {
                             showPaywall = true
                             HapticManager.shared.lightImpact()
                         }) {
-                            StatCard(title: "Adherence", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                            StatCard(title: "Adherence", value: "Pro", icon: "crown.fill", color: .yellow)
                         }
                     }
                 }

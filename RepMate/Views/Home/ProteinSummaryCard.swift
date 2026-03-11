@@ -30,11 +30,17 @@ struct ProteinSummaryCard: View {
             // 1. Streak & Header
             HStack {
                 HStack(spacing: 4) {
-                    Text("🔥")
-                        .scaleEffect(flameBounce)
-                    Text("\(streakCount) day streak")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                    if streakCount > 0 {
+                        Text("🔥")
+                            .scaleEffect(flameBounce)
+                        Text("\(streakCount) day streak")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    } else {
+                        Text("Start your streak 🔥")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -254,6 +260,7 @@ struct GhostChart: View {
         HStack(alignment: .bottom, spacing: 12) {
             // 6 Ghost Bars (Past days)
             ForEach(0..<6, id: \.self) { index in
+                let heights: [CGFloat] = [35, 28, 45, 22, 40, 30]
                 RoundedRectangle(cornerRadius: 4)
                     .fill(
                         LinearGradient(
@@ -263,7 +270,7 @@ struct GhostChart: View {
                         )
                     )
                     .frame(maxWidth: .infinity)
-                    .frame(height: CGFloat.random(in: 20...50))
+                    .frame(height: heights[index])
             }
             
             // "Today" Bar (Blinking)

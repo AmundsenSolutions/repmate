@@ -17,15 +17,7 @@ struct HomeView: View {
     @State private var pendingTemplate: WorkoutTemplate?
     @State private var navigationPath = NavigationPath()
     
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: store.currentDate)
-        switch hour {
-        case 5..<12: return "Good morning"
-        case 12..<17: return "Good afternoon"
-        case 17..<21: return "Good evening"
-        default: return "Good night"
-        }
-    }
+
 
     var body: some View {
         ZStack {
@@ -75,7 +67,7 @@ struct HomeView: View {
                             Color.clear.frame(height: 100)
                         }
                         .padding(.horizontal, 8)
-                        .padding(.top, 8)
+                        .padding(.top, 24)
                         .frame(maxWidth: 600)
                         .frame(maxWidth: .infinity)
                     }
@@ -198,32 +190,59 @@ struct HomeView: View {
     }
     
     private var trainingHeroCard: some View {
-        VStack(spacing: 20) {
-            Text("Ready for your first lift?")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-                .shadow(color: .white.opacity(0.6), radius: 8)
-            
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    showingWorkoutSelection = true
-                    HapticManager.shared.lightImpact()
-                }
-            } label: {
-                HStack {
-                    Text("Start Workout")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                showingWorkoutSelection = true
+                HapticManager.shared.lightImpact()
             }
-            .glassCapsuleButton()
+        } label: {
+            HStack(spacing: 20) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Theme.active.accent.opacity(0.5), lineWidth: 1)
+                        .frame(width: 50, height: 50)
+                        .background(Theme.active.accent.opacity(0.1))
+                        .cornerRadius(12)
+                    
+                    Image(systemName: "dumbbell.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(Theme.active.accent)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ready for your first lift?")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.white)
+                    
+                    Text("Start a workout")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 40, height: 40)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .shadow(color: Theme.active.accent.opacity(0.4), radius: 5)
+                    
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 20)
+            .contentShape(Rectangle())
+            .glassCard(style: .primary)
         }
-        .padding(.vertical, 24)
-        .padding(.horizontal, 20)
-        .glassCard(style: .primary)
+        .buttonStyle(.plain)
     }
     
     private var nutritionHeroCard: some View {
@@ -438,15 +457,11 @@ struct HomeView: View {
         store.proteinEntriesFor(date: store.currentDate).sorted { $0.date > $1.date }
     }
     
-    private var sortedWorkoutSessions: [WorkoutSession] {
-        store.workoutSessions
-    }
-    
     private func deleteWorkoutSessions(at offsets: IndexSet) {
-        let sortedSessions = sortedWorkoutSessions
+        let sessions = store.workoutSessions
         let indicesToDelete = offsets.compactMap { categoryIndex -> Int? in
-            guard categoryIndex >= 0 && categoryIndex < sortedSessions.count else { return nil }
-            let session = sortedSessions[categoryIndex]
+            guard categoryIndex >= 0 && categoryIndex < sessions.count else { return nil }
+            let session = sessions[categoryIndex]
             return store.workoutSessions.firstIndex(where: { $0.id == session.id })
         }
         store.deleteWorkoutSession(at: IndexSet(indicesToDelete))

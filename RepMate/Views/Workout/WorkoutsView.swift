@@ -251,13 +251,7 @@ struct WorkoutsView: View {
         return templates
     }
 
-    private func deleteTemplates(at offsets: IndexSet) {
-        store.deleteWorkoutTemplate(at: offsets)
-    }
 
-    private func moveTemplates(from source: IndexSet, to destination: Int) {
-        store.moveWorkoutTemplate(from: source, to: destination)
-    }
 
     private func exerciseNames(for template: WorkoutTemplate) -> String {
         let names = template.exerciseIds.map { exerciseId in

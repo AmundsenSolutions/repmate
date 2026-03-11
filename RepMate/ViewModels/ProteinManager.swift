@@ -119,7 +119,7 @@ class ProteinManager {
         let today = calendar.startOfDay(for: Date())
         guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return nil }
         
-        let filteredEntries = entries.filter { $0.date >= startDate && $0.note != nil && !$0.note!.isEmpty }
+        let filteredEntries = entries.filter { $0.date >= startDate && !($0.note?.isEmpty ?? true) }
         
         var noteCounts: [String: Int] = [:]
         for entry in filteredEntries {

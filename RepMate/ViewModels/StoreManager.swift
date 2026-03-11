@@ -58,24 +58,19 @@ class StoreManager: ObservableObject {
                 let wasPro = isPro
                 await updateCustomerProductStatus()
                 
-                DispatchQueue.main.async {
-                    if self.isPro && !wasPro {
-                        self.restoreMessage = "Successfully restored Pro access!"
-                    } else if self.isPro && wasPro {
-                        self.restoreMessage = "Pro access is already active on this device."
-                    } else {
-                        self.restoreMessage = "No prior Pro purchase was found on this Apple ID."
-                    }
+                if self.isPro && !wasPro {
+                    self.restoreMessage = "Successfully restored Pro access!"
+                } else if self.isPro && wasPro {
+                    self.restoreMessage = "Pro access is already active on this device."
+                } else {
+                    self.restoreMessage = "No prior Pro purchase was found on this Apple ID."
                 }
             } catch {
-                DispatchQueue.main.async {
-                    self.restoreMessage = "Failed to restore: \(error.localizedDescription)"
-                }
+                self.restoreMessage = "Failed to restore: \(error.localizedDescription)"
             }
         }
     }
     
-    @MainActor
     private func updateCustomerProductStatus() async {
         var purchasedIDs: Set<String> = []
         
@@ -89,17 +84,14 @@ class StoreManager: ObservableObject {
                     purchasedIDs.insert(transaction.productID)
                 }
             } catch {
+                self.errorMessage = error.localizedDescription
             }
         }
         
         self.purchasedProductIDs = purchasedIDs
         
         // Update user state if they have the Pro product.
-        if purchasedIDs.contains(proProductID) {
-            self.isPro = true
-        } else {
-            self.isPro = false
-        }
+        self.isPro = purchasedIDs.contains(proProductID)
     }
     
     // Listen for transactions that might happen outside the app (e.g. Ask to Buy)
@@ -112,6 +104,10 @@ class StoreManager: ObservableObject {
                     await transaction.finish()
                     await self.updateCustomerProductStatus()
                 } catch {
+                    let errStr = error.localizedDescription
+                    Task { @MainActor [weak self] in
+                        self?.errorMessage = errStr
+                    }
                 }
             }
         }

@@ -35,6 +35,8 @@ struct StatCard: View {
                 Text(title)
                     .font(.caption2)
                     .foregroundColor(.gray)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             
             Text(value)

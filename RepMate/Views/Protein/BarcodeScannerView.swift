@@ -8,7 +8,7 @@ struct BarcodeScannerView: View {
     
     var onBarcodeScanned: (String) -> Void
     
-    @State private var scannedCode: String?
+
     @State private var hasScanned = false
     @State private var isAnimatingScanLine = false
     @State private var cameraPermissionGranted = false
@@ -285,6 +285,7 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
             }
             device.unlockForConfiguration()
         } catch {
+              // Autofocus configuration failed — non-critical, continue with default focus
         }
         
         guard let input = try? AVCaptureDeviceInput(device: device) else { return }

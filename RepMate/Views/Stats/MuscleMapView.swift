@@ -76,7 +76,7 @@ struct MuscleMapView: View {
                             showPaywall = true
                             HapticManager.shared.lightImpact()
                         }) {
-                            StatCard(title: "Focus Area", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                            StatCard(title: "Focus Area", value: "Pro", icon: "crown.fill", color: .yellow)
                         }
                     }
                 }

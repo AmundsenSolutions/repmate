@@ -107,7 +107,7 @@ struct StrengthStatsSection: View {
                             showPaywall = true
                             HapticManager.shared.lightImpact()
                         }) {
-                            StatCard(title: "Consistency", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                            StatCard(title: "Consistency", value: "Pro", icon: "crown.fill", color: .yellow)
                         }
                     }
                 }
@@ -320,7 +320,7 @@ struct OneRMCalculatorCard: View {
                         Text("Est. 1RM")
                             .font(.caption)
                             .foregroundColor(.gray)
-                        Text(estimated1RM != nil ? String(format: "%.1f kg", estimated1RM!) : "—")
+                        Text(estimated1RM.map { String(format: "%.1f kg", $0) } ?? "—")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(Theme.Colors.cyberGold)
                             .frame(maxWidth: .infinity, alignment: .center)

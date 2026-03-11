@@ -16,7 +16,7 @@ struct ReorderExercisesView: View {
                 Theme.Colors.background.ignoresSafeArea()
                 
                 List {
-                    ForEach(exerciseIds, id: \.self) { id in
+                    ForEach(Array(exerciseIds.enumerated()), id: \.offset) { index, id in
                         if let exercise = store.exerciseLibrary.first(where: { $0.id == id }) {
                             HStack(spacing: 12) {
                                 VStack(alignment: .leading, spacing: 4) {

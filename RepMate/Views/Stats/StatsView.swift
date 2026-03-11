@@ -86,6 +86,7 @@ struct StatsView: View {
                 .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Stats")
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }

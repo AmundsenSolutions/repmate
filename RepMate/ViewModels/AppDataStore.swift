@@ -603,6 +603,8 @@ final class AppDataStore: ObservableObject {
     }
 
     func discardActiveWorkout() {
+        silentSaveTask?.cancel()
+        silentSaveTask = nil
         activeWorkout = nil
         save()
     }
@@ -627,6 +629,8 @@ final class AppDataStore: ObservableObject {
 
     /// Finalizes active workout and saves to history.
     func finishActiveWorkout() -> Bool {
+        silentSaveTask?.cancel()
+        silentSaveTask = nil
         guard var aw = activeWorkout else { return false }
         
         // 1. Validate and sanitize sets

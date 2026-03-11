@@ -256,7 +256,8 @@ struct SettingsView: View {
                                     }
                                 ))
                                 .labelsHidden()
-                                .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
+                                .tint(themeManager.palette.accent)
+                                .opacity(store.settings.workoutReminderEnabled ? 1.0 : 0.5)
                             }
                             
                             if store.settings.workoutReminderEnabled {
@@ -353,7 +354,8 @@ struct SettingsView: View {
                                     }
                                 ))
                                 .labelsHidden()
-                                .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
+                                .tint(themeManager.palette.accent)
+                                .opacity(store.settings.proteinReminderEnabled ? 1.0 : 0.5)
                             }
                             
                             if store.settings.proteinReminderEnabled {
@@ -674,15 +676,7 @@ struct SettingsView: View {
         .cornerRadius(Theme.Spacing.compact)
     }
     
-    @ViewBuilder
-    private func compactValueDisplay(_ text: String) -> some View {
-        Text(text)
-            .font(Theme.Fonts.value)
-            .foregroundColor(themeManager.palette.accent)
-            .frame(width: 44, height: 38)
-            .background(Color.white.opacity(0.06))
-            .cornerRadius(Theme.Spacing.compact)
-    }
+
     
     // MARK: - Pro Header Card
     
@@ -724,17 +718,14 @@ struct SettingsView: View {
                 } else {
                     Text("Get Pro")
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.black)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                        .background(themeManager.palette.accent.opacity(0.15))
+                        .foregroundColor(themeManager.palette.accent)
+                        .overlay(
+                            Capsule().stroke(themeManager.palette.accent.opacity(0.3), lineWidth: 1)
                         )
-                        .cornerRadius(24)
+                        .clipShape(Capsule())
                 }
             }
             .padding(20)
@@ -771,31 +762,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Keep legacy SettingsCard for backward compatibility
-struct SettingsCard<Content: View>: View {
-    let title: String
-    let content: Content
-    
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-                .foregroundColor(.gray)
-                .padding(.leading, 4)
-            
-            VStack {
-                content
-            }
-            .background(Theme.Colors.cardBackground)
-            .cornerRadius(Theme.Spacing.cornerRadius)
-        }
-    }
-}
+
 
 #Preview {
     SettingsView()

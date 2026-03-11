@@ -4,6 +4,7 @@ import StoreKit
 
 struct ActiveWorkoutView: View {
     @EnvironmentObject var store: AppDataStore
+    @EnvironmentObject var storeManager: StoreManager
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var themeManager = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -26,9 +27,9 @@ struct ActiveWorkoutView: View {
     @State private var initialTimerDuration: Int = 60 // Default for progress calculation
     @State private var timerCancellable: AnyCancellable?
     @State private var isTimerActive = false
-    @State private var overtimeSeconds: Int = 0
     
     @State private var showingReorderView = false
+    @State private var showPaywall = false
     @FocusState private var isAnyFieldFocused: Bool
     @State private var keyboardVisible = false
 
@@ -170,8 +171,12 @@ struct ActiveWorkoutView: View {
                         
                         // Save as Template
                         Button {
-                            newTemplateName = template?.name ?? "My Workout"
-                            showSaveTemplateAlert = true
+                            if !storeManager.isPro && store.workoutTemplates.count >= 3 {
+                                showPaywall = true
+                            } else {
+                                newTemplateName = template?.name ?? "My Workout"
+                                showSaveTemplateAlert = true
+                            }
                         } label: {
                             Label("Save as Template", systemImage: "square.and.arrow.down")
                         }
@@ -270,6 +275,9 @@ struct ActiveWorkoutView: View {
         }
         .sheet(isPresented: $showingReorderView) {
             ReorderExercisesView()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
         }
     }
 
@@ -491,7 +499,6 @@ struct ActiveWorkoutView: View {
         initialTimerDuration = duration
         timeRemaining = duration
         isTimerActive = true
-        overtimeSeconds = 0
         HapticManager.shared.lightImpact()
         
         let targetDate = Date().addingTimeInterval(TimeInterval(duration))
@@ -688,14 +695,5 @@ struct ActiveWorkoutView: View {
         let seconds = totalSeconds % 60
         let minutes = totalSeconds / 60
         return String(format: "%02d:%02d", minutes, seconds)
-    }
-    
-    private func formatDuration(_ totalSeconds: Int) -> String {
-        let minutes = Double(totalSeconds) / 60.0
-        // If whole number, show no decimal
-        if minutes.truncatingRemainder(dividingBy: 1) == 0 {
-            return "\(Int(minutes))m"
-        }
-        return String(format: "%.1fm", minutes)
     }
 }

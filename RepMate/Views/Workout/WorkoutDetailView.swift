@@ -22,7 +22,6 @@ struct WorkoutDetailView: View {
     @State private var showingAddCategoryAlert = false
     @State private var newCategoryName = ""
     @State private var showingAddExercise = false
-    @State private var isEditingName = false
     @State private var showingReorderSheet = false
     @State private var showDeleteConfirmation = false
     
@@ -115,7 +114,7 @@ struct WorkoutDetailView: View {
                     }
 
                     // Exercise List
-                    ForEach(Array(exerciseIds.enumerated()), id: \.element) { index, exerciseId in
+                    ForEach(Array(exerciseIds.enumerated()), id: \.offset) { index, exerciseId in
                         if let exercise = store.exerciseLibrary.first(where: { $0.id == exerciseId }) {
                             exerciseRow(index: index + 1, exercise: exercise)
                         } else {
@@ -478,24 +477,7 @@ struct WorkoutDetailView: View {
     private let defaultTarget = TemplateTarget(sets: 2, reps: "4-9", rir: "2", rest: 180)
     
     private func targetCell(label: String, value: Binding<String>, ghostText: String) -> some View {
-        VStack(spacing: 2) {
-             Text(label)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(.secondary)
-            
-            ZStack {
-                if value.wrappedValue.isEmpty {
-                    Text(ghostText)
-                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.5)) // Ghost color
-                }
-                TextField("", text: value)
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(themeManager.palette.accent) // Active color
-            }
-        }
-        .frame(maxWidth: .infinity)
+        TargetTextFieldCell(label: label, value: value, ghostText: ghostText)
     }
     
     // MARK: - Logic
@@ -583,7 +565,9 @@ struct WorkoutDetailView: View {
         if seconds % 60 == 0 {
              return "\(seconds/60)m"
         }
-        return "\(seconds)s"
+        let mins = Double(seconds) / 60.0
+        let formatted = String(format: "%g", mins)
+        return "\(formatted)m"
     }
     
     private func parseRestTime(_ input: String) -> Int? {
@@ -596,10 +580,68 @@ struct WorkoutDetailView: View {
         } else if lower.hasSuffix("s") {
             let numStr = lower.dropLast()
             return Int(numStr)
-        } else if let val = Int(lower) {
-            // Assume seconds if just a number
-            return val
+        } else if let val = Double(lower) {
+            // Assume minutes if just a number
+            return Int(val * 60)
         }
         return nil
+    }
+}
+
+private struct TargetTextFieldCell: View {
+    let label: String
+    @Binding var value: String
+    let ghostText: String
+    
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    @State private var localText: String = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 2) {
+             Text(label)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.secondary)
+            
+            ZStack {
+                if localText.isEmpty && !isFocused {
+                    Text(ghostText)
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.secondary.opacity(0.5)) // Ghost color
+                }
+                TextField("", text: $localText)
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(themeManager.palette.accent) // Active color
+                    .focused($isFocused)
+                    .onSubmit {
+                        commit()
+                    }
+                    .onChange(of: isFocused) { _, focused in
+                        if !focused { commit() }
+                    }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .onAppear {
+            localText = value
+        }
+        .onChange(of: value) { _, newValue in
+            if !isFocused {
+                localText = newValue
+            }
+        }
+    }
+    
+    private func commit() {
+        if value != localText {
+            value = localText
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if !isFocused {
+                localText = value
+            }
+        }
     }
 }

@@ -69,7 +69,7 @@ struct ActivityHeatmapView: View {
                             showPaywall = true
                             HapticManager.shared.lightImpact()
                         }) {
-                            StatCard(title: "Perfect Days", value: "Locked", icon: "lock.fill", color: .gray.opacity(0.5))
+                            StatCard(title: "Perfect Days", value: "Pro", icon: "crown.fill", color: .yellow)
                         }
                     }
                 }
@@ -178,9 +178,9 @@ struct ActivityHeatmapView: View {
     }
     
     private func cellView(for date: Date?) -> some View {
-        let normalizedDate = date != nil ? calendar.startOfDay(for: date!) : nil
-        let hasWorkout = normalizedDate != nil && workoutDates.contains(normalizedDate!)
-        let isFuture = date != nil && date! > Date()
+        let normalizedDate = date.map { calendar.startOfDay(for: $0) }
+        let hasWorkout = normalizedDate.map { workoutDates.contains($0) } ?? false
+        let isFuture = date.map { $0 > Date() } ?? false
         
         return Rectangle()
             .fill(cellColor(hasWorkout: hasWorkout, isFuture: isFuture))
