@@ -142,13 +142,13 @@ struct OnboardingNextButton: View {
                 Spacer()
                 
                 VStack(spacing: 8) {
-                    Text("Welcome to\nRepMate")
+                    Text("Your Personal\nLifting Partner")
                         .font(.system(size: 42, weight: .bold)) // Larger, matching image
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 4)
                     
-                    Text("Reps, sets, lifts & progress")
+                    Text("Master your lifts. Track your progress.\nReach your peak performance.")
                         .font(.system(size: 16, weight: .regular)) // Cleaner sans-serif
                         .foregroundColor(.white)
                     
@@ -241,44 +241,50 @@ struct OnboardingNextButton: View {
                 Spacer()
                 
                 VStack(spacing: 24) {
-                    Text("🥩")
+                    Text("⚡️")
                         .font(.system(size: 64))
                     
-                    Text("Set Your Goal")
+                    Text("Set Your Target")
                         .font(.system(size: 32, weight: .bold)) // Sans-serif, no glow
                         .foregroundColor(.white)
                     
-                    Text("Estimate your body weight")
+                    Text("Enter your body weight to calculate\nyour optimal daily protein intake.")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
                     
                     weightInput
                     presetButtons
                     
                     // Show calculated protein space reserved via opacity
-                    Text("Your target: **\(calculatedProtein ?? 150)g protein/day**")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 14)
-                        .background(
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial)
-                                Theme.active.verticalGradient.opacity(0.4)
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(Theme.active.accent.opacity(0.8), lineWidth: 1.5)
-                        )
-                        .shadow(color: Theme.active.accent.opacity(0.3), radius: 8, x: 0, y: 0)
-                        .opacity(calculatedProtein != nil ? 1 : 0)
-                        .animation(.easeInOut, value: calculatedProtein)
+                    VStack(spacing: 8) {
+                        Text("\(calculatedProtein ?? 150)g")
+                            .font(.system(size: 40, weight: .black))
+                            .foregroundColor(Theme.active.accent)
+                        
+                        Text("DAILY PROTEIN GOAL")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 20)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial)
+                            Theme.active.verticalGradient.opacity(0.2)
+                        }
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .strokeBorder(Theme.active.accent.opacity(0.5), lineWidth: 1)
+                    )
+                    .shadow(color: Theme.active.accent.opacity(0.2), radius: 15, x: 0, y: 10)
+                    .opacity(calculatedProtein != nil ? 1 : 0)
+                    .scaleEffect(calculatedProtein != nil ? 1 : 0.9)
                     
-                    Text("Based on 1.6g protein per kg body weight")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.white)
+                    Text("Optimal growth requires ~1.6g per kg")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.white.opacity(0.5))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
                 }
@@ -651,16 +657,24 @@ struct OnboardingNextButton: View {
                 Spacer()
                 
                 VStack(spacing: 24) {
-                    Text("🚀")
-                        .font(.system(size: 72))
+                    ZStack {
+                        Circle()
+                            .fill(Theme.active.accent.opacity(0.2))
+                            .frame(width: 140, height: 140)
+                            .blur(radius: 20)
+                        
+                        Text("🔥")
+                            .font(.system(size: 80))
+                    }
                     
-                    Text("Let's Lift")
+                    Text("Forge Your Legacy")
                         .font(.system(size: 40, weight: .heavy)) // Sans-serif
                         .foregroundColor(.white)
                     
-                    Text("You're all set.")
+                    Text("The best time to start was yesterday.\nThe second best time is now.")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.vertical, 40)
                 .padding(.horizontal, 24)

@@ -28,21 +28,21 @@ struct PaywallView: View {
                 .padding(.bottom, 24)
                 
                 // Title
-                Text("Unlock RepMate Pro")
-                    .font(.system(size: 32, weight: .bold, design: .default))
+                Text("Lifetime Access")
+                    .font(.system(size: 36, weight: .black, design: .default))
                     .foregroundColor(Theme.Colors.textPrimary)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 4)
                 
-                Text("One-time purchase. Forged, not rented.")
-                    .font(.subheadline)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .padding(.bottom, 40)
+                Text("One payment. Forever Yours.")
+                    .font(.headline)
+                    .foregroundColor(Theme.Colors.accent)
+                    .padding(.bottom, 32)
                 
                 // Features List
                 VStack(alignment: .leading, spacing: 24) {
-                    FeatureRow(icon: "infinity", title: "Unlimited Templates", subtitle: "Break the 3 template limit. Build the ultimate library.")
-                    FeatureRow(icon: "paintpalette.fill", title: "Premium App Icons", subtitle: "Unlock the exclusive 'Gold' and 'Forged Iron' stealth icons.")
-                    FeatureRow(icon: "chart.line.uptrend.xyaxis", title: "Pro Stats", subtitle: "Exclusive insights into 1RM projections and volume trends.")
+                    FeatureRow(icon: "infinity", title: "Unlimited Workouts", subtitle: "Remove all limits. Build the ultimate routine library.")
+                    FeatureRow(icon: "chart.bar.fill", title: "Master Your Progress", subtitle: "Deep insights into 1RM projections and volume trends.")
+                    FeatureRow(icon: "paintpalette.fill", title: "Legendary Aesthetics", subtitle: "Unlock exclusive 'Gold' and 'Forged Iron' stealth icons.")
                 }
                 .padding(.horizontal, 32)
                 
@@ -65,16 +65,31 @@ struct PaywallView: View {
                                     }
                                 }
                             } label: {
-                                Text("Upgrade to Pro")
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(Theme.Colors.accent)
-                                    .cornerRadius(16)
-                                    .shadow(color: Theme.Colors.accent.opacity(0.4), radius: 8, x: 0, y: 4)
+                                VStack(spacing: 4) {
+                                    Text("Get Pro for \(product.displayPrice)")
+                                        .font(.system(size: 18, weight: .bold))
+                                    Text("ONE-TIME PURCHASE")
+                                        .font(.system(size: 10, weight: .black))
+                                        .opacity(0.8)
+                                }
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    ZStack {
+                                        Theme.Colors.accent
+                                        LinearGradient(colors: [.white.opacity(0.3), .clear], startPoint: .top, endPoint: .bottom)
+                                    }
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: Theme.Colors.accent.opacity(0.4), radius: 12, x: 0, y: 6)
                             }
                             .padding(.horizontal, 32)
+                            
+                            Text("No subscriptions. No hidden fees.")
+                                .font(.caption2)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .padding(.top, 4)
                         } else {
                             // Product not loaded yet — show loading state
                             ProgressView()

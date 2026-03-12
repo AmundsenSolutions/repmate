@@ -23,10 +23,10 @@ struct ActiveExerciseListView: View {
         return store.workoutTemplates.first(where: { $0.id == aw.templateId })
     }
     
-    private var exercises: [Exercise] {
+    private var exercises: [(id: UUID, exercise: Exercise?)] {
         guard let aw = active else { return [] }
-        return aw.exerciseIds.compactMap { id in
-            store.exerciseLibrary.first(where: { $0.id == id })
+        return aw.exerciseIds.map { id in
+            (id: id, exercise: store.exerciseLibrary.first(where: { $0.id == id }))
         }
     }
     
@@ -41,29 +41,36 @@ struct ActiveExerciseListView: View {
                     .listRowSeparator(.hidden)
             }
             
-            // Exercises
-            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+                // Exercises
+            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, item in
+                let exerciseId = item.id
+                let exercise = item.exercise
+                
                 ExerciseCardView(
                     index: index + 1,
-                    exerciseName: exercise.name,
-                    targetRir: template?.targets?[exercise.id]?.rir,
-                    targetRest: template?.targets?[exercise.id]?.rest ?? 0,
+                    exerciseName: exercise?.name ?? "Deleted Exercise",
+                    targetRir: template?.targets?[exerciseId]?.rir,
+                    targetRest: template?.targets?[exerciseId]?.rest ?? 0,
                     overloadStatus: ProgressiveOverloadHelper.checkOverloadStatus(
-                        for: exercise.id,
+                        for: exerciseId,
                         in: store.workoutSessions,
                         settings: store.settings
                     ),
-                    note: bindingNote(for: exercise.id),
-                    ghostNote: store.ghostExerciseNote(for: exercise.id),
+                    note: bindingNote(for: exerciseId),
+                    ghostNote: store.ghostExerciseNote(for: exerciseId),
                     menuContent: {
                         Menu {
                             Button {
-                                replacingExercise = exercise
+                                if let ex = exercise {
+                                    replacingExercise = ex
+                                }
                             } label: {
                                 Label("Replace", systemImage: "arrow.triangle.2.circlepath")
                             }
+                            .disabled(exercise == nil)
+                            
                             Button(role: .destructive) {
-                                removeExercise(exercise)
+                                removeExercise(id: exerciseId)
                             } label: {
                                 Label {
                                     Text("Remove")
@@ -82,14 +89,14 @@ struct ActiveExerciseListView: View {
                     },
                     content: {
                         VStack(spacing: 6) {
-                            let rows = store.activeWorkout?.rowsByExercise[exercise.id] ?? []
+                            let rows = store.activeWorkout?.rowsByExercise[exerciseId] ?? []
                             ForEach(Array(rows.enumerated()), id: \.element.id) { rowIndex, row in
-                                rowView(exerciseId: exercise.id, row: row, index: rowIndex)
+                                rowView(exerciseId: exerciseId, row: row, index: rowIndex)
                             }
                             
                             // Add Set Button
                             Button {
-                                addSetRowIfValid(exerciseId: exercise.id)
+                                addSetRowIfValid(exerciseId: exerciseId)
                             } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
@@ -106,7 +113,7 @@ struct ActiveExerciseListView: View {
                 .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
-                        removeExercise(exercise)
+                        removeExercise(id: exerciseId)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -425,12 +432,12 @@ struct ActiveExerciseListView: View {
     
     // MARK: - Exercise Management
     
-    private func removeExercise(_ exercise: Exercise) {
+    private func removeExercise(id: UUID) {
         guard var aw = active else { return }
-        if let idx = aw.exerciseIds.firstIndex(of: exercise.id) {
+        if let idx = aw.exerciseIds.firstIndex(of: id) {
             withAnimation {
                 aw.exerciseIds.remove(at: idx)
-                aw.rowsByExercise.removeValue(forKey: exercise.id)
+                aw.rowsByExercise.removeValue(forKey: id)
                 store.updateActiveWorkout(aw)
             }
         }

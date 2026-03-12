@@ -32,6 +32,10 @@ final class AppDataStore: ObservableObject {
         set {
             objectWillChange.send()
             _activeWorkoutStorage = newValue
+            // If we set activeWorkout explicitly, cancel any pending silent saves
+            // to prevent an old state from overwriting this fresh one.
+            silentSaveTask?.cancel()
+            silentSaveTask = nil
         }
     }
     @Published var categories: [String] = []
@@ -526,11 +530,17 @@ final class AppDataStore: ObservableObject {
         
         // Also check saved workout sessions for exercise usage
         let sessionUsedIds = Set(workoutSessions.flatMap { $0.sets.map { $0.exerciseId } })
-        let allUsedIds = templateUsedIds.union(sessionUsedIds)
+        
+        // Check if currently active in a workout
+        let activeUsedIds = Set(activeWorkout?.exerciseIds ?? [])
+        
+        let allUsedIds = templateUsedIds.union(sessionUsedIds).union(activeUsedIds)
 
         // Block deletion if any selected exercise is used
         if idsToDelete.contains(where: { allUsedIds.contains($0) }) {
-            if idsToDelete.contains(where: { sessionUsedIds.contains($0) }) {
+            if idsToDelete.contains(where: { activeUsedIds.contains($0) }) {
+                lastErrorMessage = "Exercise is in your current active workout."
+            } else if idsToDelete.contains(where: { sessionUsedIds.contains($0) }) {
                 lastErrorMessage = "Exercise is used in a saved workout session."
             } else {
                 lastErrorMessage = "Exercise is used in a workout template."
@@ -618,12 +628,22 @@ final class AppDataStore: ObservableObject {
     /// Disk write is debounced: in-memory update is immediate, save fires 1.5s after the last call.
     func silentUpdateActiveWorkout(_ workout: ActiveWorkout) {
         _activeWorkoutStorage = workout   // instant, no objectWillChange
+        
+        // Cancel existing task to extend the debounce timer
         silentSaveTask?.cancel()
+        
         silentSaveTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s debounce
             guard !Task.isCancelled else { return }
-            self.save()
+            
+            // Perform the save on the MainActor (AppDataStore is @MainActor, but good to be explicit)
+            await MainActor.run {
+                if !Task.isCancelled {
+                    self.save()
+                    self.silentSaveTask = nil // Clear task once done
+                }
+            }
         }
     }
 
