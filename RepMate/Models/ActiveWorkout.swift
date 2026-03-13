@@ -57,6 +57,20 @@ struct ActiveWorkout: Identifiable, Codable, Equatable {
             targets: template.targets
         )
     }
+
+    static func startEmpty() -> ActiveWorkout {
+        return ActiveWorkout(
+            id: UUID(),
+            templateId: UUID(), // Random ID as it's not based on a template
+            startedAt: Date(),
+            exerciseIds: [],
+            rowsByExercise: [:],
+            notesByExercise: [:],
+            isDirty: false,
+            note: nil,
+            targets: nil
+        )
+    }
 }
 
 

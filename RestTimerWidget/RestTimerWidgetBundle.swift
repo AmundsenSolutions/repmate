@@ -6,5 +6,7 @@ import SwiftUI
 struct RestTimerWidgetBundle: WidgetBundle {
     var body: some Widget {
         RestTimerLiveActivity()
+        ProteinWidget()
+        WorkoutStatusWidget()
     }
 }

@@ -32,6 +32,10 @@ struct ActiveWorkoutView: View {
     @State private var showPaywall = false
     @FocusState private var isAnyFieldFocused: Bool
     @State private var keyboardVisible = false
+    
+    // Celebration State
+    @State private var showPRCelebration = false
+    @State private var prDetails: (exercise: String, weight: Double)? = nil
 
     private var active: ActiveWorkout? { store.activeWorkout }
 
@@ -92,6 +96,11 @@ struct ActiveWorkoutView: View {
                 }
                 .transition(.opacity)
                 .zIndex(100)
+            }
+            
+            if showPRCelebration {
+                PRCelebrationOverlay(details: prDetails)
+                    .zIndex(150)
             }
             
         }
@@ -251,6 +260,11 @@ struct ActiveWorkoutView: View {
         .onChange(of: store.activeWorkout?.timerTargetDate) { _, newTarget in
             if newTarget == nil {
                 stopTimer()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewPRDetected"))) { notification in
+            if let details = notification.object as? (String, Double) {
+                triggerCelebration(exercise: details.0, weight: details.1)
             }
         }
         // Menu Dialogs
@@ -419,6 +433,21 @@ struct ActiveWorkoutView: View {
         store.discardActiveWorkout()
         HapticManager.shared.success()
         dismiss()
+    }
+    
+    private func triggerCelebration(exercise: String, weight: Double) {
+        prDetails = (exercise, weight)
+        withAnimation(.spring()) {
+            showPRCelebration = true
+        }
+        HapticManager.shared.success()
+        
+        // Hide after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(.easeOut) {
+                showPRCelebration = false
+            }
+        }
     }
     
     // MARK: - Timer Logic
@@ -695,5 +724,55 @@ struct ActiveWorkoutView: View {
         let seconds = totalSeconds % 60
         let minutes = totalSeconds / 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - PR Celebration Overlay
+struct PRCelebrationOverlay: View {
+    let details: (exercise: String, weight: Double)?
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                Text("NEW PERSONAL RECORD!")
+                    .font(.system(size: 14, weight: .black))
+                    .foregroundColor(Theme.Colors.prGold)
+                    .tracking(2)
+                
+                Image(systemName: "medal.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(Theme.Colors.prGold)
+                    .shadow(color: Theme.Colors.prGold.opacity(0.6), radius: 20)
+                
+                VStack(spacing: 4) {
+                    Text(details?.exercise ?? "Exercise")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("\(String(format: "%.1f", details?.weight ?? 0)) kg")
+                        .font(.system(size: 40, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.prGold)
+                }
+                
+                Text("Way to go! 🚀")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(40)
+            .background(
+                RoundedRectangle(cornerRadius: 30)
+                    .fill(Color.black.opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 30)
+                            .stroke(Theme.Colors.prGold.opacity(0.5), lineWidth: 2)
+                    )
+            )
+            .scaleEffect(details != nil ? 1.0 : 0.5)
+            .opacity(details != nil ? 1.0 : 0)
+        }
     }
 }

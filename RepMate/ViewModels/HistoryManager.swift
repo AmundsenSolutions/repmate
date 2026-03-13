@@ -66,4 +66,55 @@ struct HistoryManager {
         
         return data
     }
+
+    /// Personal Record data structure
+    struct ExercisePR: Identifiable {
+        let id = UUID()
+        let exerciseId: UUID
+        let exerciseName: String
+        let weight: Double
+        let reps: Int
+        let date: Date
+        let estimated1RM: Double
+    }
+
+    /// Gets all-time personal records across all exercises.
+    func allTimePersonalRecords(sessions: [WorkoutSession], library: [Exercise], workoutManager: WorkoutManager) -> [ExercisePR] {
+        var prs: [UUID: ExercisePR] = [:]
+
+        for session in sessions {
+            for set in session.sets {
+                guard let weight = set.weight, weight > 0 else { continue }
+                let est1RM = workoutManager.calculate1RM(weight: weight, reps: set.reps)
+
+                if let currentPR = prs[set.exerciseId] {
+                    if est1RM > currentPR.estimated1RM {
+                        if let exercise = library.first(where: { $0.id == set.exerciseId }) {
+                            prs[set.exerciseId] = ExercisePR(
+                                exerciseId: set.exerciseId,
+                                exerciseName: exercise.name,
+                                weight: weight,
+                                reps: set.reps,
+                                date: session.date,
+                                estimated1RM: est1RM
+                            )
+                        }
+                    }
+                } else {
+                    if let exercise = library.first(where: { $0.id == set.exerciseId }) {
+                        prs[set.exerciseId] = ExercisePR(
+                            exerciseId: set.exerciseId,
+                            exerciseName: exercise.name,
+                            weight: weight,
+                            reps: set.reps,
+                            date: session.date,
+                            estimated1RM: est1RM
+                        )
+                    }
+                }
+            }
+        }
+
+        return Array(prs.values).sorted { $0.estimated1RM > $1.estimated1RM }
+    }
 }

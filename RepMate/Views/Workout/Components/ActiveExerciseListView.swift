@@ -91,7 +91,7 @@ struct ActiveExerciseListView: View {
                         VStack(spacing: 6) {
                             let rows = store.activeWorkout?.rowsByExercise[exerciseId] ?? []
                             ForEach(Array(rows.enumerated()), id: \.element.id) { rowIndex, row in
-                                rowView(exerciseId: exerciseId, row: row, index: rowIndex)
+                                rowView(exerciseId: exerciseId, exerciseName: exercise?.name ?? "Exercise", row: row, index: rowIndex)
                             }
                             
                             // Add Set Button
@@ -192,7 +192,7 @@ struct ActiveExerciseListView: View {
     
     // MARK: - Row Construction
     
-    private func rowView(exerciseId: UUID, row: ActiveSetRow, index: Int) -> some View {
+    private func rowView(exerciseId: UUID, exerciseName: String, row: ActiveSetRow, index: Int) -> some View {
         let ghostData = store.ghostSetData(for: exerciseId, setIndex: index)
         let ghostReps = ghostData.map { "\($0.reps)" }
         let ghostWeight: String? = ghostData.map { w in
@@ -209,6 +209,7 @@ struct ActiveExerciseListView: View {
         ) {
             SetRowView(
                 index: index + 1,
+                exerciseName: exerciseName,
                 weight: bindingWeight(exerciseId: exerciseId, rowId: row.id),
                 reps: bindingReps(exerciseId: exerciseId, rowId: row.id),
                 rir: bindingRir(exerciseId: exerciseId, rowId: row.id),

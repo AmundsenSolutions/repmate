@@ -32,13 +32,53 @@ struct WorkoutSelectionSheet: View {
             // Templates List
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(store.workoutTemplates.prefix(3)) { template in
+                    // Quick Start Button
+                    Button {
+                        startEmptyWorkout()
+                    } label: {
+                        HStack {
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.active.accent.opacity(0.2))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(Theme.active.accent)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Quick Start")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                Text("Start empty workout")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Color.white.opacity(0.3))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 20)
+                        .background(Color(white: 0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Theme.active.accent.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .padding(.bottom, 8)
+
+                    ForEach(store.workoutTemplates) { template in
                         Button {
                             startWorkout(template: template)
                         } label: {
                             HStack {
                                 Text(template.name)
-                                    .font(.system(size: 18, weight: .bold)) // Clean and prominent
+                                    .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.white)
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -49,20 +89,19 @@ struct WorkoutSelectionSheet: View {
                             .contentShape(Rectangle())
                             .padding(.vertical, 18)
                             .padding(.horizontal, 24)
-                            .background(Color(white: 0.1)) // Dark, neutral background
+                            .background(Color(white: 0.1))
                             .clipShape(Capsule())
                             .overlay(
                                 Capsule()
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1) // Subtle border
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
                             )
                         }
                     }
                 }
-                .padding(.horizontal, 4) // Space for shadows
+                .padding(.horizontal, 4)
             }
             .scrollIndicators(.hidden)
-            // Limit height if few items, but allow expansion
-            .frame(maxHeight: CGFloat(min(store.workoutTemplates.count, 3)) * 80 + 20) 
+            .frame(maxHeight: 400) 
             
             Spacer().frame(height: 24)
             
@@ -128,6 +167,11 @@ struct WorkoutSelectionSheet: View {
         store.addWorkoutTemplate(newTemplate)
         close()
         onCreateNewTemplate?(newTemplate.id)
+    }
+
+    private func startEmptyWorkout() {
+        store.activeWorkout = ActiveWorkout.startEmpty()
+        close()
     }
     
     private func close() {

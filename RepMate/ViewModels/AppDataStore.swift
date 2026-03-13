@@ -12,6 +12,7 @@ import SwiftUI
 /// Core data store managing app state, user data, and persistence.
 @MainActor
 final class AppDataStore: ObservableObject {
+    private let appGroup = "group.no.amundsen.repmate"
     // Published = SwiftUI updates UI automatically when these change
     @Published var proteinEntries: [ProteinEntry] = []
     @Published var settings: AppSettings = .default
@@ -462,8 +463,32 @@ final class AppDataStore: ObservableObject {
                 DispatchQueue.main.async {
                     self?.lastErrorMessage = "Failed to save data."
                 }
+            } else {
+                DispatchQueue.main.async {
+                    self?.syncToWidgets()
+                }
             }
         }
+    }
+
+    private func syncToWidgets() {
+        let defaults = UserDefaults(suiteName: appGroup)
+        
+        // Protein Sync
+        let todayProtein = totalProteinFor(date: Date())
+        defaults?.set(todayProtein, forKey: "todayProtein")
+        defaults?.set(settings.dailyProteinTarget, forKey: "proteinGoal")
+        
+        // Workout Sync
+        defaults?.set(activeWorkout != nil, forKey: "isWorkoutActive")
+        if let aw = activeWorkout {
+            defaults?.set(aw.exerciseIds.count, forKey: "exercisesCompleted")
+            // Find template name
+            let templateName = workoutTemplates.first(where: { $0.id == aw.templateId })?.name ?? "Workout"
+            defaults?.set(templateName, forKey: "activeWorkoutName")
+        }
+        
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - Workout Sessions

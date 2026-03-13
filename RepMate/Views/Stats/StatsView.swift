@@ -61,6 +61,9 @@ struct StatsView: View {
                         // 2. Activity / Consistency
                         ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
                         
+                        // New: All-Time Personal Records
+                        AllTimePRSection()
+
                         // 3. Strength & PR
                         StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
                         
