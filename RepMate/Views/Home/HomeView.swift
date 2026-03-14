@@ -60,8 +60,6 @@ struct HomeView: View {
                                 latestEntriesSection
                             }
                             
-                            // MARK: - Weekly Muscle Group Overview
-                            weeklyMuscleOverviewSection
 
                             // MARK: - Workout History
                             workoutHistorySection
@@ -359,12 +357,9 @@ struct HomeView: View {
             Text("Latest Entries")
                 .sectionHeader()
             
-            List {
+            VStack(spacing: 8) {
                 ForEach(todayEntries.prefix(3)) { entry in
                     entryRow(for: entry)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
                         .swipeActions(edge: .leading) {
                             Button {
                                 store.toggleFavorite(entry: entry)
@@ -385,10 +380,19 @@ struct HomeView: View {
                         }
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .scrollDisabled(true)
-            .frame(height: CGFloat(todayEntries.prefix(3).count * 76))
+            
+            if todayEntries.count > 3 {
+                Button {
+                    navigationPath.append(HomeNavigation.heatmap)
+                } label: {
+                    Text("Show all")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(Theme.active.accent)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                }
+            }
         }
     }
     
@@ -470,49 +474,6 @@ struct HomeView: View {
         store.deleteWorkoutSession(at: IndexSet(indicesToDelete))
     }
     
-    // MARK: - Weekly Muscle Group Overview
-    
-    private var weeklyMuscleOverviewSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("This Week")
-                .sectionHeader()
-            
-            let volume = store.workoutManager.getCategoryVolume(
-                sessions: store.workoutSessions,
-                exerciseLibrary: store.exerciseLibrary,
-                days: 7
-            )
-            
-            if volume.isEmpty {
-                Text("No activity yet this week.")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(12)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(volume.sorted(by: { $0.value > $1.value }).prefix(5), id: \.key) { category, sets in
-                        HStack {
-                            Text(category)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                            Spacer()
-                            Text("\(Int(sets)) sets")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(Theme.active.accent)
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color.black.opacity(0.4))
-                        .cornerRadius(8)
-                    }
-                }
-            }
-        }
-    }
-
     private func startWorkout(template: WorkoutTemplate) {
         if let current = store.activeWorkout, current.templateId == template.id {
             pendingTemplate = template

@@ -194,13 +194,15 @@ final class AppDataStore: ObservableObject {
 
     /// Updates the daily protein target and persists settings.
     func updateDailyProteinTarget(_ grams: Int) {
-        settings.dailyProteinTarget = grams
+        let capped = min(max(grams, 0), 1000)
+        settings.dailyProteinTarget = capped
         save()
     }
     
     /// Updates the default rest time and persists settings.
     func updateRestTime(_ seconds: Int) {
-        settings.restTime = seconds
+        let capped = min(max(seconds, 0), 600)
+        settings.restTime = capped
         save()
     }
     

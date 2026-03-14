@@ -7,7 +7,7 @@ struct OnboardingView: View {
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var currentPage = 0
-    @State private var bodyWeight = "80"
+    @State private var bodyWeight = ""
     
     var body: some View {
         ZStack {
@@ -71,7 +71,7 @@ struct OnboardingView: View {
     
     private func saveProteinFromWeight() {
         let sanitized = bodyWeight.replacingOccurrences(of: ",", with: ".")
-        if let weight = Double(sanitized), weight > 0 {
+        if let weight = Double(sanitized), weight > 0 && weight <= 300 {
             let target = Int((weight * 1.6).rounded())
             store.updateDailyProteinTarget(target)
         }
@@ -139,15 +139,15 @@ struct OnboardingNextButton: View {
         
         var body: some View {
             VStack(spacing: 0) {
-                Spacer(minLength: 80)
+                Spacer(minLength: 60)
                 
                 VStack(spacing: 16) {
                     Text("RepMate")
                         .font(.system(size: 48, weight: .black))
                         .foregroundColor(.white)
-
+                    
                     Text("Track. Lift. Grow.")
-                        .font(.system(size: 48, weight: .black))
+                        .font(.system(size: 24, weight: .regular))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                     
@@ -161,6 +161,7 @@ struct OnboardingNextButton: View {
                         }
                     }
                 }
+                .padding(.top, 120)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 24)
                 
@@ -241,16 +242,13 @@ struct OnboardingNextButton: View {
                 Spacer()
                 
                 VStack(spacing: 24) {
-                    Text("⚡️")
-                        .font(.system(size: 64))
-                    
-                    Text("Set Your Target")
+                    Text("What's your body weight?")
                         .font(.system(size: 32, weight: .bold)) // Sans-serif, no glow
                         .foregroundColor(.white)
                     
-                    Text("Enter your body weight to calculate\nyour optimal daily protein intake.")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
+                    Text("We'll calculate your daily protein goal.")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                     
                     weightInput
@@ -294,7 +292,7 @@ struct OnboardingNextButton: View {
         }
         
         private var weightInput: some View {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            VStack(spacing: 0) {
                 TextField("80", text: $bodyWeight)
                     .keyboardType(.decimalPad)
                     .focused($isWeightFocused)
@@ -310,10 +308,16 @@ struct OnboardingNextButton: View {
                         }
                     }
                 
+                Rectangle()
+                    .frame(width: 140, height: 1)
+                    .foregroundColor(Color.white.opacity(0.4))
+                    .padding(.bottom, 8)
+                
                 Text("kg")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white.opacity(0.6))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
             }
+            .frame(maxWidth: .infinity)
         }
         
         private var presetButtons: some View {
@@ -363,16 +367,13 @@ struct OnboardingNextButton: View {
                     .padding(.horizontal, 24) // Ensures first and last items are centered nicely without truncation
                 }
                 .onAppear {
-                    // Determine starting preset
-                    let startValue = Int(bodyWeight) ?? 80
-                    // Default body weight value to 80 if it's currently empty
-                    if bodyWeight.isEmpty {
-                        bodyWeight = "80"
-                    }
+                    // Determine starting preset - scroll to 80 if empty
+                    let scrollTarget = Int(bodyWeight) ?? 80
+                    
                     // Scroll to active item on appear
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
-                            proxy.scrollTo(startValue, anchor: .center)
+                            proxy.scrollTo(scrollTarget, anchor: .center)
                         }
                     }
                 }

@@ -24,7 +24,8 @@ struct OpenFoodFactsService {
             )
         }
 
-        let urlString = "https://world.openfoodfacts.org/api/v2/product/\(barcode).json?fields=product_name,nutriments,serving_size,serving_quantity"
+        let encodedBarcode = barcode.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? barcode
+        let urlString = "https://world.openfoodfacts.org/api/v2/product/\(encodedBarcode).json?fields=product_name,nutriments,serving_size,serving_quantity"
         
         guard let url = URL(string: urlString) else { return nil }
         

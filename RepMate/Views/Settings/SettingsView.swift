@@ -19,9 +19,6 @@ struct SettingsView: View {
     @Environment(\.openURL) var openURL
     @Environment(\.requestReview) var requestReview
     
-    // Analytics & Crash Reporting
-    @AppStorage("shareAnalytics") private var shareAnalytics = true
-    @AppStorage("sendCrashReports") private var sendCrashReports = true
     
     var body: some View {
         NavigationStack {
@@ -455,26 +452,6 @@ struct SettingsView: View {
                             Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/privacy.html")!) {
                                 navRow(title: "Privacy & Terms", icon: "doc.text.fill", isExternal: true)
                             }
-                            
-                            divider
-                            
-                            Toggle(isOn: $shareAnalytics) {
-                                Label("Share Anonymous Analytics", systemImage: "chart.pie.fill")
-                                    .font(Theme.Fonts.body)
-                                    .foregroundColor(.white)
-                            }
-                            .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
-                            .frame(height: 44)
-                            
-                            divider
-                            
-                            Toggle(isOn: $sendCrashReports) {
-                                Label("Send Crash Reports", systemImage: "ladybug.fill")
-                                    .font(Theme.Fonts.body)
-                                    .foregroundColor(.white)
-                            }
-                            .toggleStyle(SwitchToggleStyle(tint: themeManager.palette.accent))
-                            .frame(height: 44)
                         }
                         
                         // MARK: - Advanced
