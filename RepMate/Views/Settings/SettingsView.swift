@@ -527,6 +527,7 @@ struct SettingsView: View {
                     .padding()
                     .padding(.bottom, store.activeWorkout != nil ? 100 : 20)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

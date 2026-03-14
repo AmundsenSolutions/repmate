@@ -31,39 +31,52 @@ struct ProteinProvider: TimelineProvider {
 
 struct ProteinWidgetView: View {
     var entry: ProteinEntry
+    
+    // RepMate Blue Accent
+    private let accentColor = Color(red: 0.0, green: 0.5, blue: 1.0)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "drop.fill")
-                    .foregroundColor(.blue)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "bolt.fill")
+                    .foregroundColor(accentColor)
+                    .font(.system(size: 10, weight: .bold))
                 Text("PROTEIN")
                     .font(.system(size: 10, weight: .black))
-                    .tracking(1)
+                    .tracking(1.5)
+                    .foregroundColor(.white.opacity(0.6))
             }
             
             Spacer()
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .lastTextBaseline, spacing: 2) {
                     Text("\(entry.amount)")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .font(.system(size: 36, weight: .medium, design: .rounded))
+                        .foregroundColor(.white)
                     Text("g")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(accentColor)
                 }
                 
-                Text("/ \(entry.goal)g goal")
-                    .font(.caption2)
+                Text("\(entry.goal)g goal")
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.gray)
             }
             
             ProgressView(value: Double(entry.amount), total: Double(entry.goal))
-                .tint(.blue)
+                .tint(accentColor)
                 .progressViewStyle(.linear)
+                .scaleEffect(x: 1, y: 1.5, anchor: .center)
+                .clipShape(Capsule())
         }
-        .padding()
-        .containerBackground(Color.black.opacity(0.8), for: .widget)
+        .padding(16)
+        .containerBackground(for: .widget) {
+            ZStack {
+                Color.black
+                accentColor.opacity(0.05).blur(radius: 20)
+            }
+        }
     }
 }
 

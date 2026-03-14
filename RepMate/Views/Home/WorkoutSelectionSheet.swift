@@ -32,46 +32,6 @@ struct WorkoutSelectionSheet: View {
             // Templates List
             ScrollView {
                 VStack(spacing: 12) {
-                    // Quick Start Button
-                    Button {
-                        startEmptyWorkout()
-                    } label: {
-                        HStack {
-                            ZStack {
-                                Circle()
-                                    .fill(Theme.active.accent.opacity(0.2))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "bolt.fill")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(Theme.active.accent)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Quick Start")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                Text("Start empty workout")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color.white.opacity(0.3))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 20)
-                        .background(Color(white: 0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Theme.active.accent.opacity(0.3), lineWidth: 1)
-                        )
-                    }
-                    .padding(.bottom, 8)
-
                     ForEach(store.workoutTemplates) { template in
                         Button {
                             startWorkout(template: template)
@@ -101,30 +61,35 @@ struct WorkoutSelectionSheet: View {
                 .padding(.horizontal, 4)
             }
             .scrollIndicators(.hidden)
-            .frame(maxHeight: 400) 
+            .frame(maxHeight: 300) // Limit scroll height
             
-            Spacer().frame(height: 24)
-            
-            Button {
-                startNewWorkout()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "bolt.fill")
-                    Text("New Workout")
-                    Spacer().frame(width: 0)
-                    Image(systemName: "plus")
+            // Fixed Bottom Button
+            VStack(spacing: 0) {
+                Button {
+                    startNewWorkout()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bolt.fill")
+                        Text("New Workout")
+                        Spacer().frame(width: 0)
+                        Image(systemName: "plus")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                .glowingPanelButton()
+                .padding(.top, 16)
+                .padding(.bottom, 100) // Lifted significantly to clear TabBar
             }
-            .glowingPanelButton() // Uses Theme.active.accent internally
-            .padding(.bottom, 100) // Clear tab bar completely
+            .background(Color.black)
         }
         .padding(.horizontal, 20)
+        .fixedSize(horizontal: false, vertical: true) // Adapt to content
         .background(
             Color.black
             .ignoresSafeArea()
         )
+        .presentationDetents([.height(450), .medium]) // Control sheet height
         .clipShape(RoundedCorner(radius: 30, corners: [.topLeft, .topRight]))
         .overlay(
             // Top Border Glow

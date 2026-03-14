@@ -42,7 +42,7 @@ struct PaywallView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     FeatureRow(icon: "infinity", title: "Unlimited Workouts", subtitle: "Remove all limits. Build the ultimate routine library.")
                     FeatureRow(icon: "chart.bar.fill", title: "Master Your Progress", subtitle: "Deep insights into 1RM projections and volume trends.")
-                    FeatureRow(icon: "paintpalette.fill", title: "Legendary Aesthetics", subtitle: "Unlock exclusive 'Gold' and 'Forged Iron' stealth icons.")
+                    FeatureRow(icon: "paintpalette.fill", title: "Legendary Aesthetics", subtitle: "Unlock exclusive custom themes and premium app icons.")
                 }
                 .padding(.horizontal, 32)
                 
@@ -52,11 +52,6 @@ struct PaywallView: View {
                 VStack(spacing: 16) {
                     if !storeManager.isPro {
                         if let product = storeManager.products.first(where: { $0.id == "repmate_pro_lifetime" }) {
-                            Text(product.displayPrice)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(Theme.Colors.textPrimary)
-                            
                             Button {
                                 Task {
                                     try? await storeManager.purchase(product)
@@ -65,25 +60,16 @@ struct PaywallView: View {
                                     }
                                 }
                             } label: {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 2) {
                                     Text("Get Pro for \(product.displayPrice)")
-                                        .font(.system(size: 18, weight: .bold))
-                                    Text("ONE-TIME PURCHASE")
+                                        .font(.system(size: 19, weight: .bold))
+                                    Text("LIFETIME ACCESS • ONE-TIME PAYMENT")
                                         .font(.system(size: 10, weight: .black))
-                                        .opacity(0.8)
+                                        .opacity(0.7)
                                 }
-                                .foregroundColor(.black)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    ZStack {
-                                        Theme.Colors.accent
-                                        LinearGradient(colors: [.white.opacity(0.3), .clear], startPoint: .top, endPoint: .bottom)
-                                    }
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: Theme.Colors.accent.opacity(0.4), radius: 12, x: 0, y: 6)
                             }
+                            .glowingPanelButton()
                             .padding(.horizontal, 32)
                             
                             Text("No subscriptions. No hidden fees.")

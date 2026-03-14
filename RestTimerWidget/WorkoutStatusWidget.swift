@@ -39,52 +39,73 @@ struct WorkoutStatusProvider: TimelineProvider {
 
 struct WorkoutStatusWidgetView: View {
     var entry: WorkoutStatusEntry
+    
+    // RepMate Orange Accent
+    private let accentColor = Color(red: 1.0, green: 0.4, blue: 0.1)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: "figure.strengthtraining.traditional")
-                    .foregroundColor(.orange)
+                    .foregroundColor(accentColor)
+                    .font(.system(size: 10, weight: .bold))
                 Text("REPMATE")
                     .font(.system(size: 10, weight: .black))
-                    .tracking(1)
+                    .tracking(1.5)
+                    .foregroundColor(.white.opacity(0.6))
             }
             
             Spacer()
             
             if entry.isActive {
-                Text(entry.workoutName ?? "Workout")
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                HStack {
-                    Image(systemName: "clock")
-                    Text("ACTIVE")
-                        .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.workoutName ?? "Active Workout")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "timer")
+                        Text("ACTIVE")
+                            .fontWeight(.black)
+                    }
+                    .font(.system(size: 10))
+                    .foregroundColor(accentColor)
                 }
-                .font(.caption)
-                .foregroundColor(.orange)
-                
-                Text("\(entry.exercisesCompleted) exercises")
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            } else {
-                Text("Start Lifting")
-                    .font(.headline)
-                
-                Text("No active session")
-                    .font(.caption)
-                    .foregroundColor(.gray)
                 
                 Spacer()
                 
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.orange)
+                Text("\(entry.exercisesCompleted) exercises completed")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.gray)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ready to lift?")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("No active session")
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                HStack {
+                    Spacer()
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(accentColor)
+                }
             }
         }
-        .padding()
-        .containerBackground(Color.black.opacity(0.8), for: .widget)
+        .padding(16)
+        .containerBackground(for: .widget) {
+            ZStack {
+                Color.black
+                accentColor.opacity(0.05).blur(radius: 20)
+            }
+        }
     }
 }
 
