@@ -7,7 +7,7 @@ struct OnboardingView: View {
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var currentPage = 0
-    @State private var bodyWeight = ""
+    @State private var bodyWeight = "80"
     
     var body: some View {
         ZStack {
@@ -139,27 +139,27 @@ struct OnboardingNextButton: View {
         
         var body: some View {
             VStack(spacing: 0) {
-                Spacer()
+                Spacer(minLength: 80)
                 
-                VStack(spacing: 8) {
-                    Text("Your Personal\nLifting Partner")
-                        .font(.system(size: 42, weight: .bold)) // Larger, matching image
+                VStack(spacing: 16) {
+                    Text("RepMate")
+                        .font(.system(size: 48, weight: .black))
+                        .foregroundColor(.white)
+
+                    Text("Track. Lift. Grow.")
+                        .font(.system(size: 48, weight: .black))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
-                        .padding(.bottom, 4)
                     
-                    Text("Master your lifts. Track your progress.\nReach your peak performance.")
-                        .font(.system(size: 16, weight: .regular)) // Cleaner sans-serif
-                        .foregroundColor(.white)
+                    Text("Choose your theme")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
                     
-                    // Theme selector
                     HStack(spacing: 24) {
                         ForEach(ThemeManager.availableThemes.filter { $0 != .custom }, id: \.self) { variant in
                             ThemeBubble(variant: variant)
                         }
                     }
-                    .padding(.top, 32)
-                    .padding(.bottom, 20)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 24)
@@ -258,7 +258,7 @@ struct OnboardingNextButton: View {
                     
                     // Show calculated protein space reserved via opacity
                     VStack(spacing: 8) {
-                        Text("\(calculatedProtein ?? 150)g")
+                        Text(calculatedProtein.map { "\($0)g" } ?? "")
                             .font(.system(size: 40, weight: .black))
                             .foregroundColor(Theme.active.accent)
                         
@@ -268,21 +268,10 @@ struct OnboardingNextButton: View {
                     }
                     .padding(.horizontal, 40)
                     .padding(.vertical, 20)
-                    .background(
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial)
-                            Theme.active.verticalGradient.opacity(0.2)
-                        }
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .strokeBorder(Theme.active.accent.opacity(0.5), lineWidth: 1)
-                    )
-                    .shadow(color: Theme.active.accent.opacity(0.2), radius: 15, x: 0, y: 10)
                     .opacity(calculatedProtein != nil ? 1 : 0)
                     .scaleEffect(calculatedProtein != nil ? 1 : 0.9)
                     
-                    Text("Optimal growth requires ~1.6g per kg")
+                    Text("Based on 1.6g per kg of body weight")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.white.opacity(0.5))
                         .multilineTextAlignment(.center)
@@ -660,18 +649,18 @@ struct OnboardingNextButton: View {
                     ZStack {
                         Circle()
                             .fill(Theme.active.accent.opacity(0.2))
-                            .frame(width: 140, height: 140)
+                            .frame(width: 100, height: 100)
                             .blur(radius: 20)
                         
                         Text("🔥")
-                            .font(.system(size: 80))
+                            .font(.system(size: 56))
                     }
                     
-                    Text("Forge Your Legacy")
+                    Text("Let's Get to Work")
                         .font(.system(size: 40, weight: .heavy)) // Sans-serif
                         .foregroundColor(.white)
                     
-                    Text("The best time to start was yesterday.\nThe second best time is now.")
+                    Text("No excuses. Just reps.")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)

@@ -16,9 +16,6 @@ struct ProteinSummaryCard: View {
     // Cached weekly data for performance
     @State private var cachedWeeklyData: [DayData] = []
     
-    // Gold color for goal-met state
-    private let goalGold = Color(hue: 0.12, saturation: 0.85, brightness: 0.95)
-    
     private var streakCount: Int { store.proteinStreak() }
     private var goalMetToday: Bool {
         store.totalProteinFor(date: store.currentDate) >= store.settings.dailyProteinTarget
@@ -44,11 +41,11 @@ struct ProteinSummaryCard: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background((goalMetToday ? goalGold : Theme.active.accent).opacity(0.2))
+                .background(Theme.active.accent.opacity(goalMetToday ? 0.4 : 0.2))
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke((goalMetToday ? goalGold : Theme.active.accent).opacity(0.3), lineWidth: 1)
+                        .stroke(Theme.active.accent.opacity(goalMetToday ? 0.5 : 0.3), lineWidth: 1)
                 )
                 Spacer()
                 
@@ -80,7 +77,7 @@ struct ProteinSummaryCard: View {
             cachedWeeklyData = getWeeklyData()
             previousGoalMet = goalMetToday
         }
-        .onChange(of: store.proteinEntries.count) { _, _ in
+        .onChange(of: store.proteinEntries) { _, _ in
             cachedWeeklyData = getWeeklyData()
             checkGoalTransition()
         }
@@ -111,21 +108,29 @@ struct ProteinSummaryCard: View {
         let today = store.currentDate
         let total = store.totalProteinFor(date: today)
         
-        return HStack(alignment: .firstTextBaseline, spacing: 2) {
-            // Main number with heavy glow
-            Text("\(total)")
-                .font(.system(size: min(64, UIScreen.main.bounds.width * 0.15), weight: .regular, design: .rounded))
-                .foregroundColor(.white)
-                .shadow(color: Theme.active.accent.opacity(0.8), radius: 10, x: 0, y: 0) // Direct text glow
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                // Main number with heavy glow
+                Text("\(total)")
+                    .font(.system(size: min(64, UIScreen.main.bounds.width * 0.15), weight: .regular, design: .rounded))
+                    .foregroundColor(.white)
+                    .shadow(color: Theme.active.accent.opacity(0.8), radius: 10, x: 0, y: 0) // Direct text glow
+                
+                Text("g")
+                    .font(.system(size: 32, weight: .medium, design: .rounded))
+                    .foregroundColor(Theme.active.accent)
+                    .padding(.bottom, 4)
+            }
             
-            // Boxed 'g' unit (as seen in reference idea, or just glowing text)
-            // Reference shows a boxy "0g". Let's style the 'g' distinctly.
-            Text("g")
-                .font(.system(size: 32, weight: .medium, design: .rounded))
-                .foregroundColor(Theme.active.accent)
-                .padding(.bottom, 4)
+            if goalMetToday {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Theme.active.accent)
+                    .transition(.scale.combined(with: .opacity))
+            }
         }
         .padding(.vertical, 4)
+        .animation(.spring(), value: goalMetToday)
     }
     
     // MARK: - Weekly Bar Chart
@@ -152,10 +157,10 @@ struct ProteinSummaryCard: View {
         let maxHeight: CGFloat = 80
         let barHeight = minHeight + CGFloat(normalizedHeight) * (maxHeight - minHeight)
         
-        // Color logic: gold if goal met, accent if today but not met, glow for past days
-        let barColor: Color = day.metGoal
-            ? goalGold
-            : (day.isToday ? Theme.active.accent : Theme.active.glow)
+        // Color logic: accent if today or goal met, glow for past days
+        let barColor: Color = (day.metGoal || day.isToday)
+            ? Theme.active.accent
+            : Theme.active.glow
         
         return RoundedRectangle(cornerRadius: 4, style: .continuous)
             .fill(
@@ -173,9 +178,9 @@ struct ProteinSummaryCard: View {
                 Group {
                     if day.isToday {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(day.metGoal ? goalGold : Theme.active.accent)
-                            .blur(radius: 6)
-                            .opacity(todayPulse ? 0.6 : 0.3)
+                            .fill(Theme.active.accent)
+                            .blur(radius: day.metGoal ? 10 : 6)
+                            .opacity(todayPulse ? (day.metGoal ? 0.8 : 0.6) : (day.metGoal ? 0.5 : 0.3))
                     }
                 }
             )

@@ -118,7 +118,7 @@ struct WorkoutSessionDetailView: View {
                         ) {
                             VStack(spacing: 6) {
                                 ForEach(sets) { set in
-                                    editableSetRow(set: set, exerciseId: exercise.id)
+                                    editableSetRow(set: set, exerciseId: exercise.id, exerciseName: exercise.name)
                                 }
                                 
                                 // Add Set Button
@@ -207,12 +207,13 @@ struct WorkoutSessionDetailView: View {
     
     // MARK: - Subviews
     
-    private func editableSetRow(set: SetLog, exerciseId: UUID) -> some View {
+    private func editableSetRow(set: SetLog, exerciseId: UUID, exerciseName: String) -> some View {
         SwipeToDeleteWrapper(
             onDelete: { deleteSet(id: set.id) }
         ) {
             SetRowView(
                 index: set.setIndex,
+                exerciseName: exerciseName,
                 weight: bindingWeight(for: set.id),
                 reps: bindingReps(for: set.id),
                 rir: bindingRir(for: set.id),

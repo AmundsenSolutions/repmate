@@ -9,7 +9,7 @@
 import Foundation
 
 /// A single logged protein intake.
-struct ProteinEntry: Identifiable, Codable {
+struct ProteinEntry: Identifiable, Codable, Equatable {
     let id: UUID
     var date: Date
     var grams: Int
