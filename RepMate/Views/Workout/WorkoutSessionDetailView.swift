@@ -22,8 +22,13 @@ struct WorkoutSessionDetailView: View {
         _editedSets = State(initialValue: session.sets)
         _editedNotes = State(initialValue: session.notes ?? "")
         _editedExerciseNotes = State(initialValue: session.exerciseNotes ?? [:])
-        _editedStartDate = State(initialValue: session.startedAt ?? session.date)
-        _editedEndDate = State(initialValue: session.endedAt ?? session.date)
+        
+        // Ensure we fall back to session.date and respect any existing started/ended timestamps
+        let start = session.startedAt ?? session.date
+        let end = session.endedAt ?? session.date.addingTimeInterval(3600) // Default to 1 hour if no end time
+        
+        _editedStartDate = State(initialValue: start)
+        _editedEndDate = State(initialValue: end)
     }
     
     private var template: WorkoutTemplate? {
@@ -327,15 +332,19 @@ struct WorkoutSessionDetailView: View {
     }
     
     private func saveWorkout() {
-        // Validate: Ensure endDate >= startDate
-        let validatedEndDate = max(editedEndDate, editedStartDate)
+        // Validate: Ensure endDate is after startDate
+        if editedEndDate <= editedStartDate {
+            HapticManager.shared.error()
+            // Optional: You could show an alert here, but Haptic + keeping isDirty true is a start
+            return
+        }
         
         var updatedSession = originalSession
         updatedSession.sets = editedSets
         updatedSession.notes = editedNotes.isEmpty ? nil : editedNotes
         updatedSession.exerciseNotes = editedExerciseNotes
         updatedSession.startedAt = editedStartDate
-        updatedSession.endedAt = validatedEndDate
+        updatedSession.endedAt = editedEndDate
         updatedSession.date = editedStartDate // Update the main date too
         
         store.updateWorkoutSession(updatedSession)
