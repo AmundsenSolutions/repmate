@@ -7,8 +7,12 @@ struct ReorderExercisesView: View {
     // Optional binding for templates. If nil, uses store.activeWorkout
     var templateIds: Binding<[UUID]>? = nil
     
-    // Local state for the editable list
-    @State private var exerciseIds: [UUID] = []
+    // Local, visual-only list for smooth drag animation.
+    // Important: this list is the sole source for List/ForEach rendering.
+    @State private var exercises: [Exercise] = []
+    
+    // Debounced persistence task to avoid saving during the move animation.
+    @State private var pendingSaveTask: Task<Void, Never>?
     
     var body: some View {
         NavigationStack {
@@ -16,30 +20,27 @@ struct ReorderExercisesView: View {
                 Theme.Colors.background.ignoresSafeArea()
                 
                 List {
-                    ForEach(Array(exerciseIds.enumerated()), id: \.offset) { index, id in
-                        if let exercise = store.exerciseLibrary.first(where: { $0.id == id }) {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(exercise.name)
-                                        .font(.headline)
-                                        .foregroundColor(Theme.Colors.textPrimary)
-                                }
-                                Spacer()
-                                // The system provides the drag handle automatically, but we ensure content doesn't push it out
+                    ForEach(exercises, id: \.id) { exercise in
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(exercise.name)
+                                    .font(.headline)
+                                    .foregroundColor(Theme.Colors.textPrimary)
                             }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 4)
-                            .listRowBackground(
-                                Theme.Colors.cardBackground
-                                    .cornerRadius(Theme.Spacing.cornerRadius)
-                                    .padding(.vertical, 4)
-                            )
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            Spacer()
+                            // The system provides the drag handle automatically.
                         }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                        .listRowBackground(
+                            Theme.Colors.cardBackground
+                                .cornerRadius(Theme.Spacing.cornerRadius)
+                                .padding(.vertical, 4)
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     }
                     .onMove(perform: moveExercises)
-                    .onDelete(perform: deleteExercises)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -54,7 +55,7 @@ struct ReorderExercisesView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        saveChanges()
+                        persistNow()
                         dismiss()
                     }
                     .font(.headline)
@@ -63,26 +64,56 @@ struct ReorderExercisesView: View {
             }
         }
         .onAppear {
-            if let templateIds = templateIds {
-                self.exerciseIds = templateIds.wrappedValue
-            } else if let aw = store.activeWorkout {
-                self.exerciseIds = aw.exerciseIds
-            }
+            loadExercisesForEditing()
         }
     }
     
     private func moveExercises(from source: IndexSet, to destination: Int) {
-        exerciseIds.move(fromOffsets: source, toOffset: destination)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            exercises.move(fromOffsets: source, toOffset: destination)
+        }
+        scheduleDebouncedPersist()
     }
     
-    private func deleteExercises(at offsets: IndexSet) {
-        exerciseIds.remove(atOffsets: offsets)
-    }
-    
-    private func saveChanges() {
+    private func loadExercisesForEditing() {
+        let ids: [UUID]
         if let templateIds = templateIds {
+            ids = templateIds.wrappedValue
+        } else if let aw = store.activeWorkout {
+            ids = aw.exerciseIds
+        } else {
+            ids = []
+        }
+        
+        let byId = Dictionary(uniqueKeysWithValues: store.exerciseLibrary.map { ($0.id, $0) })
+        self.exercises = ids.compactMap { byId[$0] }
+    }
+    
+    private func scheduleDebouncedPersist() {
+        pendingSaveTask?.cancel()
+        
+        // Wait for List's reorder animation to settle before persisting.
+        pendingSaveTask = Task { [templateIds] in
+            try? await Task.sleep(nanoseconds: 450_000_000) // ~0.45s is enough for the move animation
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                persist(templateIds: templateIds, debouncedForActiveWorkout: true)
+            }
+        }
+    }
+    
+    private func persistNow() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = nil
+        persist(templateIds: templateIds, debouncedForActiveWorkout: false)
+        HapticManager.shared.success()
+    }
+    
+    private func persist(templateIds: Binding<[UUID]>?, debouncedForActiveWorkout: Bool) {
+        let exerciseIds = exercises.map(\.id)
+        
+        if let templateIds {
             templateIds.wrappedValue = exerciseIds
-            HapticManager.shared.success()
             return
         }
         
@@ -92,14 +123,17 @@ struct ReorderExercisesView: View {
         // Ensure no rows exist for deleted exercises
         var newRowsByExercise = aw.rowsByExercise
         let idSet = Set(exerciseIds)
-        for key in newRowsByExercise.keys {
-            if !idSet.contains(key) {
-                newRowsByExercise.removeValue(forKey: key)
-            }
+        for key in newRowsByExercise.keys where !idSet.contains(key) {
+            newRowsByExercise.removeValue(forKey: key)
         }
         aw.rowsByExercise = newRowsByExercise
         aw.isDirty = true
-        store.updateActiveWorkout(aw)
-        HapticManager.shared.success()
+        
+        if debouncedForActiveWorkout {
+            // Avoid stutter: update instantly, debounce disk write.
+            store.silentUpdateActiveWorkout(aw)
+        } else {
+            store.updateActiveWorkout(aw)
+        }
     }
 }

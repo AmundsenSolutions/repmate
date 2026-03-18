@@ -23,6 +23,9 @@ struct RepMateApp: App {
                 }
             }
             .environmentObject(store)
+            .environmentObject(store.proteinStore)
+            .environmentObject(store.workoutStore)
+            .environmentObject(store.settingsStore)
             .environmentObject(storeManager)
             .environmentObject(NotificationManager.shared)
             .environmentObject(ThemeManager.shared) // Global Theme Injection

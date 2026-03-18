@@ -484,13 +484,10 @@ struct HomeView: View {
         store.startWorkout(template: template, force: true)
         HapticManager.shared.success()
     }
-    
-    private func startNewWorkout() {
-        startWorkout(template: .empty)
-    }
 }
 
 #Preview {
     HomeView()
         .environmentObject(AppDataStore())
+        .environmentObject(ThemeManager.shared)
 }

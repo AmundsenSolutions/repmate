@@ -1,13 +1,13 @@
 import SwiftUI
-import Combine
 import StoreKit
 
 struct ActiveWorkoutView: View {
     @EnvironmentObject var store: AppDataStore
     @EnvironmentObject var storeManager: StoreManager
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var themeManager = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var vm = ActiveWorkoutViewModel()
 
     @State private var showExitDialog = false
     @State private var showFinishConfirmation = false
@@ -17,21 +17,11 @@ struct ActiveWorkoutView: View {
     @AppStorage("workoutsCompletedCount") private var workoutsCompletedCount = 0
     
     // Menu State
-    @State private var showSaveTemplateAlert = false
     @State private var showRestartConfirmation = false
     @State private var showDeleteConfirmation = false
-    @State private var newTemplateName = ""
-    
-    // Timer State
-    @State private var timeRemaining: Int = 0
-    @State private var initialTimerDuration: Int = 60 // Default for progress calculation
-    @State private var timerCancellable: AnyCancellable?
-    @State private var isTimerActive = false
     
     @State private var showingReorderView = false
-    @State private var showPaywall = false
     @FocusState private var isAnyFieldFocused: Bool
-    @State private var keyboardVisible = false
     
     // Celebration State
     @State private var showPRCelebration = false
@@ -63,22 +53,22 @@ struct ActiveWorkoutView: View {
                     Spacer()
                     
                     // Timer Overlay (only if active)
-                    if isTimerActive {
+                    if vm.isTimerActive {
                         timerOverlay
-                            .padding(.bottom, keyboardVisible ? 0 : 10)
+                            .padding(.bottom, vm.keyboardVisible ? 0 : 10)
                             // Hide timer if keyboard is up to avoid blocking input
-                            .opacity(keyboardVisible ? 0 : 1)
-                            .animation(.easeInOut(duration: 0.2), value: keyboardVisible)
+                            .opacity(vm.keyboardVisible ? 0 : 1)
+                            .animation(.easeInOut(duration: 0.2), value: vm.keyboardVisible)
                     }
                     
-                    if !keyboardVisible && !showWorkoutSavedOverlay {
+                    if !vm.keyboardVisible && !showWorkoutSavedOverlay {
                         finishButton
                             .padding(.bottom, 16)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .zIndex(20) // Ensure it floats above everything
-                .animation(.easeInOut(duration: 0.2), value: keyboardVisible)
+                .animation(.easeInOut(duration: 0.2), value: vm.keyboardVisible)
             }
             
             if showWorkoutSavedOverlay {
@@ -138,7 +128,7 @@ struct ActiveWorkoutView: View {
                 HStack(spacing: 8) {
                     // Rest Timer Button
                     Button {
-                        startRestTimer()
+                        vm.startRestTimer(templateName: template?.name, exerciseLibrary: store.exerciseLibrary)
                     } label: {
                         Image(systemName: "timer")
                             .font(.system(size: 18))
@@ -180,12 +170,11 @@ struct ActiveWorkoutView: View {
                         
                         // Save as Template
                         Button {
-                            if !storeManager.isPro && store.workoutTemplates.count >= 3 {
-                                showPaywall = true
-                            } else {
-                                newTemplateName = template?.name ?? "My Workout"
-                                showSaveTemplateAlert = true
-                            }
+                            vm.requestSaveAsTemplate(
+                                isPro: storeManager.isPro,
+                                templateCount: store.workoutTemplates.count,
+                                suggestedName: template?.name ?? "My Workout"
+                            )
                         } label: {
                             Label("Save as Template", systemImage: "square.and.arrow.down")
                         }
@@ -235,31 +224,32 @@ struct ActiveWorkoutView: View {
         }
         .onAppear {
             store.isViewingActiveWorkout = true
-            restoreTimerState()
+            vm.attach(store: store, themeManager: themeManager)
+            vm.restoreTimerState(templateName: template?.name, exerciseLibrary: store.exerciseLibrary)
         }
         .onDisappear {
             store.isViewingActiveWorkout = false
             // Only cancel the local Combine subscription —
             // do NOT end the Live Activity, it should keep running on the Lock Screen.
-            cancelLocalTimer()
+            vm.cancelLocalTimer()
         }
         .onChange(of: active) { _, newValue in
             if newValue == nil && !showWorkoutSavedOverlay { dismiss() }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                restoreTimerState()
+                vm.restoreTimerState(templateName: template?.name, exerciseLibrary: store.exerciseLibrary)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            withAnimation { keyboardVisible = true }
+            vm.handleKeyboardWillShow()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            withAnimation { keyboardVisible = false }
+            vm.handleKeyboardWillHide()
         }
         .onChange(of: store.activeWorkout?.timerTargetDate) { _, newTarget in
             if newTarget == nil {
-                stopTimer()
+                vm.stopTimer()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewPRDetected"))) { notification in
@@ -268,8 +258,8 @@ struct ActiveWorkoutView: View {
             }
         }
         // Menu Dialogs
-        .alert("Save as Template", isPresented: $showSaveTemplateAlert) {
-            TextField("Template Name", text: $newTemplateName)
+        .alert("Save as Template", isPresented: $vm.showSaveTemplateAlert) {
+            TextField("Template Name", text: $vm.newTemplateName)
             Button("Save") { saveAsTemplate() }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -290,7 +280,7 @@ struct ActiveWorkoutView: View {
         .sheet(isPresented: $showingReorderView) {
             ReorderExercisesView()
         }
-        .sheet(isPresented: $showPaywall) {
+        .sheet(isPresented: $vm.showPaywall) {
             PaywallView()
         }
     }
@@ -399,7 +389,7 @@ struct ActiveWorkoutView: View {
     
     private func saveAsTemplate() {
         guard let aw = active else { return }
-        let name = newTemplateName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = vm.newTemplateName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
         
         let newTemplate = WorkoutTemplate(
@@ -450,205 +440,13 @@ struct ActiveWorkoutView: View {
         }
     }
     
-    // MARK: - Timer Logic
-    
-    private func restoreTimerState() {
-        guard let aw = store.activeWorkout, let target = aw.timerTargetDate else { return }
-        
-        let now = Date()
-        let remaining = target.timeIntervalSince(now)
-        
-        if remaining > 0 {
-            // Cancel any existing timer first to prevent stacking
-            timerCancellable?.cancel()
-            timerCancellable = nil
-            
-            timeRemaining = Int(remaining)
-            initialTimerDuration = max(store.settings.restTime, Int(remaining))
-            isTimerActive = true
-            
-            if LiveActivityManager.shared.hasActiveTimer {
-                // Live Activity already running (e.g. came back from background) — just sync the end time
-                LiveActivityManager.shared.updateTimer(newEndTime: target)
-            } else {
-                // Live Activity was killed (app dismissed, crash, etc.) — restart it
-                var nextExerciseName: String?
-                var nextSetInfo: String?
-                outerLoop: for exId in aw.exerciseIds {
-                    if let rows = aw.rowsByExercise[exId],
-                       let index = rows.firstIndex(where: { !$0.isCompleted }),
-                       let ex = store.exerciseLibrary.first(where: { $0.id == exId }) {
-                        nextExerciseName = ex.name
-                        nextSetInfo = "Set \(index + 1) of \(rows.count)"
-                        break outerLoop
-                    }
-                }
-                LiveActivityManager.shared.startTimer(
-                    duration: Int(remaining),
-                    accentColor: themeManager.palette.accent,
-                    exerciseName: nextExerciseName ?? store.exerciseLibrary.first(where: { $0.id == aw.exerciseIds.first })?.name,
-                    setInfo: nextSetInfo,
-                    templateName: template?.name,
-                    exerciseCategory: nil
-                )
-            }
-            
-            timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
-                .autoconnect()
-                .sink { [self] _ in
-                    guard let dynamicTarget = store.activeWorkout?.timerTargetDate else { return }
-                    let secondsLeft = Int(ceil(dynamicTarget.timeIntervalSince(Date())))
-                    if secondsLeft > 0 {
-                        timeRemaining = secondsLeft
-                    } else {
-                        timeRemaining = 0
-                        HapticManager.shared.success()
-                        if var aw = store.activeWorkout {
-                            aw.timerTargetDate = nil
-                            store.updateActiveWorkout(aw)
-                        }
-                        stopTimer()
-                    }
-                }
-        } else {
-             if var aw = store.activeWorkout {
-                aw.timerTargetDate = nil
-                store.updateActiveWorkout(aw)
-            }
-            // Clean up any stale Live Activity
-            LiveActivityManager.shared.endTimer()
-        }
-    }
-    
-    /// Configures and launches a Live Activity widget to track the user's rest period,
-    /// injecting the upcoming exercise context to display on the Lock Screen.
-    private func startRestTimer() {
-        stopTimer()
-        let duration = store.settings.restTime
-        initialTimerDuration = duration
-        timeRemaining = duration
-        isTimerActive = true
-        HapticManager.shared.lightImpact()
-        
-        let targetDate = Date().addingTimeInterval(TimeInterval(duration))
-        
-        var nextExerciseName: String?
-        var nextSetInfo: String?
-        let tName = template?.name
-        
-        if var aw = store.activeWorkout {
-            aw.timerTargetDate = targetDate
-            store.updateActiveWorkout(aw)
-            
-            // Calculate next exercise and set
-            outerLoop: for exId in aw.exerciseIds {
-                if let rows = aw.rowsByExercise[exId], let index = rows.firstIndex(where: { !$0.isCompleted }) {
-                    if let ex = store.exerciseLibrary.first(where: { $0.id == exId }) {
-                        nextExerciseName = ex.name
-                        nextSetInfo = "Set \(index + 1) of \(rows.count)"
-                        break outerLoop
-                    }
-                }
-            }
-            
-            if nextExerciseName == nil {
-                nextExerciseName = "Workout Complete"
-                nextSetInfo = "Great Job!"
-            }
-        }
-        
-        // Start Live Activity (Dynamic Island + Lock Screen)
-        LiveActivityManager.shared.startTimer(
-            duration: duration,
-            accentColor: themeManager.palette.accent,
-            exerciseName: nextExerciseName,
-            setInfo: nextSetInfo,
-            templateName: tName,
-            exerciseCategory: nil
-        )
-        
-        timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [self] _ in
-                guard let dynamicTarget = store.activeWorkout?.timerTargetDate else { return }
-                let secondsLeft = Int(ceil(dynamicTarget.timeIntervalSince(Date())))
-                
-                if secondsLeft > 0 {
-                    timeRemaining = secondsLeft
-                    
-                    // Countdown haptics at 5s and 3s
-                    if secondsLeft == 5 {
-                        HapticManager.shared.lightImpact()
-                    } else if secondsLeft == 3 {
-                        HapticManager.shared.selection()
-                    }
-                } else {
-                    timeRemaining = 0
-                    // Multiple vibrations at 0 to get attention
-                    HapticManager.shared.success()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        HapticManager.shared.success()
-                    }
-                    if var aw = store.activeWorkout {
-                        aw.timerTargetDate = nil
-                        store.updateActiveWorkout(aw)
-                    }
-                    stopTimer()
-                }
-            }
-    }
-    
-    /// Cancels only the local Combine timer subscription, without touching the Live Activity.
-    /// Called on view disappear so the Live Activity keeps running on the Lock Screen.
-    private func cancelLocalTimer() {
-        timerCancellable?.cancel()
-        timerCancellable = nil
-        isTimerActive = false
-        // Live Activity intentionally NOT ended here
-    }
-    
-    /// Fully stops the timer: cancels the local subscription AND ends the Live Activity.
-    /// Called when the user explicitly cancels (X button, skip, timer expires).
-    private func stopTimer() {
-        timerCancellable?.cancel()
-        timerCancellable = nil
-        isTimerActive = false
-        LiveActivityManager.shared.endTimer()
-    }
-    
-    private func skipTimer() {
-        stopTimer()
-        HapticManager.shared.selection()
-    }
-    
-    private func adjustTimer(_ seconds: Int) {
-        guard var aw = store.activeWorkout, let currentTarget = aw.timerTargetDate else { return }
-        
-        let newTarget = currentTarget.addingTimeInterval(TimeInterval(seconds))
-        
-        if newTarget <= Date() {
-            timeRemaining = 0
-            aw.timerTargetDate = nil
-            store.updateActiveWorkout(aw)
-            stopTimer()
-        } else {
-            aw.timerTargetDate = newTarget
-            store.updateActiveWorkout(aw)
-            LiveActivityManager.shared.updateTimer(newEndTime: newTarget)
-            timeRemaining = Int(ceil(newTarget.timeIntervalSince(Date())))
-            if timeRemaining > initialTimerDuration {
-                initialTimerDuration = timeRemaining
-            }
-        }
-        
-        HapticManager.shared.selection()
-    }
-    
+    // MARK: - Timer UI
+
     private var timerOverlay: some View {
         HStack(spacing: 12) {
             // -15s
             Button {
-                adjustTimer(-15)
+                vm.adjustTimer(-15)
             } label: {
                 Image(systemName: "gobackward.15")
                     .font(.system(size: 20))
@@ -667,12 +465,12 @@ struct ActiveWorkoutView: View {
                     .stroke(Color.white.opacity(0.1), lineWidth: 4)
                 
                 Circle()
-                    .trim(from: 0, to: CGFloat(timeRemaining) / CGFloat(max(initialTimerDuration, 1)))
+                    .trim(from: 0, to: CGFloat(vm.timeRemaining) / CGFloat(max(vm.initialTimerDuration, 1)))
                     .stroke(Theme.Colors.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1.0), value: timeRemaining)
+                    .animation(.linear(duration: 1.0), value: vm.timeRemaining)
                 
-                Text(formatTime(timeRemaining))
+                Text(formatTime(vm.timeRemaining))
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                     .lineLimit(1)
@@ -691,7 +489,7 @@ struct ActiveWorkoutView: View {
             
             // +15s
              Button {
-                adjustTimer(15)
+                vm.adjustTimer(15)
             } label: {
                 Image(systemName: "goforward.15")
                     .font(.system(size: 20))
@@ -706,7 +504,7 @@ struct ActiveWorkoutView: View {
             
             // Skip (X)
             Button {
-                skipTimer()
+                vm.skipTimer()
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 18, weight: .bold))

@@ -9,8 +9,7 @@
 import SwiftUI
 
 struct AppTabView: View {
-    @ObservedObject var themeManager = ThemeManager.shared // Observe updates
-
+    @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var store: AppDataStore // Ensure we have access to store
     @State private var isShowingActiveWorkout = false
 
@@ -38,7 +37,6 @@ struct AppTabView: View {
                 }
         }
         .tint(themeManager.palette.accent) // Dynamic Tab Bar Color
-        .environmentObject(themeManager) // Inject for child views
 
         .overlay(alignment: .bottom) {
             PersistentWorkoutBanner {
@@ -60,7 +58,6 @@ struct AppTabView: View {
             NavigationStack {
                 ActiveWorkoutView()
             }
-            .environmentObject(themeManager) // Also inject in fullScreenCover
         }
     }
 }
@@ -68,4 +65,8 @@ struct AppTabView: View {
 /// AppTabView preview.
 #Preview {
     AppTabView()
+        .environmentObject(AppDataStore())
+        .environmentObject(ThemeManager.shared)
+        .environmentObject(StoreManager())
+        .environmentObject(NotificationManager.shared)
 }

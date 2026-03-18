@@ -3,13 +3,11 @@ import SwiftUI
 struct CustomThemeView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var store: AppDataStore // For preview data if needed
+    @EnvironmentObject var themeManager: ThemeManager
     
     // Local State for color manipulation
     @State private var hue: Double = 0.5
     @State private var previewColor: Color = .blue
-    
-    // Binding to ThemeManager
-    @ObservedObject var themeManager = ThemeManager.shared
     
     var body: some View {
         ZStack {
@@ -221,4 +219,6 @@ struct CustomThemeView: View {
 
 #Preview {
     CustomThemeView()
+        .environmentObject(AppDataStore())
+        .environmentObject(ThemeManager.shared)
 }

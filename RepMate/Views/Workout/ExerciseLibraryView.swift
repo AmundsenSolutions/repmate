@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ExerciseLibraryView: View {
     @EnvironmentObject var store: AppDataStore
-    @ObservedObject var themeManager = ThemeManager.shared // Reactivity
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     
     @State private var showingAddExercise = false
@@ -301,7 +301,7 @@ struct ExerciseLibraryView: View {
             exercises = exercises.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
         
-        return exercises.sorted { $0.name < $1.name }
+        return exercises
     }
 }
 
@@ -310,6 +310,8 @@ struct ExerciseCard: View {
     var isSelected: Bool = false
     var selectionMode: Bool = false
     var onTap: (() -> Void)?
+    
+    @EnvironmentObject private var themeManager: ThemeManager
     
     var body: some View {
         Button {
@@ -350,7 +352,7 @@ struct ExerciseCard: View {
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 22))
-                            .foregroundColor(ThemeManager.shared.activeTheme.palette.accent)
+                            .foregroundColor(themeManager.palette.accent)
                     } else {
                         Image(systemName: "circle")
                             .font(.system(size: 22))

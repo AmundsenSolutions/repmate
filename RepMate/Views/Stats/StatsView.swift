@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import StoreKit
 
 enum StatsTimeFilter: String, CaseIterable, Identifiable {
     case week = "7d"
@@ -25,6 +26,7 @@ struct StatsView: View {
     @State private var selectedFilter: StatsTimeFilter = .month
     @State private var showPaywall = false
     
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -34,7 +36,7 @@ struct StatsView: View {
                     }
                 
                 ScrollView {
-                    VStack(spacing: Theme.Spacing.standard * 1.25) { // 20 -> 16 * 1.25 = 20. Or just use 20. Let's Stick to standard 20 spacing for outer stack.
+                    VStack(spacing: 24) { // Increased vertical spacing between groups
                         // Time Filter Chips
                         HStack(spacing: Theme.Spacing.tight) {
                             ForEach(StatsTimeFilter.allCases) { filter in
@@ -58,28 +60,31 @@ struct StatsView: View {
                         }
                         .padding(.horizontal)
                         
-                        // 2. Activity / Consistency
-                        ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
+                        // 1. Overview
+                        StatsOverviewSection(days: selectedFilter.days)
                         
-                        // New: All-Time Personal Records
-                        AllTimePRSection()
-
-                        // 3. Strength & PR
+                        // 2. Strength & PR
                         StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
                         
-                        // 4. 1RM Calculator (Free)
-                        OneRMCalculatorCard()
+                        // 3. Activity / Consistency
+                        ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
                         
-                        // 5. Muscle Map (Mixed Free/Pro)
-                        MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
+                        // 4. Personal Records (All Time)
+                        AllTimePRSection()
                         
-                        // 6. Nutrition Stats
+                        // 5. Nutrition
                         NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
+
+                        // 6. Muscle Map (Mixed Free/Pro)
+                        MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
                             
                         // 7. Smart Insights (Pro Locked)
                         ProLockedOverlay(isPro: storeManager.isPro, paywallAction: { showPaywall = true }) {
                             SmartInsightsRow(days: selectedFilter.days)
                         }
+
+                        // 8. Tools
+                        OneRMCalculatorCard()
                         
                         // Bottom Spacing
                         Spacer(minLength: 100)
@@ -97,16 +102,82 @@ struct StatsView: View {
     }
 }
 
+// MARK: - Stats Overview
+private struct StatsOverviewSection: View {
+    @EnvironmentObject var store: AppDataStore
+    @EnvironmentObject var themeManager: ThemeManager
+    let days: Int
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var workoutCount: Int {
+        store.workoutManager.getWorkoutCount(sessions: store.workoutSessions, days: days)
+    }
+
+    private var weeklyAvg: Double {
+        store.workoutManager.avgWorkoutsPerWeek(sessions: store.workoutSessions, days: days)
+    }
+
+    private var proteinAvg: Double {
+        store.proteinManager.dailyAverage(entries: store.proteinEntries, days: days)
+    }
+
+    var body: some View {
+        GlassSection(title: "Overview") {
+            Group {
+                if horizontalSizeClass == .compact {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        overviewCards
+                    }
+                } else {
+                    HStack(spacing: 8) {
+                        overviewCards
+                    }
+                }
+            }
+            .padding(Theme.Spacing.standard)
+        }
+    }
+    
+    @ViewBuilder
+    private var overviewCards: some View {
+        StatCard(
+            title: "Workouts",
+            value: "\(workoutCount)",
+            icon: "figure.strengthtraining.traditional",
+            color: themeManager.palette.accent
+        )
+        StatCard(
+            title: "Avg / Week",
+            value: String(format: "%.1f", weeklyAvg),
+            icon: "calendar",
+            color: Theme.Colors.accent
+        )
+        StatCard(
+            title: "Avg Protein",
+            value: String(format: "%.0fg", proteinAvg),
+            icon: "fork.knife",
+            color: themeManager.palette.accent
+        )
+    }
+}
+
 // MARK: - Pro Locked Overlay
 struct ProLockedOverlay<Content: View>: View {
+    @EnvironmentObject var storeManager: StoreManager
     let isPro: Bool
+    var price: String? = nil
     let paywallAction: () -> Void
     let content: Content
 
-    init(isPro: Bool, paywallAction: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+    init(isPro: Bool, price: String? = nil, paywallAction: @escaping () -> Void, @ViewBuilder content: () -> Content) {
         self.isPro = isPro
+        self.price = price
         self.paywallAction = paywallAction
         self.content = content()
+    }
+    
+    private var displayPrice: String? {
+        price ?? storeManager.products.first(where: { $0.id == "repmate_pro_lifetime" })?.displayPrice
     }
 
     var body: some View {
@@ -127,6 +198,13 @@ struct ProLockedOverlay<Content: View>: View {
                     Text("Unlock RepMate Pro")
                         .font(.headline)
                         .foregroundColor(.white)
+                    
+                    if let price = displayPrice, !price.isEmpty {
+                        Text(price)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.yellow)
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)

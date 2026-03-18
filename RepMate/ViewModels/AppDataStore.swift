@@ -55,6 +55,11 @@ final class AppDataStore: ObservableObject {
     private let fileName = "repmate_data.json"
     /// Debounce task for silentUpdateActiveWorkout — prevents per-keystroke disk writes.
     private var silentSaveTask: Task<Void, Never>?
+    
+    // Domain stores (composition): allows gradual migration away from a mega-store.
+    lazy var proteinStore: ProteinStore = ProteinStore(store: self)
+    lazy var workoutStore: WorkoutStore = WorkoutStore(store: self)
+    lazy var settingsStore: SettingsStore = SettingsStore(store: self)
 
     init() {
         // Migrate old vext_data.json to repmate_data.json to prevent data loss on update

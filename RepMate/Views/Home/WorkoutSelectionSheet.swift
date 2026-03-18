@@ -134,11 +134,6 @@ struct WorkoutSelectionSheet: View {
         onCreateNewTemplate?(newTemplate.id)
     }
 
-    private func startEmptyWorkout() {
-        store.activeWorkout = ActiveWorkout.startEmpty()
-        close()
-    }
-    
     private func close() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             isPresented = false

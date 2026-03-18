@@ -3,12 +3,16 @@ import SwiftUI
 /// First-run onboarding flow with 4 swipeable pages.
 struct OnboardingView: View {
     @EnvironmentObject var store: AppDataStore
-    @ObservedObject var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var currentPage = 0
     @State private var bodyWeight = ""
     
+    private var isWeightValid: Bool {
+        bodyWeight.isValidWeight
+    }
+
     var body: some View {
         ZStack {
             // Background Layer
@@ -23,6 +27,7 @@ struct OnboardingView: View {
                 .frame(width: proxy.size.width, height: proxy.size.height)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.8), value: currentPage)
+                .gesture(currentPage == 1 && !isWeightValid ? DragGesture() : nil)
                 
                 // Heavy dark overlay to make text premium and legible
                 Color.black.opacity(0.65).ignoresSafeArea()
@@ -49,6 +54,7 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
+                .gesture(currentPage == 1 && !isWeightValid ? DragGesture() : nil)
                 
                 // Custom Pagination Dots placed explicitly so they don't overlap the NEXT button
                 HStack(spacing: 8) {
@@ -102,13 +108,41 @@ extension View {
     }
 }
 
+// MARK: - Onboarding Premium Card
+private struct OnboardingGlassCard: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(16)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.9)
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.white.opacity(0.03))
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+    }
+}
+
+private extension View {
+    func onboardingGlassCard() -> some View {
+        modifier(OnboardingGlassCard())
+    }
+}
+
 // MARK: - Shared Next Button
 
 struct OnboardingNextButton: View {
-    @ObservedObject var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
     var action: () -> Void
     var title: String
     var icon: String? = "arrow.right"
+    var isEnabled: Bool = true
     
     var body: some View {
         Button {
@@ -125,6 +159,8 @@ struct OnboardingNextButton: View {
             .contentShape(Rectangle())
         }
         .glowingPanelButton()
+        .opacity(isEnabled ? 1 : 0.45)
+        .disabled(!isEnabled)
         .frame(maxWidth: 600)
         .padding(.horizontal, 24)
         .padding(.bottom, 24) // Leaves room for custom pagination dots
@@ -134,7 +170,7 @@ struct OnboardingNextButton: View {
     // MARK: - Slide 1: Welcome & Theme
     
     struct OnboardingWelcomeSlide: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         var onNext: () -> Void
         
         var body: some View {
@@ -173,7 +209,7 @@ struct OnboardingNextButton: View {
     }
     
     struct ThemeBubble: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         let variant: ThemeVariant
         
         private var isActive: Bool { themeManager.activeTheme == variant }
@@ -226,7 +262,7 @@ struct OnboardingNextButton: View {
     // MARK: - Slide 2: Nutrition (Body Weight → Protein)
     
     struct OnboardingNutritionSlide: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         @Binding var bodyWeight: String
         var onNext: () -> Void
         @FocusState private var isWeightFocused: Bool
@@ -236,46 +272,68 @@ struct OnboardingNextButton: View {
             guard let weight = Double(sanitized), weight > 0 else { return nil }
             return Int((weight * 1.6).rounded())
         }
+
+        private var isWeightValid: Bool {
+            bodyWeight.isValidWeight
+        }
         
         var body: some View {
             VStack(spacing: 0) {
                 Spacer()
                 
-                VStack(spacing: 24) {
-                    Text("What's your body weight?")
-                        .font(.system(size: 32, weight: .bold)) // Sans-serif, no glow
-                        .foregroundColor(.white)
-                    
-                    Text("We'll calculate your daily protein goal.")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.white.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                    
-                    weightInput
-                    presetButtons
-                    
-                    // Show calculated protein space reserved via opacity
+                VStack(spacing: 18) {
                     VStack(spacing: 8) {
-                        Text(calculatedProtein.map { "\($0)g" } ?? "")
-                            .font(.system(size: 40, weight: .black))
-                            .foregroundColor(Theme.active.accent)
+                        Text("What's your body weight?")
+                            .font(.system(size: 30, weight: .black))
+                            .foregroundColor(.white)
+                        
+                        Text("We'll calculate your daily protein goal.")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 10)
+                    
+                    VStack(spacing: 14) {
+                        weightInput
+                        presetButtons
+                    }
+                    .onboardingGlassCard()
+                    
+                    VStack(spacing: 10) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(calculatedProtein.map { "\($0)" } ?? "—")
+                                .font(.system(size: 44, weight: .black, design: .rounded))
+                                .foregroundColor(themeManager.palette.accent)
+                                .contentTransition(.numericText())
+                            
+                            Text("g")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(themeManager.palette.accent.opacity(0.9))
+                        }
                         
                         Text("DAILY PROTEIN GOAL")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(.white.opacity(0.55))
+                            .tracking(1.2)
+                        
+                        Text("Based on 1.6g per kg of body weight")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                        
+                        if !bodyWeight.isEmpty && !isWeightValid {
+                            Text("Enter a weight between 1 and 300 kg")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.red.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                                .transition(.opacity)
+                        }
                     }
-                    .padding(.horizontal, 40)
-                    .padding(.vertical, 20)
-                    .opacity(calculatedProtein != nil ? 1 : 0)
-                    .scaleEffect(calculatedProtein != nil ? 1 : 0.9)
-                    
-                    Text("Based on 1.6g per kg of body weight")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.white.opacity(0.5))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                    .onboardingGlassCard()
+                    .opacity(calculatedProtein != nil ? 1 : 0.9)
                 }
-                .padding(.vertical, 32)
+                .padding(.vertical, 28)
                 .padding(.horizontal, 24)
                 .frame(maxWidth: 600)
                 
@@ -284,9 +342,10 @@ struct OnboardingNextButton: View {
                 OnboardingNextButton(action: {
                     isWeightFocused = false
                     onNext()
-                }, title: "NEXT")
+                }, title: "NEXT", isEnabled: isWeightValid)
             }
             .animation(.easeOut(duration: 0.2), value: calculatedProtein)
+            .animation(.easeOut(duration: 0.15), value: isWeightValid)
             .contentShape(Rectangle())
             .onTapGesture { isWeightFocused = false }
         }
@@ -325,7 +384,7 @@ struct OnboardingNextButton: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         // Start lower to allow 80 to be in the middle, and go up higher
-                        ForEach([40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150], id: \.self) { preset in
+                        ForEach([60, 70, 80, 90, 100, 110, 120], id: \.self) { preset in
                             let isActive = bodyWeight == "\(preset)"
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -348,7 +407,7 @@ struct OnboardingNextButton: View {
                                                     .cornerRadius(12)
                                             } else {
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .fill(Color(white: 0.15))
+                                                    .fill(Color.white.opacity(0.06))
                                             }
                                         }
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -384,25 +443,34 @@ struct OnboardingNextButton: View {
     // MARK: - Slide 3: Tutorial
     
     struct OnboardingTutorialSlide: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         var onNext: () -> Void
         
         var body: some View {
             VStack(spacing: 0) {
                 Spacer(minLength: 20)
                 
-                VStack(spacing: 16) {
-                    Text("🎓")
-                        .font(.system(size: 48))
+                VStack(spacing: 18) {
+                    VStack(spacing: 10) {
+                        Text("How It Works")
+                            .font(.system(size: 30, weight: .black))
+                            .foregroundColor(.white)
+                        
+                        Text("A few small details that make progress effortless.")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 10)
                     
-                    Text("How It Works")
-                        .font(.system(size: 28, weight: .bold)) // Sans-serif
-                        .foregroundColor(.white)
-                        .padding(.bottom, 8)
-                    
-                    ghostDataCard
-                    swipeCard
-                    arrowsCard
+                    VStack(spacing: 24) {
+                        ghostDataCard
+                        swipeCard
+                        arrowsCard
+                    }
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 20)
+                    .onboardingGlassCard()
                 }
                 .padding(24)
                 .frame(maxWidth: 600)
@@ -426,7 +494,8 @@ struct OnboardingNextButton: View {
                         Text("Ghost Data")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
-                        Text("Grey numbers show your last session.").fixedSize(horizontal: false, vertical: true)
+                        Text("Grey numbers show your last session.")
+                            .fixedSize(horizontal: false, vertical: true)
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
@@ -434,7 +503,6 @@ struct OnboardingNextButton: View {
                 
                 GhostDataDemoRow()
             }
-            .padding(.vertical, 4)
         }
         
         private var swipeCard: some View {
@@ -449,7 +517,8 @@ struct OnboardingNextButton: View {
                         Text("Swipe to Delete")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
-                        Text("Swipe left on any row to remove it.").fixedSize(horizontal: false, vertical: true)
+                        Text("Swipe left on any row to remove it.")
+                            .fixedSize(horizontal: false, vertical: true)
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
@@ -457,7 +526,6 @@ struct OnboardingNextButton: View {
                 
                 SwipeDeleteDemoRow()
             }
-            .padding(.vertical, 4)
         }
         
         private var arrowsCard: some View {
@@ -472,7 +540,8 @@ struct OnboardingNextButton: View {
                         Text("Target Rep Range")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
-                        Text("Arrows guide weight adjustments.").fixedSize(horizontal: false, vertical: true)
+                        Text("Arrows guide weight adjustments.")
+                            .fixedSize(horizontal: false, vertical: true)
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
@@ -480,14 +549,13 @@ struct OnboardingNextButton: View {
                 
                 ArrowsDemoRow()
             }
-            .padding(.vertical, 4)
         }
     }
     
     // MARK: - Tutorial Demo Rows
     
     struct GhostDataDemoRow: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         
         var body: some View {
             HStack(spacing: 8) {
@@ -539,7 +607,7 @@ struct OnboardingNextButton: View {
                     Spacer()
                     Image(systemName: "trash.fill")
                         .foregroundColor(.white)
-                        .padding(.trailing, 28) // Moved slightly more to the right so it doesn't overlap text
+                        .padding(.trailing, 28)
                 }
                 .frame(height: 44)
                 .background(Color.red.opacity(0.8))
@@ -560,7 +628,7 @@ struct OnboardingNextButton: View {
                     Text("80 kg × 8")
                         .font(.system(size: 13))
                         .foregroundColor(.white.opacity(0.8))
-                        .padding(.trailing, 8) // ensuring left clearance from the right edge
+                        .padding(.trailing, 8)
                 }
                 .padding(.horizontal, 12)
                 .frame(height: 44)
@@ -604,7 +672,7 @@ struct OnboardingNextButton: View {
     }
     
     struct ArrowsDemoRow: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         
         var body: some View {
             HStack {
@@ -618,7 +686,9 @@ struct OnboardingNextButton: View {
                 }
                 .frame(maxWidth: .infinity)
                 
-                Divider().background(Color.white.opacity(0.2)).frame(height: 20)
+                Divider()
+                    .background(Color.white.opacity(0.2))
+                    .frame(height: 20)
                 
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.down.circle.fill")
@@ -639,7 +709,7 @@ struct OnboardingNextButton: View {
     // MARK: - Slide 4: Get Started
     
     struct OnboardingStartSlide: View {
-        @ObservedObject var themeManager = ThemeManager.shared
+        @EnvironmentObject var themeManager: ThemeManager
         var onStart: () -> Void
         
         var body: some View {
@@ -653,16 +723,17 @@ struct OnboardingNextButton: View {
                             .frame(width: 100, height: 100)
                             .blur(radius: 20)
                         
-                        Text("🔥")
-                            .font(.system(size: 56))
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 44, weight: .black))
+                            .foregroundColor(themeManager.palette.accent)
                     }
                     
                     Text("Let's Get to Work")
-                        .font(.system(size: 40, weight: .heavy)) // Sans-serif
+                        .font(.system(size: 36, weight: .black))
                         .foregroundColor(.white)
                     
                     Text("No excuses. Just reps.")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                 }
@@ -682,3 +753,11 @@ struct OnboardingNextButton: View {
             .environmentObject(ThemeManager.shared)
     }
 
+// MARK: - Weight Validation Extension
+extension String {
+    var isValidWeight: Bool {
+        let sanitized = self.replacingOccurrences(of: ",", with: ".")
+        guard let weight = Double(sanitized) else { return false }
+        return weight > 0 && weight <= 300
+    }
+}
