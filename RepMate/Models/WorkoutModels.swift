@@ -2,10 +2,45 @@
 import Foundation
 
 struct TemplateTarget: Codable, Hashable {
-    var sets: Int
+    var sets: String
     var reps: String
     var rir: String // Reps in Reserve (String to support ranges like "0-1")
     var rest: Int // Seconds (optional, maybe standard Int representing seconds)
+    
+    enum CodingKeys: String, CodingKey {
+        case sets, reps, rir, rest
+    }
+    
+    init(sets: String, reps: String, rir: String, rest: Int) {
+        self.sets = sets
+        self.reps = reps
+        self.rir = rir
+        self.rest = rest
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.reps = try container.decode(String.self, forKey: .reps)
+        self.rir = try container.decode(String.self, forKey: .rir)
+        self.rest = try container.decode(Int.self, forKey: .rest)
+        
+        // Try decoding 'sets' as String first.
+        if let setsString = try? container.decode(String.self, forKey: .sets) {
+            self.sets = setsString
+        } else {
+            // Fallback: decode as Int and convert to String to support old local saves
+            let setsInt = try container.decode(Int.self, forKey: .sets)
+            self.sets = String(setsInt)
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sets, forKey: .sets)
+        try container.encode(reps, forKey: .reps)
+        try container.encode(rir, forKey: .rir)
+        try container.encode(rest, forKey: .rest)
+    }
 }
 
 struct ActiveSetRow: Codable, Hashable, Identifiable {
@@ -14,6 +49,12 @@ struct ActiveSetRow: Codable, Hashable, Identifiable {
     var reps: String = ""
     var rir: String = ""
     var isCompleted: Bool = false
+}
+
+enum WorkoutFieldFocus: Hashable {
+    case weight(setId: UUID)
+    case reps(setId: UUID)
+    case rir(setId: UUID)
 }
 
 struct WorkoutTemplate: Identifiable, Codable {
@@ -65,9 +106,46 @@ struct ShareableTemplate: Codable {
     struct ShareableExercise: Codable {
         var name: String
         var category: String? // Changed to optional for backwards compatibility
-        var sets: Int?
+        var sets: String?
         var reps: String?
         var rir: String?
+        
+        enum CodingKeys: String, CodingKey {
+            case name, category, sets, reps, rir
+        }
+        
+        init(name: String, category: String? = nil, sets: String? = nil, reps: String? = nil, rir: String? = nil) {
+            self.name = name
+            self.category = category
+            self.sets = sets
+            self.reps = reps
+            self.rir = rir
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.name = try container.decode(String.self, forKey: .name)
+            self.category = try container.decodeIfPresent(String.self, forKey: .category)
+            self.reps = try container.decodeIfPresent(String.self, forKey: .reps)
+            self.rir = try container.decodeIfPresent(String.self, forKey: .rir)
+            
+            if let setsString = try? container.decodeIfPresent(String.self, forKey: .sets) {
+                self.sets = setsString
+            } else if let setsInt = try? container.decodeIfPresent(Int.self, forKey: .sets) {
+                self.sets = String(setsInt)
+            } else {
+                self.sets = nil
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+            try container.encodeIfPresent(category, forKey: .category)
+            try container.encodeIfPresent(sets, forKey: .sets)
+            try container.encodeIfPresent(reps, forKey: .reps)
+            try container.encodeIfPresent(rir, forKey: .rir)
+        }
     }
     
     var name: String

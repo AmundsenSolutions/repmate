@@ -343,6 +343,13 @@ struct HomeView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                store.toggleFavorite(entry: ProteinEntry(grams: entry.grams, note: entry.note))
+                            } label: {
+                                Label("Remove from Favorites", systemImage: "star.slash")
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 2)
@@ -357,9 +364,12 @@ struct HomeView: View {
             Text("Latest Entries")
                 .sectionHeader()
             
-            VStack(spacing: 8) {
+            List {
                 ForEach(todayEntries.prefix(3)) { entry in
                     entryRow(for: entry)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .leading) {
                             Button {
                                 store.toggleFavorite(entry: entry)
@@ -380,6 +390,10 @@ struct HomeView: View {
                         }
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .scrollDisabled(true)
+            .frame(height: CGFloat(min(todayEntries.count, 3) * 76))
             
             if todayEntries.count > 3 {
                 Button {

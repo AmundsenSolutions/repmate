@@ -25,6 +25,7 @@ struct StatsView: View {
     
     @State private var selectedFilter: StatsTimeFilter = .month
     @State private var showPaywall = false
+    @State private var showingEditDashboard = false
     
     
     var body: some View {
@@ -36,7 +37,7 @@ struct StatsView: View {
                     }
                 
                 ScrollView {
-                    VStack(spacing: 24) { // Increased vertical spacing between groups
+                    VStack(spacing: 24) {
                         // Time Filter Chips
                         HStack(spacing: Theme.Spacing.tight) {
                             ForEach(StatsTimeFilter.allCases) { filter in
@@ -60,43 +61,66 @@ struct StatsView: View {
                         }
                         .padding(.horizontal)
                         
-                        // 1. Overview
-                        StatsOverviewSection(days: selectedFilter.days)
-                        
-                        // 2. Strength & PR
-                        StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
-                        
-                        // 3. Activity / Consistency
-                        ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
-                        
-                        // 4. Personal Records (All Time)
-                        AllTimePRSection()
-                        
-                        // 5. Nutrition
-                        NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
-
-                        // 6. Muscle Map (Mixed Free/Pro)
-                        MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
-                            
-                        // 7. Smart Insights (Pro Locked)
-                        ProLockedOverlay(isPro: storeManager.isPro, paywallAction: { showPaywall = true }) {
-                            SmartInsightsRow(days: selectedFilter.days)
+                        // Dynamic Section Order
+                        ForEach(store.settings.activeStatsOrder) { section in
+                            switch section {
+                            case .overview:
+                                StatsOverviewSection(days: selectedFilter.days)
+                            case .strength:
+                                StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
+                            case .activity:
+                                ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
+                            case .nutrition:
+                                NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
+                            case .muscleMap:
+                                MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
+                            case .insights:
+                                ProLockedOverlay(isPro: storeManager.isPro, paywallAction: { showPaywall = true }) {
+                                    SmartInsightsRow(days: selectedFilter.days)
+                                }
+                            case .oneRM:
+                                OneRMCalculatorCard()
+                            case .allTimePRs:
+                                AllTimePRSection()
+                            }
                         }
-
-                        // 8. Tools
-                        OneRMCalculatorCard()
                         
                         // Bottom Spacing
                         Spacer(minLength: 100)
                     }
                     .padding(Theme.Spacing.standard)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: store.settings.activeStatsOrder)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
             }
             .navigationTitle("Stats")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingEditDashboard = true
+                        HapticManager.shared.lightImpact()
+                    } label: {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 15, weight: .medium))
+                    }
+                }
+            }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showingEditDashboard) {
+                EditDashboardView()
+                    .environmentObject(store)
             }
         }
     }
@@ -116,9 +140,25 @@ private struct StatsOverviewSection: View {
     private var weeklyAvg: Double {
         store.workoutManager.avgWorkoutsPerWeek(sessions: store.workoutSessions, days: days)
     }
+    
+    private var activeDays: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return 0 }
+        let unique = Set(store.workoutSessions.filter { $0.date >= startDate }.map { calendar.startOfDay(for: $0.date) })
+        return unique.count
+    }
 
     private var proteinAvg: Double {
         store.proteinManager.dailyAverage(entries: store.proteinEntries, days: days)
+    }
+    
+    private var goalReached: Double {
+        store.proteinManager.targetSuccessRate(
+            entries: store.proteinEntries,
+            target: store.settings.dailyProteinTarget,
+            days: days
+        )
     }
 
     var body: some View {
@@ -146,17 +186,32 @@ private struct StatsOverviewSection: View {
             icon: "figure.strengthtraining.traditional",
             color: themeManager.palette.accent
         )
-        StatCard(
-            title: "Avg / Week",
-            value: String(format: "%.1f", weeklyAvg),
-            icon: "calendar",
-            color: Theme.Colors.accent
-        )
+        if days == 7 {
+            StatCard(
+                title: "Active Days",
+                value: "\(activeDays)",
+                icon: "calendar.badge.checkmark",
+                color: Theme.Colors.accent
+            )
+        } else {
+            StatCard(
+                title: "Avg / Week",
+                value: String(format: "%.1f", weeklyAvg),
+                icon: "calendar",
+                color: Theme.Colors.accent
+            )
+        }
         StatCard(
             title: "Avg Protein",
             value: String(format: "%.0fg", proteinAvg),
             icon: "fork.knife",
             color: themeManager.palette.accent
+        )
+        StatCard(
+            title: "Goal Reached",
+            value: String(format: "%.0f%%", goalReached),
+            icon: "checkmark.seal.fill",
+            color: goalReached >= 70 ? .green : (goalReached >= 50 ? .yellow : Theme.Colors.cyberRed)
         )
     }
 }

@@ -1,10 +1,3 @@
-//
-//  ActiveExerciseListView.swift
-//  RepMate
-//
-//  Created by Auto-Agent on 02/02/2026.
-//
-
 import SwiftUI
 import Combine
 
@@ -13,8 +6,22 @@ struct ActiveExerciseListView: View {
     
     // Local Sheet States
     @State private var showingAddExercise = false
-    @State private var replacingExercise: Exercise?
+    @State private var replacingExercise: Exercise? = nil
+    
+    @FocusState private var focusedField: WorkoutFieldFocus?
+    @State private var scrollTargetID: UUID? = nil
+    
+    // Safe computed props for toolbar disabled state
+    private var isAtFirstField: Bool {
+        guard let f = focusedField else { return true }
+        return cachedFields.first == f
+    }
+    private var isAtLastField: Bool {
+        guard let f = focusedField else { return true }
+        return cachedFields.last == f
+    }
     @State private var prCache: [UUID: Bool] = [:]
+    @State private var cachedFields: [WorkoutFieldFocus] = []
 
     private var active: ActiveWorkout? { store.activeWorkout }
     
@@ -31,138 +38,224 @@ struct ActiveExerciseListView: View {
     }
     
     var body: some View {
-        List {
-            // Persistent Note
-            if let note = active?.note, !note.isEmpty {
-                Text(note)
-                    .font(.body)
-                    .foregroundColor(Theme.Colors.textSecondary)
+        VStack(spacing: 0) {
+            ScrollViewReader { scrollProxy in
+                List {
+                    // Top Safe Zone
+                    Color.clear.frame(height: 10)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        
+                // Persistent Note
+                if let note = active?.note, !note.isEmpty {
+                    Text(note)
+                        .font(.body)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+                
+                    // Exercises
+                ForEach(Array(exercises.enumerated()), id: \.element.id) { index, item in
+                    let exerciseId = item.id
+                    let exercise = item.exercise
+                    
+                    ExerciseCardView(
+                        index: index + 1,
+                        exerciseName: exercise?.name ?? "Deleted Exercise",
+                        targetReps: template?.targets?[exerciseId]?.reps,
+                        targetRir: template?.targets?[exerciseId]?.rir,
+                        targetRest: template?.targets?[exerciseId]?.rest ?? 0,
+                        overloadStatus: ProgressiveOverloadHelper.checkOverloadStatus(
+                            for: exerciseId,
+                            in: store.workoutSessions,
+                            settings: store.settings
+                        ),
+                        note: bindingNote(for: exerciseId),
+                        ghostNote: store.ghostExerciseNote(for: exerciseId),
+                        menuContent: {
+                            Menu {
+                                Button {
+                                    if let ex = exercise {
+                                        replacingExercise = ex
+                                    }
+                                } label: {
+                                    Label("Replace", systemImage: "arrow.triangle.2.circlepath")
+                                }
+                                .disabled(exercise == nil)
+                                
+                                Button(role: .destructive) {
+                                    removeExercise(id: exerciseId)
+                                } label: {
+                                    Label {
+                                        Text("Remove")
+                                    } icon: {
+                                        Image(systemName: "trash")
+                                            .tint(.red)
+                                    }
+                                    .foregroundColor(.red)
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .foregroundColor(Theme.Colors.textSecondary)
+                                    .frame(width: 30, height: 30)
+                                    .contentShape(Rectangle())
+                            }
+                        },
+                        content: {
+                            VStack(spacing: 6) {
+                                let rows = store.activeWorkout?.rowsByExercise[exerciseId] ?? []
+                                ForEach(Array(rows.enumerated()), id: \.element.id) { rowIndex, row in
+                                    rowView(exerciseId: exerciseId, exerciseName: exercise?.name ?? "Exercise", row: row, index: rowIndex)
+                                        .id(row.id)
+                                }
+                                
+                                // Add Set Button
+                                Button {
+                                    addSetRowIfValid(exerciseId: exerciseId)
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(Theme.Colors.accent)
+                                        .padding(.top, 4)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-            }
-            
-                // Exercises
-            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, item in
-                let exerciseId = item.id
-                let exercise = item.exercise
-                
-                ExerciseCardView(
-                    index: index + 1,
-                    exerciseName: exercise?.name ?? "Deleted Exercise",
-                    targetRir: template?.targets?[exerciseId]?.rir,
-                    targetRest: template?.targets?[exerciseId]?.rest ?? 0,
-                    overloadStatus: ProgressiveOverloadHelper.checkOverloadStatus(
-                        for: exerciseId,
-                        in: store.workoutSessions,
-                        settings: store.settings
-                    ),
-                    note: bindingNote(for: exerciseId),
-                    ghostNote: store.ghostExerciseNote(for: exerciseId),
-                    menuContent: {
-                        Menu {
-                            Button {
-                                if let ex = exercise {
-                                    replacingExercise = ex
-                                }
-                            } label: {
-                                Label("Replace", systemImage: "arrow.triangle.2.circlepath")
-                            }
-                            .disabled(exercise == nil)
-                            
-                            Button(role: .destructive) {
-                                removeExercise(id: exerciseId)
-                            } label: {
-                                Label {
-                                    Text("Remove")
-                                } icon: {
-                                    Image(systemName: "trash")
-                                        .tint(.red)
-                                }
-                                .foregroundColor(.red)
-                            }
+                    .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            removeExercise(id: exerciseId)
                         } label: {
-                            Image(systemName: "ellipsis")
-                                .foregroundColor(Theme.Colors.textSecondary)
-                                .frame(width: 30, height: 30)
-                                .contentShape(Rectangle())
+                            Label("Delete", systemImage: "trash")
                         }
-                    },
-                    content: {
-                        VStack(spacing: 6) {
-                            let rows = store.activeWorkout?.rowsByExercise[exerciseId] ?? []
-                            ForEach(Array(rows.enumerated()), id: \.element.id) { rowIndex, row in
-                                rowView(exerciseId: exerciseId, exerciseName: exercise?.name ?? "Exercise", row: row, index: rowIndex)
-                            }
-                            
-                            // Add Set Button
-                            Button {
-                                addSetRowIfValid(exerciseId: exerciseId)
-                            } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(Theme.Colors.accent)
-                                    .padding(.top, 4)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .buttonStyle(.plain)
-                        }
+                        .tint(.red)
                     }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        removeExercise(id: exerciseId)
+                }
+                .onMove(perform: moveExercises)
+                
+                // Add Exercise Button (Footer)
+                if !exercises.isEmpty {
+                    Button {
+                        showingAddExercise = true
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add Exercise")
+                        }
+                        .font(.headline)
+                        .pillButton(backgroundColor: Theme.Colors.cardBackground, foregroundColor: Theme.Colors.accent)
+                        .frame(maxWidth: .infinity)
                     }
-                    .tint(.red)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .padding(.vertical, 12)
+                    .buttonStyle(.plain)
+                }
+                
+                // Spacing i bunnen
+                if focusedField != nil {
+                    Color.clear.frame(height: 150)
+                         .listRowBackground(Color.clear)
+                         .listRowSeparator(.hidden)
                 }
             }
-            .onMove(perform: moveExercises)
-            
-            // Add Exercise Button (Footer)
-            if !exercises.isEmpty {
-                Button {
-                    showingAddExercise = true
-                } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add Exercise")
-                    }
-                    .font(.headline)
-                    .pillButton(backgroundColor: Theme.Colors.cardBackground, foregroundColor: Theme.Colors.accent)
-                    .frame(maxWidth: .infinity)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden) 
+            .background(Color.black) // Tetter hullet mot ZStack
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: focusedField) { _, newFocus in
+                guard let focus = newFocus else { return }
+                
+                let id: UUID
+                switch focus {
+                case .weight(let setId), .reps(let setId), .rir(let setId): id = setId
                 }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .padding(.vertical, 12)
-                .buttonStyle(.plain)
+                
+                // Nå som lista flytter seg selv og skjønner tastaturet,
+                // er et enkelt scroll til .center nok!
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    scrollProxy.scrollTo(id, anchor: .center)
+                }
             }
-            
-            // Spacing
-            Color.clear.frame(height: 100)
-                 .listRowBackground(Color.clear)
-                 .listRowSeparator(.hidden)
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    UIApplication.shared.sendAction(
-                        #selector(UIResponder.resignFirstResponder),
-                        to: nil, from: nil, for: nil
+        } // End of ScrollViewReader
+        .overlay(alignment: .bottom) {
+            // TWO FLOATING PILLS KEYBOARD TOOLBAR
+            if focusedField != nil {
+                HStack(alignment: .bottom) {
+                    // LEFT PILL: Navigation & Checkmark
+                    HStack(spacing: 20) {
+                        Button { focusPrevious() } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .bold))
+                                .frame(width: 30, height: 30)
+                        }
+                        .disabled(isAtFirstField)
+                        .foregroundColor(isAtFirstField ? Color.secondary.opacity(0.3) : Theme.Colors.accent)
+                        
+                        Button { focusNext() } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .bold))
+                                .frame(width: 30, height: 30)
+                        }
+                        .disabled(isAtLastField)
+                        .foregroundColor(isAtLastField ? Color.secondary.opacity(0.3) : Theme.Colors.accent)
+                        
+                        Button { confirmGhostValue() } label: {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 18, weight: .bold))
+                                .frame(width: 30, height: 30)
+                        }
+                        .foregroundColor(Theme.Colors.accent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .environment(\.colorScheme, .dark)
+                            .opacity(0.4)
+                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     )
+                    .shadow(color: Color.black.opacity(0.5), radius: 10, x: 0, y: 5)
+                    
+                    Spacer()
+                    
+                    // RIGHT PILL: Done Button
+                    Button("Done") { focusedField = nil }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(Theme.Colors.accent)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                                .environment(\.colorScheme, .dark)
+                                .opacity(0.4)
+                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        )
+                        .shadow(color: Color.black.opacity(0.5), radius: 10, x: 0, y: 5)
                 }
-                .fontWeight(.semibold)
+                .padding(.horizontal, 16)
+                .offset(y: -9) // Pulls the pills down into the safe area gap
+                .transition(.move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: focusedField)
             }
         }
+    } // End of body VStack
         // Sheet Management
         .onAppear {
+            updateFieldCache()
+            for exercise in exercises {
+                recalculatePRStatus(for: exercise.id)
+            }
+        }
+        .onChange(of: store.activeWorkout) { _, _ in
+            updateFieldCache()
             for exercise in exercises {
                 recalculatePRStatus(for: exercise.id)
             }
@@ -214,11 +307,100 @@ struct ActiveExerciseListView: View {
                 reps: bindingReps(exerciseId: exerciseId, rowId: row.id),
                 rir: bindingRir(exerciseId: exerciseId, rowId: row.id),
                 isCompleted: bindingIsCompleted(exerciseId: exerciseId, rowId: row.id),
+                rowId: row.id,
+                focusedField: $focusedField,
                 isPR: prCache[row.id] ?? false,
                 ghostWeight: ghostWeight,
                 ghostReps: ghostReps,
                 ghostRir: ghostRir
             )
+        }
+    }
+    
+    // MARK: - Keyboard Navigation
+    
+    private func updateFieldCache() {
+        guard let aw = store.activeWorkout else { cachedFields = []; return }
+        var fields: [WorkoutFieldFocus] = []
+        for exId in aw.exerciseIds {
+            if let rows = aw.rowsByExercise[exId] {
+                for row in rows {
+                    fields.append(.weight(setId: row.id))
+                    fields.append(.reps(setId: row.id))
+                    fields.append(.rir(setId: row.id))
+                }
+            }
+        }
+        cachedFields = fields
+    }
+    
+    private func focusNext() {
+        guard let current = focusedField, let index = cachedFields.firstIndex(of: current) else { return }
+        if index + 1 < cachedFields.count {
+            focusedField = cachedFields[index + 1]
+        } else {
+            focusedField = nil
+        }
+    }
+    
+    private func focusPrevious() {
+        guard let current = focusedField, let index = cachedFields.firstIndex(of: current) else { return }
+        if index - 1 >= 0 {
+            focusedField = cachedFields[index - 1]
+        } else {
+            focusedField = nil
+        }
+    }
+    
+    private func confirmGhostValue() {
+        guard let current = focusedField else { return }
+        
+        // Inject data immediately before losing focus
+        self.injectGhostData(for: current)
+        HapticManager.shared.lightImpact()
+        
+        // Move to next field natively
+        focusNext()
+    }
+    
+    private func injectGhostData(for field: WorkoutFieldFocus) {
+        guard var aw = store.activeWorkout else { return }
+        var didInject = false
+        
+        func lookupGhost(setId: UUID) -> (exerciseId: UUID, rowIndex: Int, ghost: (weight: Double, reps: Int, rir: String))? {
+            for exId in aw.exerciseIds {
+                if let rows = aw.rowsByExercise[exId], let idx = rows.firstIndex(where: { $0.id == setId }) {
+                    if let ghost = store.ghostSetData(for: exId, setIndex: idx) {
+                        return (exId, idx, ghost)
+                    }
+                }
+            }
+            return nil
+        }
+        
+        switch field {
+        case .weight(let setId):
+            if let matched = lookupGhost(setId: setId) {
+                let w = matched.ghost.weight
+                let str = w.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(w))" : "\(w)"
+                aw.rowsByExercise[matched.exerciseId]?[matched.rowIndex].weight = str
+                didInject = true
+            }
+        case .reps(let setId):
+            if let matched = lookupGhost(setId: setId) {
+                aw.rowsByExercise[matched.exerciseId]?[matched.rowIndex].reps = "\(matched.ghost.reps)"
+                didInject = true
+            }
+        case .rir(let setId):
+            if let matched = lookupGhost(setId: setId) {
+                aw.rowsByExercise[matched.exerciseId]?[matched.rowIndex].rir = matched.ghost.rir
+                didInject = true
+            }
+        }
+        
+        if didInject {
+            aw.isDirty = true
+            store.silentUpdateActiveWorkout(aw)
         }
     }
     
@@ -234,21 +416,44 @@ struct ActiveExerciseListView: View {
                 ensureAtLeastOneRow(&aw, for: exerciseId)
                 guard var rows = aw.rowsByExercise[exerciseId], let index = rows.firstIndex(where: { $0.id == rowId }) else { return }
                 
+                let wasCompleted = rows[index].isCompleted
                 rows[index].isCompleted = newValue
                 aw.rowsByExercise[exerciseId] = rows
                 aw.isDirty = true
                 store.updateActiveWorkout(aw)
                 
-                if newValue {
+                if newValue && !wasCompleted {
                      if prCache[rowId] == true {
                          HapticManager.shared.heavyImpact()
                      } else {
                          HapticManager.shared.success()
                      }
-                     // FIX: Removed startRestTimer(). Timer is now manual only.
+                     // Auto-jump to next weight field!
+                     if let nextField = findNextWeightField(after: rowId) {
+                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                             focusedField = nextField
+                         }
+                     } else {
+                         focusedField = nil
+                     }
                 }
             }
         )
+    }
+
+    private func findNextWeightField(after rowId: UUID) -> WorkoutFieldFocus? {
+        guard let currentIndex = cachedFields.firstIndex(where: { 
+            switch $0 {
+            case .weight(let id), .reps(let id), .rir(let id): return id == rowId
+            }
+        }) else { return nil }
+        
+        for i in (currentIndex + 1)..<cachedFields.count {
+            if case .weight = cachedFields[i] {
+                return cachedFields[i]
+            }
+        }
+        return nil
     }
 
     private func bindingReps(exerciseId: UUID, rowId: UUID) -> Binding<String> {
@@ -259,14 +464,12 @@ struct ActiveExerciseListView: View {
                 ensureAtLeastOneRow(&aw, for: exerciseId)
                 guard var rows = aw.rowsByExercise[exerciseId], let index = rows.firstIndex(where: { $0.id == rowId }) else { return }
                 
-                let wasCompleted = rows[index].isCompleted
                 rows[index].reps = newValue
                 aw.rowsByExercise[exerciseId] = rows
                 aw.isDirty = true
                 store.silentUpdateActiveWorkout(aw)
-                
-                checkAutoComplete(exerciseId: exerciseId, index: index, wasCompleted: wasCompleted)
                 recalculatePRStatus(for: exerciseId)
+                checkInstantCompletion(exerciseId: exerciseId, rowId: rowId)
             }
         )
     }
@@ -279,14 +482,12 @@ struct ActiveExerciseListView: View {
                 ensureAtLeastOneRow(&aw, for: exerciseId)
                 guard var rows = aw.rowsByExercise[exerciseId], let index = rows.firstIndex(where: { $0.id == rowId }) else { return }
                 
-                let wasCompleted = rows[index].isCompleted
                 rows[index].weight = newValue
                 aw.rowsByExercise[exerciseId] = rows
                 aw.isDirty = true
                 store.silentUpdateActiveWorkout(aw)
-                
-                checkAutoComplete(exerciseId: exerciseId, index: index, wasCompleted: wasCompleted)
                 recalculatePRStatus(for: exerciseId)
+                checkInstantCompletion(exerciseId: exerciseId, rowId: rowId)
             }
         )
     }
@@ -299,14 +500,11 @@ struct ActiveExerciseListView: View {
                 ensureAtLeastOneRow(&aw, for: exerciseId)
                 guard var rows = aw.rowsByExercise[exerciseId], let index = rows.firstIndex(where: { $0.id == rowId }) else { return }
                 
-                let wasCompleted = rows[index].isCompleted
                 rows[index].rir = newValue
                 aw.rowsByExercise[exerciseId] = rows
                 aw.isDirty = true
                 store.silentUpdateActiveWorkout(aw)
-                
-                // Also check autocomplete on RIR (e.g. if user fills RIR last)
-                checkAutoComplete(exerciseId: exerciseId, index: index, wasCompleted: wasCompleted)
+
             }
         )
     }
@@ -325,44 +523,28 @@ struct ActiveExerciseListView: View {
     
     // MARK: - Logic Helpers
     
-    private func checkAutoComplete(exerciseId: UUID, index: Int, wasCompleted: Bool) {
+    private func checkInstantCompletion(exerciseId: UUID, rowId: UUID) {
         guard var aw = store.activeWorkout,
-              let rows = aw.rowsByExercise[exerciseId],
-              rows.indices.contains(index) else { return }
+              var rows = aw.rowsByExercise[exerciseId],
+              let index = rows.firstIndex(where: { $0.id == rowId }) else { return }
         
-        // Logic: Weight + Reps required, RIR is optional
         let row = rows[index]
         let weight = row.weight.parseDoubleFlexible() ?? 0
         let reps = row.reps.parseIntFlexible() ?? 0
-        
         let shouldBeComplete = weight > 0 && reps > 0
         
-        if shouldBeComplete && !wasCompleted {
-            // Auto-complete: both fields have valid values
-            var updatedRows = rows
-            updatedRows[index].isCompleted = true
-            aw.rowsByExercise[exerciseId] = updatedRows
+        if shouldBeComplete && !row.isCompleted {
+            rows[index].isCompleted = true
+            aw.rowsByExercise[exerciseId] = rows
             aw.isDirty = true
-            
             store.silentUpdateActiveWorkout(aw)
-            store.objectWillChange.send()
-            
-            if prCache[rows[index].id] == true {
-                HapticManager.shared.heavyImpact()
-            } else {
-                HapticManager.shared.success()
-            }
-        } else if !shouldBeComplete && wasCompleted {
-            // Auto-uncomplete: fields were cleared while set was marked done
-            var updatedRows = rows
-            updatedRows[index].isCompleted = false
-            aw.rowsByExercise[exerciseId] = updatedRows
+        } else if !shouldBeComplete && row.isCompleted {
+            rows[index].isCompleted = false
+            aw.rowsByExercise[exerciseId] = rows
             aw.isDirty = true
-            
             store.silentUpdateActiveWorkout(aw)
-            store.objectWillChange.send()
         }
-    }
+    }    
     
     private func recalculatePRStatus(for exerciseId: UUID) {
         guard let rows = store.activeWorkout?.rowsByExercise[exerciseId] else { return }
@@ -411,6 +593,7 @@ struct ActiveExerciseListView: View {
         aw.rowsByExercise[exerciseId] = rows
         aw.isDirty = true
         store.updateActiveWorkout(aw)
+        updateFieldCache()
     }
     
     private func addSetRowIfValid(exerciseId: UUID) {
@@ -428,6 +611,7 @@ struct ActiveExerciseListView: View {
             aw.isDirty = true
             store.updateActiveWorkout(aw) // Force update for structural change
         }
+        updateFieldCache()
         HapticManager.shared.lightImpact()
     }
     
@@ -440,6 +624,7 @@ struct ActiveExerciseListView: View {
                 aw.exerciseIds.remove(at: idx)
                 aw.rowsByExercise.removeValue(forKey: id)
                 store.updateActiveWorkout(aw)
+                updateFieldCache()
             }
         }
     }
@@ -454,6 +639,7 @@ struct ActiveExerciseListView: View {
                 // Initialize with one set
                 aw.rowsByExercise[exercise.id] = [ActiveSetRow()]
                 store.updateActiveWorkout(aw)
+                updateFieldCache()
             }
         }
     }
@@ -480,6 +666,7 @@ struct ActiveExerciseListView: View {
             
             store.updateActiveWorkout(aw)
         }
+        updateFieldCache()
     }
     
     private func moveExercises(from source: IndexSet, to destination: Int) {
@@ -487,6 +674,7 @@ struct ActiveExerciseListView: View {
         aw.exerciseIds.move(fromOffsets: source, toOffset: destination)
         aw.isDirty = true
         store.updateActiveWorkout(aw)
+        updateFieldCache()
         HapticManager.shared.lightImpact()
     }
 }

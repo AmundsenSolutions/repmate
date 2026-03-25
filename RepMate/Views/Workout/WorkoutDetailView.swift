@@ -173,6 +173,24 @@ struct WorkoutDetailView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        // Special char quick-tap buttons (only focused cell responds)
+                        Button("–") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "-") }
+                            .frame(minWidth: 36)
+                        Button("/") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "/") }
+                            .frame(minWidth: 36)
+                        Button("m") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "m") }
+                            .frame(minWidth: 36)
+                        Button("s") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "s") }
+                            .frame(minWidth: 36)
+                        Spacer()
+                        Button("Done") {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
                     
                 // Footer
                 HStack {
@@ -408,16 +426,19 @@ struct WorkoutDetailView: View {
                 targetCell(
                     label: "SETS",
                     value: Binding(
-                        get: { targets[exercise.id] != nil ? String(targets[exercise.id]!.sets) : "" },
+                        get: { targets[exercise.id]?.sets ?? "" },
                         set: {
                             var t = targets[exercise.id] ?? defaultTarget
-                            if let val = Int($0) { t.sets = val; targets[exercise.id] = t }
-                            else if $0.isEmpty { targets[exercise.id] = nil } // Revert to ghost if cleared? Or keep? Let's keep object but allow empty maybe? No, 'sets' is Int.
-                            // If user clears it, we can't easily set 'nil' to Int.
-                            // Better: Only update if valid Int.
+                            if $0.isEmpty {
+                                targets[exercise.id] = nil
+                            } else {
+                                t.sets = $0
+                                targets[exercise.id] = t
+                            }
                         }
                     ),
-                    ghostText: "2"
+                    ghostText: "2",
+                    keyboardType: .numberPad
                 )
                 
                 // REPS
@@ -431,21 +452,23 @@ struct WorkoutDetailView: View {
                             targets[exercise.id] = t
                         }
                     ),
-                    ghostText: "4-9"
+                    ghostText: "4-9",
+                    keyboardType: .numberPad
                 )
                 
                 // RIR
                 targetCell(
                     label: "RIR",
                     value: Binding(
-                        get: { targets[exercise.id]?.rir ?? "" }, // RIR is now String
+                        get: { targets[exercise.id]?.rir ?? "" },
                         set: {
                             var t = targets[exercise.id] ?? defaultTarget
-                            t.rir = $0 // Assign directly as String
+                            t.rir = $0
                             targets[exercise.id] = t
                         }
                     ),
-                    ghostText: "2"
+                    ghostText: "2",
+                    keyboardType: .numberPad
                 )
                 
                 // REST
@@ -461,7 +484,8 @@ struct WorkoutDetailView: View {
                             }
                         }
                     ),
-                    ghostText: "3m"
+                    ghostText: "3m",
+                    keyboardType: .numberPad
                 )
             }
             .padding(12)
@@ -474,10 +498,10 @@ struct WorkoutDetailView: View {
         .padding(.horizontal, 16)
     }
     
-    private let defaultTarget = TemplateTarget(sets: 2, reps: "4-9", rir: "2", rest: 180)
+    private let defaultTarget = TemplateTarget(sets: "2", reps: "4-9", rir: "2", rest: 180)
     
-    private func targetCell(label: String, value: Binding<String>, ghostText: String) -> some View {
-        TargetTextFieldCell(label: label, value: value, ghostText: ghostText)
+    private func targetCell(label: String, value: Binding<String>, ghostText: String, keyboardType: UIKeyboardType = .default) -> some View {
+        TargetTextFieldCell(label: label, value: value, ghostText: ghostText, keyboardType: keyboardType)
     }
     
     // MARK: - Logic
@@ -541,8 +565,9 @@ struct WorkoutDetailView: View {
     // Helpers
     private func estimateSets() -> String {
         let total = exerciseIds.reduce(0) { sum, id in
-            // Use 2 as default if nil, matching the ghost text "2"
-            sum + (targets[id]?.sets ?? 2)
+            let setsStr = targets[id]?.sets ?? "2"
+            let maxSets = setsStr.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap { Int($0) }.max() ?? 2
+            return sum + maxSets
         }
         return "\(total)"
     }
@@ -592,6 +617,7 @@ private struct TargetTextFieldCell: View {
     let label: String
     @Binding var value: String
     let ghostText: String
+    var keyboardType: UIKeyboardType = .numberPad
     
     @EnvironmentObject var themeManager: ThemeManager
     
@@ -613,6 +639,7 @@ private struct TargetTextFieldCell: View {
                 TextField("", text: $localText)
                     .font(.system(size: 14, weight: .semibold, design: .monospaced))
                     .multilineTextAlignment(.center)
+                    .keyboardType(keyboardType)
                     .foregroundColor(themeManager.palette.accent) // Active color
                     .focused($isFocused)
                     .onSubmit {
@@ -620,6 +647,12 @@ private struct TargetTextFieldCell: View {
                     }
                     .onChange(of: isFocused) { _, focused in
                         if !focused { commit() }
+                    }
+                    // Insert special chars broadcast from the parent toolbar
+                    .onReceive(NotificationCenter.default.publisher(for: .insertTargetFieldChar)) { note in
+                        guard isFocused, let char = note.object as? String else { return }
+                        localText += char
+                        value = localText
                     }
             }
         }

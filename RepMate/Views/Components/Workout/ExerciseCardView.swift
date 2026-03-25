@@ -5,6 +5,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
     let exerciseName: String
     
     // Header Info
+    var targetReps: String? = nil
     var targetRir: String? = nil
     var targetRest: Int = 0
     
@@ -24,6 +25,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
     init(
         index: Int,
         exerciseName: String,
+        targetReps: String? = nil,
         targetRir: String? = nil,
         targetRest: Int = 0,
         overloadStatus: OverloadDirection = .none,
@@ -34,6 +36,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
     ) {
         self.index = index
         self.exerciseName = exerciseName
+        self.targetReps = targetReps
         self.targetRir = targetRir
         self.targetRest = targetRest
         self.overloadStatus = overloadStatus
@@ -75,9 +78,15 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
                         }
                     }
                     
-                    // Targets (RIR / Rest)
-                    if (targetRir != nil || targetRest > 0) {
+                    // Targets (Reps / RIR / Rest)
+                    if (targetReps != nil || targetRir != nil || targetRest > 0) {
                         HStack(spacing: 8) {
+                            if let reps = targetReps, !reps.isEmpty {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "repeat")
+                                    Text("\(reps)")
+                                }
+                            }
                             if let rir = targetRir, !rir.isEmpty {
                                 HStack(spacing: 2) {
                                     Image(systemName: "chart.bar.fill")
@@ -142,6 +151,7 @@ extension ExerciseCardView where MenuContent == EmptyView {
     init(
         index: Int,
         exerciseName: String,
+        targetReps: String? = nil,
         targetRir: String? = nil,
         targetRest: Int = 0,
         overloadStatus: OverloadDirection = .none,
@@ -151,6 +161,7 @@ extension ExerciseCardView where MenuContent == EmptyView {
     ) {
         self.index = index
         self.exerciseName = exerciseName
+        self.targetReps = targetReps
         self.targetRir = targetRir
         self.targetRest = targetRest
         self.overloadStatus = overloadStatus

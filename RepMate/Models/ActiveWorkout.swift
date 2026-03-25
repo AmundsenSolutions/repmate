@@ -1,11 +1,3 @@
-//
-//  ActiveWorkout.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 13/12/2025.
-//
-
-
 import Foundation
 
 struct ActiveWorkout: Identifiable, Codable, Equatable {
@@ -34,10 +26,14 @@ struct ActiveWorkout: Identifiable, Codable, Equatable {
         // Start with 1 empty row per exercise
         var dict: [UUID: [ActiveSetRow]] = [:]
         for exId in template.exerciseIds {
-            // Check for target sets
-            let targetSets = template.targets?[exId]?.sets ?? 1
-            // Ensure at least 1 set
-            let count = max(1, targetSets)
+            // Parse target sets to find the maximum requested rows
+            let setsString = template.targets?[exId]?.sets ?? "1"
+            let numbers = setsString.components(separatedBy: CharacterSet.decimalDigits.inverted)
+                .compactMap { Int($0) }
+            
+            let requestedSets = numbers.max() ?? 1
+            // Cap at 20 sets per exercise to prevent UI freezes
+            let count = min(max(1, requestedSets), 20)
             
             var rows: [ActiveSetRow] = []
             for _ in 0..<count {

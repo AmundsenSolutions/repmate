@@ -1,10 +1,3 @@
-//
-//  HistoryManager.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 2026.
-//
-
 import Foundation
 
 /// Retrieves historical workout data.

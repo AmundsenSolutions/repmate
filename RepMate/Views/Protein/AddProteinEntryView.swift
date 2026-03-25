@@ -1,11 +1,3 @@
-//
-//  AddProteinEntryView.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 11/12/2025.
-//
-
-
 import SwiftUI
 
 struct AddProteinEntryView: View {
@@ -206,6 +198,15 @@ struct AddProteinEntryView: View {
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
                     .scrollDismissesKeyboard(.interactively)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") {
+                                hideKeyboard()
+                            }
+                            .fontWeight(.semibold)
+                        }
+                    }
                     // Removed padding(.bottom, 100) to allow list to maximize height
                 }
                 .ignoresSafeArea(.keyboard, edges: .bottom) 

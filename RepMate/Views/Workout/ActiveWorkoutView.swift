@@ -314,10 +314,6 @@ struct ActiveWorkoutView: View {
             // List Component
             ActiveExerciseListView()
         }
-        .safeAreaInset(edge: .bottom) {
-            // Invisible spacer so list content scrolls above the floating button
-            Color.clear.frame(height: 70)
-        }
     }
 
     private var finishButton: some View {

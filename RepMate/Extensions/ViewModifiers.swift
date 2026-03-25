@@ -1,10 +1,3 @@
-//
-//  ViewModifiers.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 2026.
-//
-
 import SwiftUI
 
 // MARK: - Hide Keyboard Extension

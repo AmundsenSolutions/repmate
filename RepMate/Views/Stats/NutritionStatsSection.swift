@@ -49,7 +49,7 @@ struct NutritionStatsSection: View {
                         )
                         
                         StatCard(
-                            title: "Adherence",
+                            title: "Goal Reached",
                             value: String(format: "%.0f%%", adherenceRate),
                             icon: "bolt.fill",
                             color: adherenceRate >= 70 ? .green : (adherenceRate >= 50 ? .yellow : Theme.Colors.cyberRed)
@@ -66,7 +66,7 @@ struct NutritionStatsSection: View {
                             showPaywall = true
                             HapticManager.shared.lightImpact()
                         }) {
-                            StatCard(title: "Adherence", value: "Pro", icon: "crown.fill", color: .yellow)
+                            StatCard(title: "Goal Reached", value: "Pro", icon: "crown.fill", color: .yellow)
                         }
                     }
                 }

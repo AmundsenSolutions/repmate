@@ -10,6 +10,10 @@ struct SetRowView: View {
     // Configuration
     @Binding var isCompleted: Bool
     
+    // Identity for global focus
+    let rowId: UUID
+    @FocusState.Binding var focusedField: WorkoutFieldFocus?
+    
     // PR Detection
     var isPR: Bool = false
     @State private var showPRGlow = false
@@ -18,11 +22,6 @@ struct SetRowView: View {
     var ghostWeight: String? = nil
     var ghostReps: String? = nil
     var ghostRir: String? = nil
-    
-    // Focus management for keyboard toolbar
-    @FocusState private var weightFocused: Bool
-    @FocusState private var repsFocused: Bool
-    @FocusState private var rirFocused: Bool
     
     private enum Field: Int, CaseIterable {
         case weight, reps, rir
@@ -37,10 +36,12 @@ struct SetRowView: View {
     }
     
     private var activeField: Field? {
-        if weightFocused { return .weight }
-        if repsFocused { return .reps }
-        if rirFocused { return .rir }
-        return nil
+        switch focusedField {
+        case .weight(let id) where id == rowId: return .weight
+        case .reps(let id) where id == rowId: return .reps
+        case .rir(let id) where id == rowId: return .rir
+        default: return nil
+        }
     }
     
     // Computed: row is complete when weight AND reps have values
@@ -89,35 +90,35 @@ struct SetRowView: View {
                 backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
                 cornerRadius: 6
             )
-            .focused($weightFocused)
+            .focused($focusedField, equals: .weight(setId: rowId))
             .frame(maxWidth: .infinity)
             
             // Reps
             BufferedInputView(
                 value: $reps,
                 placeholder: ghostReps ?? "-",
-                keyboardType: .decimalPad,
+                keyboardType: .numberPad,
                 color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
                 alignment: .center,
                 font: .system(size: 15, weight: .semibold, design: .monospaced),
                 backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
                 cornerRadius: 6
             )
-            .focused($repsFocused)
+            .focused($focusedField, equals: .reps(setId: rowId))
             .frame(maxWidth: .infinity)
             
             // RIR
             BufferedInputView(
                 value: $rir,
                 placeholder: ghostRir ?? "-",
-                keyboardType: .decimalPad,
+                keyboardType: .numberPad,
                 color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
                 alignment: .center,
                 font: .system(size: 15, weight: .semibold, design: .monospaced),
                 backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
                 cornerRadius: 6
             )
-            .focused($rirFocused)
+            .focused($focusedField, equals: .rir(setId: rowId))
             .frame(maxWidth: .infinity)
         }
         .background(
@@ -151,49 +152,5 @@ struct SetRowView: View {
         .contentShape(Rectangle()) // Ensure entire row is hittable even if empty
     }
     
-    // MARK: - Focus Navigation
-    
-    private enum FocusDirection {
-        case previous, next
-    }
-    
-    private func moveFocus(direction: FocusDirection) {
-        guard let current = activeField else { return }
-        let allFields = Field.allCases
-        let currentIndex = allFields.firstIndex(of: current)!
-        
-        let targetIndex: Int
-        switch direction {
-        case .previous:
-            targetIndex = currentIndex - 1
-        case .next:
-            targetIndex = currentIndex + 1
-        }
-        
-        guard allFields.indices.contains(targetIndex) else { return }
-        
-        setFocus(to: allFields[targetIndex])
-    }
-    
-    private func setFocus(to field: Field) {
-        // Clear all first
-        weightFocused = false
-        repsFocused = false
-        rirFocused = false
-        
-        // Set target after a tiny delay to ensure the clear takes effect
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            switch field {
-            case .weight: weightFocused = true
-            case .reps: repsFocused = true
-            case .rir: rirFocused = true
-            }
-        }
-    }
-    
-    private func dismissAllFocus() {
-        weightFocused = false
-        repsFocused = false
-        rirFocused = false
-    }
+
 }

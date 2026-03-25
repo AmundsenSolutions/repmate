@@ -1,10 +1,3 @@
-//
-//  BackupManager.swift
-//  RepMate
-//
-//  Created by Auto-Agent on 02/02/2026.
-//
-
 import Foundation
 
 class BackupManager {

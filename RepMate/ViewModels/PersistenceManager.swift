@@ -1,10 +1,3 @@
-//
-//  PersistenceManager.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 2026.
-//
-
 import Foundation
 
 /// File system operational errors.

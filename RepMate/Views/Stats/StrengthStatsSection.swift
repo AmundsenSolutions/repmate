@@ -42,8 +42,16 @@ struct StrengthStatsSection: View {
         return allPRs.filter { $0.date >= startDate }.count
     }
     
-    private var consistencyScore: Int {
-        store.workoutManager.consistencyScore(sessions: store.workoutSessions, days: days)
+    private var totalVolume: Double {
+        store.workoutManager.calculateTotalVolume(sessions: store.workoutSessions, days: days)
+    }
+    
+    private var totalVolumeFormatted: String {
+        if totalVolume >= 1000 {
+            return String(format: "%.1fk kg", totalVolume / 1000)
+        } else {
+            return String(format: "%.0f kg", totalVolume)
+        }
     }
     
     var body: some View {
@@ -95,21 +103,12 @@ struct StrengthStatsSection: View {
                         color: .yellow
                     )
                     
-                    if storeManager.isPro {
-                        StatCard(
-                            title: "Consistency",
-                            value: "\(consistencyScore)",
-                            icon: "target",
-                            color: Theme.Colors.cyberGold
-                        )
-                    } else {
-                        Button(action: {
-                            showPaywall = true
-                            HapticManager.shared.lightImpact()
-                        }) {
-                            StatCard(title: "Consistency", value: "Pro", icon: "crown.fill", color: .yellow)
-                        }
-                    }
+                    StatCard(
+                        title: "Total Volume",
+                        value: totalVolume > 0 ? totalVolumeFormatted : "—",
+                        icon: "scalemass.fill",
+                        color: Theme.Colors.cyberGold
+                    )
                 }
                 
                 // 1RM Trend Chart
@@ -281,6 +280,11 @@ struct OneRMCalculatorCard: View {
     @EnvironmentObject var store: AppDataStore
     @State private var weight: String = ""
     @State private var reps: String = ""
+    @FocusState private var focusedField: CalcField?
+    
+    private enum CalcField {
+        case weight, reps
+    }
     
     private var estimated1RM: Double? {
         guard let w = weight.parseDoubleFlexible(),
@@ -298,6 +302,7 @@ struct OneRMCalculatorCard: View {
                             .foregroundColor(.gray)
                         TextField("kg", text: $weight)
                             .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .weight)
                             .padding(10)
                             .background(Theme.Colors.cardBackground)
                             .cornerRadius(Theme.Spacing.tight)
@@ -310,6 +315,7 @@ struct OneRMCalculatorCard: View {
                             .foregroundColor(.gray)
                         TextField("reps", text: $reps)
                             .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .reps)
                             .padding(10)
                             .background(Theme.Colors.cardBackground)
                             .cornerRadius(Theme.Spacing.tight)

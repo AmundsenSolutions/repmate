@@ -1,10 +1,3 @@
-//
-//  HapticManager.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 2026.
-//
-
 import UIKit
 
 /// App-wide haptic feedback engine.

@@ -1,11 +1,3 @@
-//
-//  AppTabView.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 10/12/2025.
-//
-
-
 import SwiftUI
 
 struct AppTabView: View {

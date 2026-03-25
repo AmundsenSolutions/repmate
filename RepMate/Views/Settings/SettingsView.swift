@@ -17,7 +17,6 @@ struct SettingsView: View {
     @State private var showPaywall = false
     
     @Environment(\.openURL) var openURL
-    @Environment(\.requestReview) var requestReview
     
     
     var body: some View {
@@ -434,10 +433,7 @@ struct SettingsView: View {
                             
                             divider
                             
-                            Button(action: {
-                                requestReview()
-                                HapticManager.shared.lightImpact()
-                            }) {
+                            Link(destination: URL(string: "https://apps.apple.com/app/id6760585720?action=write-review")!) {
                                 navRow(title: "Rate on App Store", icon: "star.fill")
                             }
                             
@@ -528,6 +524,15 @@ struct SettingsView: View {
                     .padding(.bottom, store.activeWorkout != nil ? 100 : 20)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

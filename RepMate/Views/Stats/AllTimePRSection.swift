@@ -56,7 +56,7 @@ struct AllTimePRSection: View {
         if isShowingAll {
             return allTimeResults
         } else {
-            return Array(allTimeResults.prefix(10))
+            return Array(allTimeResults.prefix(3))
         }
     }
     
@@ -134,7 +134,7 @@ struct AllTimePRSection: View {
                         
                         // Show More / Show Less Button
                         let totalCount = allTimeResults.count
-                        if totalCount > 10 {
+                        if totalCount > 3 {
                             Button {
                                 withAnimation(.spring()) {
                                     isShowingAll.toggle()

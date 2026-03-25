@@ -17,6 +17,9 @@ struct WorkoutSessionDetailView: View {
     @State private var editedStartDate: Date = Date()
     @State private var editedEndDate: Date = Date()
     
+    @FocusState private var focusedField: WorkoutFieldFocus?
+    @State private var scrollTargetID: UUID? = nil
+    
     init(session: WorkoutSession) {
         self.originalSession = session
         _editedSets = State(initialValue: session.sets)
@@ -62,7 +65,7 @@ struct WorkoutSessionDetailView: View {
     }
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -77,105 +80,116 @@ struct WorkoutSessionDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 
-                List {
-                    // Time Editing Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Start")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            DatePicker("", selection: $editedStartDate, displayedComponents: [.date, .hourAndMinute])
-                                .labelsHidden()
-                                .onChange(of: editedStartDate) { _, _ in isDirty = true }
-                        }
-                        
-                        HStack {
-                            Text("End")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            DatePicker("", selection: $editedEndDate, displayedComponents: [.date, .hourAndMinute])
-                                .labelsHidden()
-                                .onChange(of: editedEndDate) { _, _ in isDirty = true }
-                        }
-                        
-                        TextField("Workout notes...", text: $editedNotes)
-                            .font(.body)
-                            .foregroundColor(themeManager.palette.accent)
-                            .onChange(of: editedNotes) { _, _ in isDirty = true }
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .padding(.bottom, 8)
-                    
-                    // Exercise Cards
-                    ForEach(Array(exercisesWithSets.enumerated()), id: \.element.0.id) { index, item in
-                        let (exercise, sets) = item
-                        
-                        ExerciseCardView(
-                            index: index + 1,
-                            exerciseName: exercise.name,
-                            targetRir: template?.targets?[exercise.id]?.rir, // Show valid targets if we have them
-                            targetRest: template?.targets?[exercise.id]?.rest ?? 0,
-                            note: bindingExerciseNote(for: exercise.id),
-                            ghostNote: nil
-                        ) {
-                            VStack(spacing: 6) {
-                                ForEach(sets) { set in
-                                    editableSetRow(set: set, exerciseId: exercise.id, exerciseName: exercise.name)
-                                }
-                                
-                                // Add Set Button
-                                Button {
-                                    addSet(for: exercise.id, afterIndex: sets.last?.setIndex ?? 0)
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title2)
-                                        .foregroundColor(themeManager.palette.accent)
-                                        .padding(.top, 4)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .buttonStyle(.plain)
+                ScrollViewReader { scrollProxy in
+                    List {
+                        // Time Editing Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Start")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                DatePicker("", selection: $editedStartDate, displayedComponents: [.date, .hourAndMinute])
+                                    .labelsHidden()
+                                    .environment(\.colorScheme, .dark)
+                                    .onChange(of: editedStartDate) { _, _ in isDirty = true }
                             }
+                            
+                            HStack {
+                                Text("End")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                DatePicker("", selection: $editedEndDate, displayedComponents: [.date, .hourAndMinute])
+                                    .labelsHidden()
+                                    .environment(\.colorScheme, .dark)
+                                    .onChange(of: editedEndDate) { _, _ in isDirty = true }
+                            }
+                            
+                            TextField("Workout notes...", text: $editedNotes)
+                                .font(.body)
+                                .foregroundColor(themeManager.palette.accent)
+                                .onChange(of: editedNotes) { _, _ in isDirty = true }
                         }
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    }
-                    
-
-                    
-                    // Add Exercise Button
-                    Button {
-                        showingAddExercise = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add Exercise")
+                        .padding(.bottom, 8)
+                        
+                        // Exercise Cards
+                        ForEach(Array(exercisesWithSets.enumerated()), id: \.element.0.id) { index, item in
+                            let (exercise, sets) = item
+                            
+                            ExerciseCardView(
+                                index: index + 1,
+                                exerciseName: exercise.name,
+                                targetReps: template?.targets?[exercise.id]?.reps,
+                                targetRir: template?.targets?[exercise.id]?.rir, // Show valid targets if we have them
+                                targetRest: template?.targets?[exercise.id]?.rest ?? 0,
+                                note: bindingExerciseNote(for: exercise.id),
+                                ghostNote: nil
+                            ) {
+                                VStack(spacing: 6) {
+                                    ForEach(sets) { set in
+                                        editableSetRow(set: set, exerciseId: exercise.id, exerciseName: exercise.name)
+                                            .id(set.id)
+                                    }
+                                    
+                                    // Add Set Button
+                                    Button {
+                                        addSet(for: exercise.id, afterIndex: sets.last?.setIndex ?? 0)
+                                    } label: {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.title2)
+                                            .foregroundColor(themeManager.palette.accent)
+                                            .padding(.top, 4)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
-                        .font(.headline)
-                        .pillButton(backgroundColor: Theme.Colors.cardBackground, foregroundColor: themeManager.palette.accent)
-                        .frame(maxWidth: .infinity)
+                        
+    
+                        
+                        // Add Exercise Button
+                        Button {
+                            showingAddExercise = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Add Exercise")
+                            }
+                            .font(.headline)
+                            .pillButton(backgroundColor: Theme.Colors.cardBackground, foregroundColor: themeManager.palette.accent)
+                            .frame(maxWidth: .infinity)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .padding(.vertical, 12)
+                        .buttonStyle(.plain)
+                        
+                        // Spacing
+                        Color.clear.frame(height: 100)
+                             .listRowBackground(Color.clear)
+                             .listRowSeparator(.hidden)
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .padding(.vertical, 12)
-                    .buttonStyle(.plain)
-                    
-                    // Spacing
-                    Color.clear.frame(height: 100)
-                         .listRowBackground(Color.clear)
-                         .listRowSeparator(.hidden)
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.interactively)
+                    .listStyle(.plain)
+                    .scrollDismissesKeyboard(.interactively)
+                    .onChange(of: scrollTargetID) { _, newID in
+                        if let id = newID {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                scrollProxy.scrollTo(id, anchor: .center)
+                            }
+                            scrollTargetID = nil
+                        }
+                    }
+                } // End of ScrollViewReader
             }
-            
-            // Floating Save Button
-            VStack {
-                Spacer()
+            // FLOATING SAVE BUTTON
+            if focusedField == nil {
                 Button {
                     saveWorkout()
                 } label: {
@@ -189,7 +203,7 @@ struct WorkoutSessionDetailView: View {
                     .padding(.vertical, 12)
                     .background(
                         Capsule()
-                            .fill(isDirty ? themeManager.palette.accent : Color.gray.opacity(0.3))
+                            .fill(isDirty ? Theme.Colors.accent : Color.gray.opacity(0.3))
                     )
                     .foregroundColor(isDirty ? .black : .gray)
                 }
@@ -197,7 +211,62 @@ struct WorkoutSessionDetailView: View {
                 .disabled(!isDirty)
                 .padding(.bottom, 24)
             }
-        }
+            
+            // TWO FLOATING PILLS KEYBOARD TOOLBAR
+            if focusedField != nil {
+                HStack(alignment: .bottom) {
+                    // LEFT PILL: Navigation
+                    HStack(spacing: 20) {
+                        Button { focusPrevious() } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .bold))
+                                .frame(width: 30, height: 30)
+                        }
+                        .disabled(isAtFirstField)
+                        .foregroundColor(isAtFirstField ? Color.secondary.opacity(0.3) : themeManager.palette.accent)
+                        
+                        Button { focusNext() } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .bold))
+                                .frame(width: 30, height: 30)
+                        }
+                        .disabled(isAtLastField)
+                        .foregroundColor(isAtLastField ? Color.secondary.opacity(0.3) : themeManager.palette.accent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .environment(\.colorScheme, .dark)
+                            .opacity(0.4)
+                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    )
+                    .shadow(color: Color.black.opacity(0.5), radius: 10, x: 0, y: 5)
+                    
+                    Spacer()
+                    
+                    // RIGHT PILL: Done Button
+                    Button("Done") { focusedField = nil }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(themeManager.palette.accent)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                                .environment(\.colorScheme, .dark)
+                                .opacity(0.4)
+                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        )
+                        .shadow(color: Color.black.opacity(0.5), radius: 10, x: 0, y: 5)
+                }
+                .padding(.horizontal, 16)
+                .offset(y: -9) // Pulls the pills down into the safe area gap
+                .transition(.move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: focusedField)
+            }
+        } // End of ZStack
 
         .navigationTitle(template?.name ?? "Workout")
         .navigationBarTitleDisplayMode(.inline)
@@ -208,6 +277,7 @@ struct WorkoutSessionDetailView: View {
                 })
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
     
     // MARK: - Subviews
@@ -222,12 +292,72 @@ struct WorkoutSessionDetailView: View {
                 weight: bindingWeight(for: set.id),
                 reps: bindingReps(for: set.id),
                 rir: bindingRir(for: set.id),
-                isCompleted: .constant(true) // History sets are "done"
+                isCompleted: .constant(true),
+                rowId: set.id,
+                focusedField: $focusedField
             )
         }
     }
     
     // MARK: - Bindings
+    
+    // MARK: - Keyboard Navigation
+    
+    private var allFields: [WorkoutFieldFocus] {
+        var fields: [WorkoutFieldFocus] = []
+        for (_, sets) in exercisesWithSets {
+            for set in sets {
+                fields.append(.weight(setId: set.id))
+                fields.append(.reps(setId: set.id))
+                fields.append(.rir(setId: set.id))
+            }
+        }
+        return fields
+    }
+    
+    private var isAtFirstField: Bool {
+        guard let f = focusedField, let index = allFields.firstIndex(of: f) else { return true }
+        return index == 0
+    }
+    
+    private var isAtLastField: Bool {
+        guard let f = focusedField, let index = allFields.firstIndex(of: f) else { return true }
+        return index == allFields.count - 1
+    }
+    
+    private func focusNext() {
+        guard let current = focusedField, let index = allFields.firstIndex(of: current) else { return }
+        if index + 1 < allFields.count {
+            let nextField = allFields[index + 1]
+            let id: UUID
+            switch nextField {
+            case .weight(let setId), .reps(let setId), .rir(let setId): id = setId
+            }
+            scrollTargetID = id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                focusedField = nextField
+            }
+        } else {
+            focusedField = nil
+        }
+    }
+    
+    private func focusPrevious() {
+        guard let current = focusedField, let index = allFields.firstIndex(of: current) else { return }
+        if index - 1 >= 0 {
+            let prevField = allFields[index - 1]
+            let id: UUID
+            switch prevField {
+            case .weight(let setId), .reps(let setId), .rir(let setId): id = setId
+            }
+            scrollTargetID = id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                focusedField = prevField
+            }
+        } else {
+            focusedField = nil
+        }
+    }
     
     private func bindingWeight(for setId: UUID) -> Binding<String> {
         Binding(

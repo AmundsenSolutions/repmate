@@ -36,6 +36,13 @@ struct WorkoutsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     addTemplateButton
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .fontWeight(.semibold)
+                }
             }
             .navigationDestination(for: WorkoutNavigation.self) { destination in
                  switch destination {
@@ -208,6 +215,7 @@ struct WorkoutsView: View {
                 .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .padding(.bottom, 100)
+
             }
         }
         .ignoresSafeArea(edges: .bottom)

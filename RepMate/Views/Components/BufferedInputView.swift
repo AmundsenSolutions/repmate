@@ -62,9 +62,9 @@ struct BufferedInputView: View {
                         value = newLocal
                     }
                 }
-                // SYNC: Binding -> Local (Only if not focused, to avoid cursor jumps)
+                // SYNC: Binding -> Local (Allow external overrides even while focused)
                 .onChange(of: value) { _, newBinding in
-                    if !isFocused && localText != newBinding {
+                    if localText != newBinding {
                         localText = newBinding
                     }
                 }

@@ -1,5 +1,10 @@
 import Foundation
 
+extension Notification.Name {
+    static let insertTargetFieldChar = Notification.Name("insertTargetFieldChar")
+    static let confirmGhostValue = Notification.Name("confirmGhostValue")
+}
+
 extension Array {
     /// Safely gets item at index.
     subscript(safe index: Int) -> Element? {

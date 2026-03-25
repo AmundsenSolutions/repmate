@@ -120,15 +120,11 @@ struct ActivityHeatmapView: View {
             ForEach(0..<7, id: \.self) { dayOffset in
                 let date = calendar.date(byAdding: .day, value: -6 + dayOffset, to: Date()) ?? Date()
                 let hasWorkout = workoutDates.contains(calendar.startOfDay(for: date))
-                let isToday = calendar.isDateInToday(date)
                 
                 VStack(spacing: 4) {
                      RoundedRectangle(cornerRadius: 4)
                         .fill(hasWorkout ? Theme.Colors.accent : Color.white.opacity(0.1))
-                        .frame(height: 32) // Taller pill
-                        .overlay(
-                            isToday ? Circle().fill(.white).frame(width: 4, height: 4) : nil
-                        )
+                        .frame(height: 32)
                     
                     Text(date.formatted(.dateTime.weekday(.narrow)))
                         .font(.caption2)

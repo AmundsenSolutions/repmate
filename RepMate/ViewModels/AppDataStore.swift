@@ -1,10 +1,3 @@
-//
-//  AppDataStore.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 11/12/2025.
-//
-
 import Foundation
 import Combine
 import SwiftUI
@@ -806,6 +799,7 @@ final class AppDataStore: ObservableObject {
     @discardableResult
     private func seedDefaultWorkouts() -> Bool {
         let defaults = DefaultData.workouts
+        let hasSeeded = UserDefaults.standard.bool(forKey: "hasSeededDefaultWorkouts")
         
         var hasChanges = false
         
@@ -813,7 +807,7 @@ final class AppDataStore: ObservableObject {
             // Finding existing templates: match by name
             if let index = workoutTemplates.firstIndex(where: { $0.name == def.name }) {
                 // Self-Healing: If existing template has 0 exercises, it's considered broken/empty.
-                // We overwrite it with the default definition.
+                // We overwrite it with the default definition. This ALWAYS runs if the template exists but is empty.
                 if workoutTemplates[index].exerciseIds.isEmpty {
                     
                     var exerciseIds: [UUID] = []
@@ -829,13 +823,11 @@ final class AppDataStore: ObservableObject {
                             exerciseId = newEx.id
                         }
                         exerciseIds.append(exerciseId)
-                        targets[exerciseId] = TemplateTarget(sets: exDef.sets, reps: exDef.reps, rir: exDef.rir, rest: 180)
+                        targets[exerciseId] = TemplateTarget(sets: String(exDef.sets), reps: exDef.reps, rir: exDef.rir, rest: 180)
                     }
                     
-                    // Replace the empty template with the fixed one (keeping ID if desired, but replacing is safer for fresh start)
                     let repairedTemplate = WorkoutTemplate(
-                        id: workoutTemplates[index].id, // Keep ID to preserve sessions? Or new ID? usage in sessions is by ID.
-                        // If we keep ID, we fix sessions.
+                        id: workoutTemplates[index].id,
                         name: def.name,
                         exerciseIds: exerciseIds,
                         targets: targets,
@@ -845,8 +837,8 @@ final class AppDataStore: ObservableObject {
                     workoutTemplates[index] = repairedTemplate
                     hasChanges = true
                 }
-            } else {
-                // Template doesn't exist, create it (Original Logic)
+            } else if !hasSeeded {
+                // Template doesn't exist AND we haven't seeded yet: Initial creation.
                 var exerciseIds: [UUID] = []
                 var targets: [UUID: TemplateTarget] = [:]
                 
@@ -862,7 +854,7 @@ final class AppDataStore: ObservableObject {
                     }
                     
                     exerciseIds.append(exerciseId)
-                    targets[exerciseId] = TemplateTarget(sets: exDef.sets, reps: exDef.reps, rir: exDef.rir, rest: 180)
+                    targets[exerciseId] = TemplateTarget(sets: String(exDef.sets), reps: exDef.reps, rir: exDef.rir, rest: 180)
                 }
                 
                 let template = WorkoutTemplate(
@@ -878,8 +870,7 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        
-        // Seed categories if empty or missing defaults
+        // Seed categories if empty or missing defaults (Always runs)
         let defaultCats = defaultCategories()
         for cat in defaultCats {
             if !categories.contains(cat) {
@@ -888,13 +879,18 @@ final class AppDataStore: ObservableObject {
             }
         }
         
-        // Seed workout categories if empty or missing defaults
+        // Seed workout categories if empty or missing defaults (Always runs)
         let defaultWorkoutCats = defaultWorkoutCategories()
         for cat in defaultWorkoutCats {
             if !workoutCategories.contains(cat) {
                 workoutCategories.append(cat)
                 hasChanges = true
             }
+        }
+        
+        // Mark as seeded so deleted templates stay deleted on future launches
+        if !hasSeeded {
+            UserDefaults.standard.set(true, forKey: "hasSeededDefaultWorkouts")
         }
         
         return hasChanges

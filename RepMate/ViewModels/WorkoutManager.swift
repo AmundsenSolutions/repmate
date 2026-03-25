@@ -1,10 +1,3 @@
-//
-//  WorkoutManager.swift
-//  RepMate
-//
-//  Created by Aleksander Amundsen on 2026.
-//
-
 import Foundation
 
 struct WorkoutManager {
@@ -41,7 +34,8 @@ struct WorkoutManager {
         let exerciseMap = Dictionary(uniqueKeysWithValues: exerciseLibrary.map { ($0.id, $0) })
         var total = 0
         for (index, exId) in ids.enumerated() {
-            let sets = max(1, template.targets?[exId]?.sets ?? 3)
+            let setsStr = template.targets?[exId]?.sets ?? "3"
+            let sets = setsStr.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap { Int($0) }.max() ?? 3
             let setup = exerciseMap[exId]?.setupTime ?? .medium
             total += exerciseSeconds(setupTime: setup, setCount: sets, userRestTime: userRestTime,
                                      isFirst: index == 0, isLast: index == ids.count - 1)
@@ -346,6 +340,21 @@ struct WorkoutManager {
         guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return 0 }
         
         return sessions.filter { $0.date >= startDate }.count
+    }
+    
+    /// Calculates total volume (sum of weight × reps) over a period, in kg.
+    func calculateTotalVolume(sessions: [WorkoutSession], days: Int) -> Double {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return 0 }
+        
+        return sessions
+            .filter { $0.date >= startDate }
+            .flatMap { $0.sets }
+            .reduce(0.0) { total, set in
+                guard let weight = set.weight, weight > 0, set.reps > 0 else { return total }
+                return total + weight * Double(set.reps)
+            }
     }
     
     // MARK: - Habit & Consistency Analytics
