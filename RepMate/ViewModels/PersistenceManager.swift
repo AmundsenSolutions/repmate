@@ -40,9 +40,9 @@ class PersistenceManager {
                     try? self.fileManager.copyItem(at: url, to: backupUrl)
                 }
                 
-                // 2. Write new data atomically
+                // 2. Write new data atomically with hardware-level encryption
                 let data = try JSONEncoder().encode(object)
-                try data.write(to: url, options: [.atomic])
+                try data.write(to: url, options: [.atomic, .completeFileProtection])
                 completion?(.success(()))
             } catch {
                 completion?(.failure(.writingFailed(error)))

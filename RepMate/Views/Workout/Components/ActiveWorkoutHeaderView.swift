@@ -116,13 +116,11 @@ struct ActiveWorkoutHeaderView: View {
             let exercise = store.exerciseLibrary.first(where: { $0.id == item.exerciseId })
             let setupTime = exercise?.setupTime ?? .medium
             
-            // Transition + warmup for non-first exercises
             if !isFirstRemaining {
                 totalSeconds += setupTime.transitionSeconds
                 totalSeconds += setupTime.warmupSetSeconds + setupTime.warmupRestSeconds
             }
             
-            // Work sets
             for setIndex in 0..<item.remaining {
                 totalSeconds += setupTime.setDurationSeconds
                 
@@ -135,7 +133,10 @@ struct ActiveWorkoutHeaderView: View {
             }
         }
         
-        let minutes = max(1, totalSeconds / 60)
+        let minutes = Int(ceil(Double(totalSeconds) / 60.0))
+        if minutes <= 0 {
+            return "0 min"
+        }
         return "~\(minutes) min"
     }
 }

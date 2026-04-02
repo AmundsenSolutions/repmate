@@ -364,36 +364,11 @@ struct HomeView: View {
             Text("Latest Entries")
                 .sectionHeader()
             
-            List {
+            VStack(spacing: 8) {
                 ForEach(todayEntries.prefix(3)) { entry in
                     entryRow(for: entry)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                store.toggleFavorite(entry: entry)
-                                HapticManager.shared.success()
-                            } label: {
-                                Label("Favorite", systemImage: store.isFavorite(entry: entry) ? "star.slash" : "star")
-                            }
-                            .tint(Theme.active.accent)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                store.deleteProteinEntry(withID: entry.id)
-                                HapticManager.shared.success()
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            .tint(.red)
-                        }
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .scrollDisabled(true)
-            .frame(height: CGFloat(min(todayEntries.count, 3) * 76))
             
             if todayEntries.count > 3 {
                 Button {

@@ -13,7 +13,6 @@ struct ProteinSummaryCard: View {
     @State private var flameBounce: CGFloat = 1.0
     @State private var previousGoalMet = false
     
-    // Cached weekly data for performance
     @State private var cachedWeeklyData: [DayData] = []
     
     private var streakCount: Int { store.proteinStreak() }
@@ -24,7 +23,6 @@ struct ProteinSummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             
-            // 1. Streak & Header
             HStack {
                 HStack(spacing: 4) {
                     if streakCount > 0 {
@@ -58,14 +56,11 @@ struct ProteinSummaryCard: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(Theme.Colors.textSecondary)
             
-            // 2. Large Glowing Protein Value
             proteinValueDisplay
             
-            // 3. 7-Day Bar Chart
             weeklyBarChart
                 .frame(height: horizontalSizeClass == .regular ? 140 : 100)
             
-            // 4. Day labels
             dayLabels
         }
         .padding(.horizontal, 20)

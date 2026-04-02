@@ -112,7 +112,9 @@ struct ActiveWorkoutView: View {
                     titleVisibility: .visible
                 ) {
                     Button("Save and Exit") {
-                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            dismiss()
+                        }
                     }
                     .contentShape(Rectangle())
                     Button("Discard Workout", role: .destructive) {

@@ -2,21 +2,29 @@ import SwiftUI
 
 struct AddProteinEntryView: View {
     @EnvironmentObject var store: AppDataStore
+    @EnvironmentObject var storeManager: StoreManager
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var showCamera = false
+    @State private var showPaywall = false
 
     @State private var gramsText: String = ""
     @State private var note: String = ""
     @State private var showScanner = false
     @State private var isLookingUp = false
     @State private var scanError: String?
+    @State private var isAIProcessing = false
+    @State private var aiNoteError: String?
+
+    private let aiService = ProteinAIService()
     
-    // New Barcode Registration State
     @State private var unknownBarcode: String?
     @State private var showRegisterSheet = false
     @State private var newProductName: String = ""
     @State private var newProductProtein: String = ""
     @State private var lookupTask: Task<Void, Never>?
+    @State private var toastTask: Task<Void, Never>?
     
     @FocusState private var focusedField: Field?
     
@@ -61,17 +69,58 @@ struct AddProteinEntryView: View {
                             )
                             .frame(width: 100)
                             
-                            BufferedInputView(
-                                value: $note,
-                                placeholder: "Note (optional)",
-                                keyboardType: .default,
-                                color: .white,
-                                alignment: .leading,
-                                font: .body,
-                                backgroundColor: Theme.Colors.cardBackground,
-                                cornerRadius: Theme.Spacing.cornerRadius
-                            )
-                            
+                            // Note field + sparkle AI button side-by-side
+                            ZStack(alignment: .trailing) {
+                                BufferedInputView(
+                                    value: $note,
+                                    placeholder: "Note (optional)",
+                                    keyboardType: .default,
+                                    color: .white,
+                                    alignment: .leading,
+                                    font: .body,
+                                    backgroundColor: Theme.Colors.cardBackground,
+                                    cornerRadius: Theme.Spacing.cornerRadius
+                                )
+                                // Sparkle button — visible only when note has text
+                                if !note.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    Button {
+                                        if storeManager.isPro {
+                                            processNotesWithAI()
+                                        } else {
+                                            showPaywall = true
+                                        }
+                                        HapticManager.shared.lightImpact()
+                                    } label: {
+                                        Image(systemName: "sparkles")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(themeManager.palette.accent)
+                                            .frame(width: 36, height: 36)
+                                            .background(themeManager.palette.accent.opacity(0.12))
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                    .padding(.trailing, 6)
+                                    .transition(.scale.combined(with: .opacity))
+                                }
+                            }
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: note.isEmpty)
+
+                            // AI Camera Button
+                            Button {
+                                if storeManager.isPro {
+                                    showCamera = true
+                                } else {
+                                    showPaywall = true
+                                }
+                                HapticManager.shared.lightImpact()
+                            } label: {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(themeManager.palette.accent)
+                                    .frame(width: 44, height: 44)
+                                    .background(Theme.Colors.cardBackground)
+                                    .cornerRadius(Theme.Spacing.cornerRadius)
+                            }
+
                             // Barcode Scan Button
                             Button {
                                 showScanner = true
@@ -90,7 +139,7 @@ struct AddProteinEntryView: View {
                         // Always visible, disabled state indicated by color
                         Button(action: save) {
                             Text("Log entry")
-                                .font(.system(size: 16, weight: .bold)) // Bold for primary action
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(isValidManualEntry ? .black : .gray)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -234,14 +283,14 @@ struct AddProteinEntryView: View {
             .environmentObject(themeManager)
         }
         .overlay {
-            if isLookingUp {
+            if isLookingUp || isAIProcessing {
                 ZStack {
                     Color.black.opacity(0.4).ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView()
                             .tint(themeManager.palette.accent)
                             .scaleEffect(1.3)
-                        Text("Looking up product...")
+                        Text(isAIProcessing ? "Beregner protein..." : "Looking up product...")
                             .font(.caption)
                             .foregroundColor(.white)
                     }
@@ -252,11 +301,13 @@ struct AddProteinEntryView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if let error = scanError {
+            // Unified toast: scan errors + AI note errors
+            let toastMessage = scanError ?? aiNoteError
+            if let message = toastMessage {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
-                    Text(error)
+                    Text(message)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
                 }
@@ -267,15 +318,32 @@ struct AddProteinEntryView: View {
                 .padding(.bottom, 40)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        withAnimation { scanError = nil }
+                    toastTask?.cancel()
+                    toastTask = Task {
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        guard !Task.isCancelled else { return }
+                        await MainActor.run {
+                            withAnimation {
+                                scanError = nil
+                                aiNoteError = nil
+                            }
+                        }
                     }
                 }
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: scanError)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: aiNoteError)
         .sheet(isPresented: $showRegisterSheet) {
             registerNewProductSheet
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(storeManager)
         }
     }
     
@@ -398,6 +466,58 @@ struct AddProteinEntryView: View {
         store.addProteinEntry(grams: grams, note: finalNote)
         dismiss()
     }
+
+    // MARK: - AI Notes Processing
+    private func processNotesWithAI() {
+        let trimmed = note.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+
+        isAIProcessing = true
+        aiNoteError = nil
+        // NOTE: Do NOT dismiss keyboard here.
+        // We dismiss it atomically with the result below so the view
+        // only re-layouts once — preventing the scroll jump.
+
+        Task {
+            do {
+                let response = try await aiService.analyzeInput(text: trimmed)
+                await MainActor.run {
+                    // Dismiss keyboard and apply result in the same frame.
+                    focusedField = nil
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        isAIProcessing = false
+                        if response.protein_grams == -1 {
+                            // Lambda sentinel: gibberish/not food
+                            aiNoteError = "I couldn't understand that. Try writing something like '2 eggs'."
+                            HapticManager.shared.error()
+                        } else {
+                            // >= 0 is valid (0g is real food like water/black coffee)
+                            gramsText = "\(response.protein_grams)"
+                            HapticManager.shared.success()
+                        }
+                    }
+                }
+            } catch ProteinAIService.AIError.serverError(_, let message) {
+                await MainActor.run {
+                    focusedField = nil
+                    withAnimation {
+                        isAIProcessing = false
+                        aiNoteError = message
+                    }
+                    HapticManager.shared.error()
+                }
+            } catch {
+                await MainActor.run {
+                    focusedField = nil
+                    withAnimation {
+                        isAIProcessing = false
+                        aiNoteError = "Could not calculate protein, please be more specific"
+                    }
+                    HapticManager.shared.error()
+                }
+            }
+        }
+    }
     
     private func handleBarcodeScan(_ barcode: String) {
         // 1. Check Custom Local Barcodes First
@@ -466,4 +586,5 @@ struct AddProteinEntryView: View {
     AddProteinEntryView()
         .environmentObject(AppDataStore())
         .environmentObject(ThemeManager.shared)
+        .environmentObject(StoreManager())
 }

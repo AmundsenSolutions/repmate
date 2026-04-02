@@ -365,43 +365,36 @@ struct ActiveExerciseListView: View {
     
     private func injectGhostData(for field: WorkoutFieldFocus) {
         guard var aw = store.activeWorkout else { return }
-        var didInject = false
         
-        func lookupGhost(setId: UUID) -> (exerciseId: UUID, rowIndex: Int, ghost: (weight: Double, reps: Int, rir: String))? {
-            for exId in aw.exerciseIds {
-                if let rows = aw.rowsByExercise[exId], let idx = rows.firstIndex(where: { $0.id == setId }) {
-                    if let ghost = store.ghostSetData(for: exId, setIndex: idx) {
-                        return (exId, idx, ghost)
-                    }
-                }
-            }
-            return nil
+        // Find the exercise and row index for the targeted setId
+        let setId: UUID
+        switch field {
+        case .weight(let id), .reps(let id), .rir(let id): setId = id
         }
+        
+        var targetMatch: (exerciseId: UUID, rowIndex: Int)? = nil
+        for exId in aw.exerciseIds {
+            if let rows = aw.rowsByExercise[exId], let idx = rows.firstIndex(where: { $0.id == setId }) {
+                targetMatch = (exId, idx)
+                break
+            }
+        }
+        
+        guard let match = targetMatch,
+              let ghost = store.ghostSetData(for: match.exerciseId, setIndex: match.rowIndex) else { return }
         
         switch field {
-        case .weight(let setId):
-            if let matched = lookupGhost(setId: setId) {
-                let w = matched.ghost.weight
-                let str = w.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(w))" : "\(w)"
-                aw.rowsByExercise[matched.exerciseId]?[matched.rowIndex].weight = str
-                didInject = true
-            }
-        case .reps(let setId):
-            if let matched = lookupGhost(setId: setId) {
-                aw.rowsByExercise[matched.exerciseId]?[matched.rowIndex].reps = "\(matched.ghost.reps)"
-                didInject = true
-            }
-        case .rir(let setId):
-            if let matched = lookupGhost(setId: setId) {
-                aw.rowsByExercise[matched.exerciseId]?[matched.rowIndex].rir = matched.ghost.rir
-                didInject = true
-            }
+        case .weight:
+            let w = ghost.weight
+            aw.rowsByExercise[match.exerciseId]?[match.rowIndex].weight = w.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(w))" : "\(w)"
+        case .reps:
+            aw.rowsByExercise[match.exerciseId]?[match.rowIndex].reps = "\(ghost.reps)"
+        case .rir:
+            aw.rowsByExercise[match.exerciseId]?[match.rowIndex].rir = ghost.rir
         }
         
-        if didInject {
-            aw.isDirty = true
-            store.silentUpdateActiveWorkout(aw)
-        }
+        aw.isDirty = true
+        store.silentUpdateActiveWorkout(aw)
     }
     
     // MARK: - Bindings (ID-Based)
@@ -537,12 +530,12 @@ struct ActiveExerciseListView: View {
             rows[index].isCompleted = true
             aw.rowsByExercise[exerciseId] = rows
             aw.isDirty = true
-            store.silentUpdateActiveWorkout(aw)
+            store.updateActiveWorkout(aw)
         } else if !shouldBeComplete && row.isCompleted {
             rows[index].isCompleted = false
             aw.rowsByExercise[exerciseId] = rows
             aw.isDirty = true
-            store.silentUpdateActiveWorkout(aw)
+            store.updateActiveWorkout(aw)
         }
     }    
     
