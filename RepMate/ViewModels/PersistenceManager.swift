@@ -38,6 +38,11 @@ class PersistenceManager {
                 if self.fileManager.fileExists(atPath: url.path) {
                     try? self.fileManager.removeItem(at: backupUrl) // Remove old backup
                     try? self.fileManager.copyItem(at: url, to: backupUrl)
+                    // Explicitly enforce hardware-level encryption on the backup file.
+                    try? self.fileManager.setAttributes(
+                        [.protectionKey: FileProtectionType.complete],
+                        ofItemAtPath: backupUrl.path
+                    )
                 }
                 
                 // 2. Write new data atomically with hardware-level encryption
