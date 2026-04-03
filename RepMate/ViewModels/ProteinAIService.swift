@@ -20,7 +20,7 @@ class ProteinAIService {
         let config = URLSessionConfiguration.default
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = nil
-        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 30
         config.httpAdditionalHeaders = ["Connection": "keep-alive"]
         return URLSession(configuration: config)

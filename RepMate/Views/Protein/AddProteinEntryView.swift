@@ -81,6 +81,7 @@ struct AddProteinEntryView: View {
                                     backgroundColor: Theme.Colors.cardBackground,
                                     cornerRadius: Theme.Spacing.cornerRadius
                                 )
+                                .padding(.trailing, note.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : 48)
                                 // Sparkle button — visible only when note has text
                                 if !note.trimmingCharacters(in: .whitespaces).isEmpty {
                                     Button {
