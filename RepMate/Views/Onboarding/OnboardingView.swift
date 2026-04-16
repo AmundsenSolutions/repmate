@@ -1,104 +1,564 @@
 import SwiftUI
 
-/// First-run onboarding flow with 4 swipeable pages.
+// MARK: - Unified Onboarding (New Users)
+
+/// Single, unified onboarding flow shown to first-time users.
+/// Combines the original body-weight setup with the AI plan generation
+/// using the premium AI design aesthetic throughout.
 struct OnboardingView: View {
     @EnvironmentObject var store: AppDataStore
     @EnvironmentObject var themeManager: ThemeManager
-    
-    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @EnvironmentObject var storeManager: StoreManager
+
+    @AppStorage("hasSeenOnboarding")   private var hasSeenOnboarding   = false
+    @AppStorage("hasSeenAIOnboarding") private var hasSeenAIOnboarding = false
+
+    // MARK: Navigation
     @State private var currentPage = 0
+    private let totalPages = 5  // 0=Welcome, 1=Weight, 2=Experience, 3=Days, 4=Equipment
+
+    // MARK: Body Weight
     @State private var bodyWeight = ""
-    
-    private var isWeightValid: Bool {
-        bodyWeight.isValidWeight
+    @FocusState private var isWeightFocused: Bool
+
+    // MARK: AI Questions
+    @State private var selectedExperience: AIOnboardingAnswers.ExperienceLevel?
+    @State private var selectedDays: AIOnboardingAnswers.TrainingDays?
+    @State private var selectedEquipment: AIOnboardingAnswers.Equipment?
+
+    // MARK: Generation
+    @State private var isLoading = false
+    @State private var generatedPlan: AIPlanResponse?
+    @State private var errorMessage: String?
+    @State private var showError = false
+    @State private var isRateLimitFreeError = false
+    @State private var showPaywall = false
+    private let service = AIPlanService()
+
+    // MARK: Can Advance?
+    private var canAdvance: Bool {
+        switch currentPage {
+        case 0: return true
+        case 1: return bodyWeight.isValidWeight
+        case 2: return selectedExperience != nil
+        case 3: return selectedDays != nil
+        case 4: return selectedEquipment != nil
+        default: return false
+        }
     }
+
+    // MARK: Body
 
     var body: some View {
         ZStack {
-            // Background Layer
-            GeometryReader { proxy in
-                TabView(selection: $currentPage) {
-                    Image("onboarding_bg_1").resizable().scaledToFill().ignoresSafeArea().tag(0)
-                    Image("onboarding_bg_2").resizable().scaledToFill().ignoresSafeArea().tag(1)
-                    Image("onboarding_bg_3").resizable().scaledToFill().ignoresSafeArea().tag(2)
-                    Image("onboarding_bg_4").resizable().scaledToFill().ignoresSafeArea().tag(3)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never)) // Hide native index since we want custom placement
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.8), value: currentPage)
-                .gesture(currentPage == 1 && !isWeightValid ? DragGesture() : nil)
-                
-                // Heavy dark overlay to make text premium and legible
-                Color.black.opacity(0.65).ignoresSafeArea()
-            }
+            // Background gradient
+            LinearGradient(
+                colors: [Color.black, Color(white: 0.06)],
+                startPoint: .top, endPoint: .bottom
+            )
             .ignoresSafeArea()
-            
-            // Content Layer
-            VStack {
-                TabView(selection: $currentPage) {
-                    OnboardingWelcomeSlide(onNext: advancePage)
-                        .tag(0)
-                    
-                    OnboardingNutritionSlide(
-                        bodyWeight: $bodyWeight,
-                        onNext: { saveProteinFromWeight(); advancePage() }
-                    )
-                    .tag(1)
-                    
-                    OnboardingTutorialSlide(onNext: advancePage)
-                        .tag(2)
-                    
-                    OnboardingStartSlide(onStart: completeOnboarding)
-                        .tag(3)
+
+            // Ambient accent glow
+            Circle()
+                .fill(themeManager.palette.accent.opacity(0.12))
+                .frame(width: 400, height: 400)
+                .blur(radius: 80)
+                .offset(y: -220)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            if let plan = generatedPlan {
+                // Result screen
+                AIPlanResultView(plan: plan, isOnboarding: true, onDismiss: finalDismiss)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .opacity
+                    ))
+            } else if isLoading {
+                OnboardingLoadingView()
+                    .transition(.opacity)
+            } else {
+                mainContent
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.4), value: isLoading)
+        .animation(.easeInOut(duration: 0.5), value: generatedPlan != nil)
+        .alert(isRateLimitFreeError ? "Daily Limit Reached" : "Couldn't Generate Plan", isPresented: $showError) {
+            if isRateLimitFreeError {
+                Button("Upgrade to Pro") { showPaywall = true }
+            } else {
+                Button("Try Again") { runGeneration() }
+            }
+            Button("Skip", role: .cancel) { skipFromAISection() }
+        } message: {
+            Text(errorMessage ?? "An unknown error occurred. Please try again.")
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(storeManager)
+        }
+    }
+
+    // MARK: - Main Content
+
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            // Top bar: Skip only visible on AI question slides
+            HStack {
+                Spacer()
+                if currentPage >= 2 {
+                    Button("Skip") { skipFromAISection() }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.4))
+                        .padding(.trailing, 24)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.3), value: currentPage)
-                .gesture(currentPage == 1 && !isWeightValid ? DragGesture() : nil)
-                
-                // Custom Pagination Dots placed explicitly so they don't overlap the NEXT button
-                HStack(spacing: 8) {
-                    ForEach(0..<4) { index in
-                        Circle()
-                            .fill(currentPage == index ? themeManager.palette.accent : Color.white.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                            .animation(.spring(), value: currentPage)
+            }
+            .frame(height: 44)
+
+            // Progress bar (hidden on welcome slide)
+            if currentPage > 0 {
+                HStack(spacing: 6) {
+                    ForEach(1..<totalPages, id: \.self) { idx in
+                        Capsule()
+                            .fill(idx <= currentPage
+                                  ? themeManager.palette.accent
+                                  : Color.white.opacity(0.15))
+                            .frame(height: 3)
                     }
                 }
-                .padding(.bottom, 20)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
+            }
+
+            // Slides
+            TabView(selection: $currentPage) {
+                welcomeSlide.tag(0)
+                bodyWeightSlide.tag(1)
+
+                AIQuestionSlide(
+                    icon: "figure.strengthtraining.traditional",
+                    title: "Experience Level",
+                    subtitle: "How long have you been training consistently?",
+                    options: AIOnboardingAnswers.ExperienceLevel.allCases.map {
+                        QuestionOption(id: $0.rawValue, title: $0.rawValue, icon: experienceIcon($0))
+                    },
+                    selectedId: selectedExperience?.rawValue,
+                    onSelect: { id in
+                        selectedExperience = .init(rawValue: id)
+                        HapticManager.shared.selection()
+                    }
+                ).tag(2)
+
+                AIQuestionSlide(
+                    icon: "calendar.badge.clock",
+                    title: "Training Days per Week",
+                    subtitle: "How many days can you realistically commit to?",
+                    options: AIOnboardingAnswers.TrainingDays.allCases.map {
+                        QuestionOption(id: $0.rawValue, title: $0.rawValue, icon: daysIcon($0))
+                    },
+                    selectedId: selectedDays?.rawValue,
+                    onSelect: { id in
+                        selectedDays = .init(rawValue: id)
+                        HapticManager.shared.selection()
+                    }
+                ).tag(3)
+
+                AIQuestionSlide(
+                    icon: "dumbbell.fill",
+                    title: "Available Equipment",
+                    subtitle: "What do you have access to for training?",
+                    options: AIOnboardingAnswers.Equipment.allCases.map {
+                        QuestionOption(id: $0.rawValue, title: $0.rawValue, icon: equipmentIcon($0))
+                    },
+                    selectedId: selectedEquipment?.rawValue,
+                    onSelect: { id in
+                        selectedEquipment = .init(rawValue: id)
+                        HapticManager.shared.selection()
+                    }
+                ).tag(4)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.35), value: currentPage)
+            .gesture(DragGesture()) // Button-only navigation
+
+            // Bottom button
+            bottomButton
+        }
+    }
+
+    // MARK: - Welcome Slide
+
+    private var welcomeSlide: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 24) {
+                // Icon cluster
+                ZStack {
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(themeManager.palette.accent.opacity(0.06 - Double(i) * 0.015))
+                            .frame(width: CGFloat(100 + i * 44), height: CGFloat(100 + i * 44))
+                    }
+                    Image("Preview_Blue")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(themeManager.palette.accent, lineWidth: 1.5))
+                        .shadow(color: themeManager.palette.accent.opacity(0.3), radius: 10)
+                }
+
+                // Text
+                VStack(spacing: 8) {
+                    Text("RepMate")
+                        .font(.system(size: 52, weight: .black))
+                        .foregroundColor(.white)
+
+                    Text("AI-Powered Fitness")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(themeManager.palette.accent)
+                        .tracking(0.5)
+                }
+
+                Text("Answer a few quick questions and get\na science-based workout plan\nbuilt specifically for you.")
+                    .font(.system(size: 15))
+                    .foregroundColor(Color.white.opacity(0.55))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 16)
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Body Weight Slide
+
+    private var bodyWeightSlide: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 22) {
+                // Header
+                VStack(spacing: 10) {
+                    Image(systemName: "scalemass.fill")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(themeManager.palette.gradient)
+
+                    Text("What's your body weight?")
+                        .font(.system(size: 26, weight: .black))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+
+                    Text("We'll calculate your daily protein goal.")
+                        .font(.system(size: 15))
+                        .foregroundColor(Color.white.opacity(0.55))
+                        .multilineTextAlignment(.center)
+                }
+
+                // Large number input
+                VStack(spacing: 4) {
+                    TextField("80", text: $bodyWeight)
+                        .keyboardType(.decimalPad)
+                        .focused($isWeightFocused)
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .frame(width: 160)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") { isWeightFocused = false }
+                                    .fontWeight(.semibold)
+                            }
+                        }
+
+                    Rectangle()
+                        .frame(width: 140, height: 1)
+                        .foregroundColor(Color.white.opacity(0.25))
+                        .padding(.bottom, 4)
+
+                    Text("kg")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.45))
+                }
+                .frame(maxWidth: .infinity)
+
+                // Preset chips
+                weightPresets
+
+                // Protein preview
+                if let protein = calculatedProtein {
+                    VStack(spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(protein)")
+                                .font(.system(size: 42, weight: .black, design: .rounded))
+                                .foregroundStyle(themeManager.palette.gradient)
+                                .contentTransition(.numericText())
+                            Text("g")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(themeManager.palette.accent.opacity(0.8))
+                        }
+                        Text("DAILY PROTEIN GOAL")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(Color.white.opacity(0.35))
+                            .tracking(1.2)
+                        Text("Based on 1.6g per kg of body weight")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color.white.opacity(0.35))
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
+
+                // Validation error
+                if !bodyWeight.isEmpty && !bodyWeight.isValidWeight {
+                    Text("Enter a weight between 1 and 300 kg")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.red.opacity(0.85))
+                        .transition(.opacity)
+                }
+            }
+            .padding(.horizontal, 24)
+            .animation(.easeOut(duration: 0.2), value: calculatedProtein)
+
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { isWeightFocused = false }
+    }
+
+    private var weightPresets: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach([55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 120], id: \.self) { preset in
+                        let isActive = bodyWeight == "\(preset)"
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                bodyWeight = "\(preset)"
+                                proxy.scrollTo(preset, anchor: .center)
+                            }
+                            isWeightFocused = false
+                            HapticManager.shared.lightImpact()
+                        } label: {
+                            Text("\(preset)")
+                                .font(.system(size: 14, weight: .bold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(isActive
+                                              ? themeManager.palette.accent.opacity(0.2)
+                                              : Color.white.opacity(0.06))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(
+                                                    isActive
+                                                        ? themeManager.palette.accent.opacity(0.7)
+                                                        : Color.clear,
+                                                    lineWidth: 1.5
+                                                )
+                                        )
+                                )
+                                .foregroundColor(isActive ? .white : Color.white.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .id(preset)
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation { proxy.scrollTo(80, anchor: .center) }
+                }
             }
         }
-        .background(Color.black.ignoresSafeArea(.all)) // Base color beneath images
     }
-    
-    private func advancePage() {
-        withAnimation { currentPage += 1 }
+
+    // MARK: - Bottom Button
+
+    @ViewBuilder
+    private var bottomButton: some View {
+        if currentPage < totalPages - 1 {
+            Button {
+                if currentPage == 1 { isWeightFocused = false }
+                guard canAdvance else { return }
+                withAnimation(.easeInOut(duration: 0.3)) { currentPage += 1 }
+            } label: {
+                HStack(spacing: 8) {
+                    Text(currentPage == 0 ? "Get Started" : "Continue")
+                        .font(.system(size: 16, weight: .bold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    Capsule()
+                        .fill(canAdvance
+                              ? themeManager.palette.gradient
+                              : LinearGradient(colors: [Color.white.opacity(0.1)],
+                                               startPoint: .leading, endPoint: .trailing))
+                )
+                .foregroundColor(canAdvance ? .white : Color.white.opacity(0.3))
+            }
+            .disabled(!canAdvance)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 36)
+            .animation(.easeInOut(duration: 0.2), value: canAdvance)
+        } else {
+            // Last slide: Generate button
+            VStack(spacing: 12) {
+                Button {
+                    guard canAdvance else { return }
+                    runGeneration()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Generate My Science-Based Plan")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        Capsule()
+                            .fill(canAdvance
+                                  ? themeManager.palette.gradient
+                                  : LinearGradient(colors: [Color.white.opacity(0.1)],
+                                                   startPoint: .leading, endPoint: .trailing))
+                    )
+                    .foregroundColor(canAdvance ? .white : Color.white.opacity(0.3))
+                }
+                .disabled(!canAdvance)
+                .animation(.easeInOut(duration: 0.2), value: canAdvance)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 36)
+        }
     }
-    
+
+    // MARK: - Logic
+
+    private var calculatedProtein: Int? {
+        let s = bodyWeight.replacingOccurrences(of: ",", with: ".")
+        guard let w = Double(s), w > 0 else { return nil }
+        return Int((w * 1.6).rounded())
+    }
+
     private func saveProteinFromWeight() {
-        let sanitized = bodyWeight.replacingOccurrences(of: ",", with: ".")
-        if let weight = Double(sanitized), weight > 0 && weight <= 300 {
-            let target = Int((weight * 1.6).rounded())
-            store.updateDailyProteinTarget(target)
+        let s = bodyWeight.replacingOccurrences(of: ",", with: ".")
+        if let w = Double(s), w > 0 && w <= 300 {
+            store.updateDailyProteinTarget(Int((w * 1.6).rounded()))
         }
     }
-    
-    private func completeOnboarding() {
-        saveProteinFromWeight()
-        withAnimation(.easeInOut(duration: 0.4)) {
-            hasSeenOnboarding = true
+
+    private func runGeneration() {
+        guard let exp = selectedExperience,
+              let days = selectedDays,
+              let equip = selectedEquipment else { return }
+
+        let answers = AIOnboardingAnswers(
+            experienceLevel: exp, trainingDays: days, equipment: equip
+        ).formattedString
+
+        withAnimation { isLoading = true }
+
+        Task {
+            do {
+                let plan = try await service.generateAIPlan(answers: answers, isPro: storeManager.isPro)
+                await MainActor.run {
+                    withAnimation { isLoading = false }
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        generatedPlan = plan
+                    }
+                    HapticManager.shared.success()
+                }
+            } catch AIPlanService.AIPlanError.rateLimitReached(let isPro) {
+                await MainActor.run {
+                    withAnimation { isLoading = false }
+                    errorMessage = AIPlanService.AIPlanError.rateLimitReached(isPro: isPro).localizedDescription
+                    isRateLimitFreeError = !isPro
+                    showError = true
+                    HapticManager.shared.error()
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation { isLoading = false }
+                    errorMessage = error.localizedDescription
+                    isRateLimitFreeError = false
+                    showError = true
+                    HapticManager.shared.error()
+                }
+            }
         }
+    }
+
+    /// Called when AI plan saved or result screen dismissed. Marks both flags done.
+    private func finalDismiss() {
+        saveProteinFromWeight()
+        hasSeenOnboarding   = true
+        hasSeenAIOnboarding = true
+        store.seedDefaultWorkoutsIfNeeded()
         HapticManager.shared.success()
+    }
+
+    /// Called when user taps Skip on an AI question slide. Still saves weight.
+    private func skipFromAISection() {
+        saveProteinFromWeight()
+        hasSeenOnboarding   = true
+        hasSeenAIOnboarding = true
+        store.seedDefaultWorkoutsIfNeeded()
+    }
+
+    // MARK: - Icon Helpers
+
+    private func experienceIcon(_ v: AIOnboardingAnswers.ExperienceLevel) -> String {
+        switch v {
+        case .beginner:     return "1.circle.fill"
+        case .intermediate: return "2.circle.fill"
+        case .advanced:     return "3.circle.fill"
+        }
+    }
+
+    private func daysIcon(_ v: AIOnboardingAnswers.TrainingDays) -> String {
+        switch v {
+        case .light:    return "calendar"
+        case .moderate: return "calendar.badge.plus"
+        case .high:     return "calendar.badge.exclamationmark"
+        }
+    }
+
+    private func equipmentIcon(_ v: AIOnboardingAnswers.Equipment) -> String {
+        switch v {
+        case .fullGym:    return "building.2.fill"
+        case .homeGym:    return "house.fill"
+        case .bodyweight: return "figure.arms.open"
+        }
     }
 }
 
-// MARK: - Minimal Card Modifier
+// MARK: - Weight Validation
+
+extension String {
+    var isValidWeight: Bool {
+        let sanitized = replacingOccurrences(of: ",", with: ".")
+        guard let weight = Double(sanitized) else { return false }
+        return weight > 0 && weight <= 300
+    }
+}
+
+// MARK: - Minimal Card (kept for backward compat)
 
 struct MinimalCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(Theme.Colors.cardBackground) // Exact match to Workouts tab (Color(uiColor: .tertiarySystemFill) / white: 0.1)
-            .cornerRadius(16) // Exact match to Workouts tab standard
+            .background(Theme.Colors.cardBackground)
+            .cornerRadius(16)
     }
 }
 
@@ -108,656 +568,10 @@ extension View {
     }
 }
 
-// MARK: - Onboarding Premium Card
-private struct OnboardingGlassCard: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(16)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.9)
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.white.opacity(0.03))
-                }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-            )
-    }
-}
+// MARK: - Preview
 
-private extension View {
-    func onboardingGlassCard() -> some View {
-        modifier(OnboardingGlassCard())
-    }
-}
-
-// MARK: - Shared Next Button
-
-struct OnboardingNextButton: View {
-    @EnvironmentObject var themeManager: ThemeManager
-    var action: () -> Void
-    var title: String
-    var icon: String? = "arrow.right"
-    var isEnabled: Bool = true
-    
-    var body: some View {
-        Button {
-            action()
-        } label: {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 16, weight: .bold)) // Clean sans-serif
-                if let icon = icon {
-                    Image(systemName: icon)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .glowingPanelButton()
-        .opacity(isEnabled ? 1 : 0.45)
-        .disabled(!isEnabled)
-        .frame(maxWidth: 600)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 24) // Leaves room for custom pagination dots
-    }
-}
-    
-    // MARK: - Slide 1: Welcome & Theme
-    
-    struct OnboardingWelcomeSlide: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        var onNext: () -> Void
-        
-        var body: some View {
-            VStack(spacing: 0) {
-                Spacer(minLength: 60)
-                
-                VStack(spacing: 16) {
-                    Text("RepMate")
-                        .font(.system(size: 48, weight: .black))
-                        .foregroundColor(.white)
-                    
-                    Text("Track. Lift. Grow.")
-                        .font(.system(size: 24, weight: .regular))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("Choose your theme")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
-                    
-                    HStack(spacing: 24) {
-                        ForEach(ThemeManager.availableThemes.filter { $0 != .custom }, id: \.self) { variant in
-                            ThemeBubble(variant: variant)
-                        }
-                    }
-                }
-                .padding(.top, 120)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 24)
-                
-                Spacer()
-                
-                OnboardingNextButton(action: onNext, title: "NEXT", icon: nil) // No icon in Welcome screen to match design
-            }
-        }
-    }
-    
-    struct ThemeBubble: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        let variant: ThemeVariant
-        
-        private var isActive: Bool { themeManager.activeTheme == variant }
-        
-        var body: some View {
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                    themeManager.activeTheme = variant
-                }
-                HapticManager.shared.selection()
-            } label: {
-                ZStack {
-                    // Inactive state: Dark metallic circle
-                    Circle()
-                        .fill(Color(white: 0.15))
-                        .frame(width: 56, height: 56)
-                        .overlay(
-                            Circle().stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                    
-                    // Inner color fill (gradient for tactile feel)
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [variant.palette.accent.opacity(isActive ? 1.0 : 0.8), variant.palette.accent.opacity(isActive ? 0.7 : 0.5)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 48, height: 48)
-                    
-                    // Active ring layer
-                    if isActive {
-                        Circle()
-                            .stroke(variant.palette.accent.opacity(0.8), lineWidth: 3) // Glowing active ring
-                            .frame(width: 64, height: 64)
-                            .blur(radius: 2) // Slight glow on the active ring itself
-                        
-                        Circle()
-                            .stroke(variant.palette.accent, lineWidth: 2) // Crisp inner ring
-                            .frame(width: 64, height: 64)
-                    }
-                }
-                .scaleEffect(isActive ? 1.05 : 1.0)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-    
-    // MARK: - Slide 2: Nutrition (Body Weight → Protein)
-    
-    struct OnboardingNutritionSlide: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        @Binding var bodyWeight: String
-        var onNext: () -> Void
-        @FocusState private var isWeightFocused: Bool
-        
-        private var calculatedProtein: Int? {
-            let sanitized = bodyWeight.replacingOccurrences(of: ",", with: ".")
-            guard let weight = Double(sanitized), weight > 0 else { return nil }
-            return Int((weight * 1.6).rounded())
-        }
-
-        private var isWeightValid: Bool {
-            bodyWeight.isValidWeight
-        }
-        
-        var body: some View {
-            VStack(spacing: 0) {
-                Spacer()
-                
-                VStack(spacing: 18) {
-                    VStack(spacing: 8) {
-                        Text("What's your body weight?")
-                            .font(.system(size: 30, weight: .black))
-                            .foregroundColor(.white)
-                        
-                        Text("We'll calculate your daily protein goal.")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.horizontal, 10)
-                    
-                    VStack(spacing: 14) {
-                        weightInput
-                        presetButtons
-                    }
-                    .onboardingGlassCard()
-                    
-                    VStack(spacing: 10) {
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(calculatedProtein.map { "\($0)" } ?? "—")
-                                .font(.system(size: 44, weight: .black, design: .rounded))
-                                .foregroundColor(themeManager.palette.accent)
-                                .contentTransition(.numericText())
-                            
-                            Text("g")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(themeManager.palette.accent.opacity(0.9))
-                        }
-                        
-                        Text("DAILY PROTEIN GOAL")
-                            .font(.system(size: 11, weight: .black))
-                            .foregroundColor(.white.opacity(0.55))
-                            .tracking(1.2)
-                        
-                        Text("Based on 1.6g per kg of body weight")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
-                            .multilineTextAlignment(.center)
-                        
-                        if !bodyWeight.isEmpty && !isWeightValid {
-                            Text("Enter a weight between 1 and 300 kg")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.red.opacity(0.9))
-                                .multilineTextAlignment(.center)
-                                .transition(.opacity)
-                        }
-                    }
-                    .onboardingGlassCard()
-                    .opacity(calculatedProtein != nil ? 1 : 0.9)
-                }
-                .padding(.vertical, 28)
-                .padding(.horizontal, 24)
-                .frame(maxWidth: 600)
-                
-                Spacer()
-                
-                OnboardingNextButton(action: {
-                    isWeightFocused = false
-                    onNext()
-                }, title: "NEXT", isEnabled: isWeightValid)
-            }
-            .animation(.easeOut(duration: 0.2), value: calculatedProtein)
-            .animation(.easeOut(duration: 0.15), value: isWeightValid)
-            .contentShape(Rectangle())
-            .onTapGesture { isWeightFocused = false }
-        }
-        
-        private var weightInput: some View {
-            VStack(spacing: 0) {
-                TextField("80", text: $bodyWeight)
-                    .keyboardType(.decimalPad)
-                    .focused($isWeightFocused)
-                    .font(.system(size: 56, weight: .bold))
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .frame(width: 140)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer()
-                            Button("Done") { isWeightFocused = false }
-                                .fontWeight(.semibold)
-                        }
-                    }
-                
-                Rectangle()
-                    .frame(width: 140, height: 1)
-                    .foregroundColor(Color.white.opacity(0.4))
-                    .padding(.bottom, 8)
-                
-                Text("kg")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.5))
-            }
-            .frame(maxWidth: .infinity)
-        }
-        
-        private var presetButtons: some View {
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        // Start lower to allow 80 to be in the middle, and go up higher
-                        ForEach([60, 70, 80, 90, 100, 110, 120], id: \.self) { preset in
-                            let isActive = bodyWeight == "\(preset)"
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    bodyWeight = "\(preset)"
-                                    proxy.scrollTo(preset, anchor: .center)
-                                }
-                                isWeightFocused = false
-                                HapticManager.shared.lightImpact()
-                            } label: {
-                                Text("\(preset)")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        ZStack {
-                                            if isActive {
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .fill(.ultraThinMaterial)
-                                                Theme.active.verticalGradient.opacity(0.4)
-                                                    .cornerRadius(12)
-                                            } else {
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .fill(Color.white.opacity(0.06))
-                                            }
-                                        }
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    )
-                                    .foregroundColor(.white)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .strokeBorder(isActive ? Theme.active.accent.opacity(0.8) : Color.clear, lineWidth: 1.5)
-                                    )
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .id(preset) // Enable scroll to
-                        }
-                    }
-                    .padding(.horizontal, 24) // Ensures first and last items are centered nicely without truncation
-                }
-                .onAppear {
-                    // Determine starting preset - scroll to 80 if empty
-                    let scrollTarget = Int(bodyWeight) ?? 80
-                    
-                    // Scroll to active item on appear
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation {
-                            proxy.scrollTo(scrollTarget, anchor: .center)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Slide 3: Tutorial
-    
-    struct OnboardingTutorialSlide: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        var onNext: () -> Void
-        
-        var body: some View {
-            VStack(spacing: 0) {
-                Spacer(minLength: 20)
-                
-                VStack(spacing: 18) {
-                    VStack(spacing: 10) {
-                        Text("How It Works")
-                            .font(.system(size: 30, weight: .black))
-                            .foregroundColor(.white)
-                        
-                        Text("A few small details that make progress effortless.")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.horizontal, 10)
-                    
-                    VStack(spacing: 24) {
-                        ghostDataCard
-                        swipeCard
-                        arrowsCard
-                    }
-                    .padding(.vertical, 20)
-                    .padding(.horizontal, 20)
-                    .onboardingGlassCard()
-                }
-                .padding(24)
-                .frame(maxWidth: 600)
-                
-                Spacer(minLength: 20)
-                
-                OnboardingNextButton(action: onNext, title: "NEXT")
-            }
-            .padding(.top, 40)
-        }
-        
-        private var ghostDataCard: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 20))
-                        .foregroundColor(themeManager.palette.accent)
-                        .frame(width: 32)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Ghost Data")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("Grey numbers show your last session.")
-                            .fixedSize(horizontal: false, vertical: true)
-                            .font(.system(size: 12))
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                GhostDataDemoRow()
-            }
-        }
-        
-        private var swipeCard: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Image(systemName: "hand.draw")
-                        .font(.system(size: 20))
-                        .foregroundColor(themeManager.palette.accent)
-                        .frame(width: 32)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Swipe to Delete")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("Swipe left on any row to remove it.")
-                            .fixedSize(horizontal: false, vertical: true)
-                            .font(.system(size: 12))
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                SwipeDeleteDemoRow()
-            }
-        }
-        
-        private var arrowsCard: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Image(systemName: "arrow.up.arrow.down.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(themeManager.palette.accent)
-                        .frame(width: 32)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Target Rep Range")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("Arrows guide weight adjustments.")
-                            .fixedSize(horizontal: false, vertical: true)
-                            .font(.system(size: 12))
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                ArrowsDemoRow()
-            }
-        }
-    }
-    
-    // MARK: - Tutorial Demo Rows
-    
-    struct GhostDataDemoRow: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        
-        var body: some View {
-            HStack(spacing: 8) {
-                Text("1")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white.opacity(0.5))
-                    .frame(width: 16)
-                
-                Text("80")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(themeManager.palette.accent)
-                    .frame(width: 44)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.4))
-                    .cornerRadius(6)
-                
-                ghostCell("75")
-                ghostCell("2")
-                
-                Spacer()
-                
-                HStack(spacing: 4) {
-                    Text("←").font(.system(size: 10, weight: .bold))
-                    Text("Ghost").font(.system(size: 10, weight: .bold))
-                }
-                .foregroundColor(.white.opacity(0.5))
-            }
-        }
-        
-        private func ghostCell(_ text: String) -> some View {
-            Text(text)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white.opacity(0.3))
-                .frame(width: 44)
-                .padding(.vertical, 6)
-                .background(Color(white: 0.15))
-                .cornerRadius(6)
-        }
-    }
-    
-    struct SwipeDeleteDemoRow: View {
-        @State private var swipeOffset: CGFloat = 0
-        @State private var isVisible = false
-        
-        var body: some View {
-            ZStack(alignment: .trailing) {
-                // Red delete background
-                HStack {
-                    Spacer()
-                    Image(systemName: "trash.fill")
-                        .foregroundColor(.white)
-                        .padding(.trailing, 28)
-                }
-                .frame(height: 44)
-                .background(Color.red.opacity(0.8))
-                .cornerRadius(8)
-                
-                // Sliding row — NO user interaction
-                HStack(spacing: 8) {
-                    Text("1")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white.opacity(0.5))
-                    
-                    Text("Bench")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Text("80 kg × 8")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.8))
-                        .padding(.trailing, 8)
-                }
-                .padding(.horizontal, 12)
-                .frame(height: 44)
-                .background(Color(white: 0.2))
-                .cornerRadius(8)
-                .offset(x: swipeOffset)
-            }
-            .allowsHitTesting(false)
-            .onAppear {
-                isVisible = true
-                startAnimation()
-            }
-            .onDisappear {
-                isVisible = false
-                swipeOffset = 0
-            }
-        }
-        
-        private func startAnimation() {
-            guard isVisible else { return }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                guard isVisible else { return }
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    swipeOffset = -80
-                }
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-                guard isVisible else { return }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    swipeOffset = 0
-                }
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                guard isVisible else { return }
-                startAnimation()
-            }
-        }
-    }
-    
-    struct ArrowsDemoRow: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        
-        var body: some View {
-            HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.system(size: 16))
-                    Text("Too Light")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity)
-                
-                Divider()
-                    .background(Color.white.opacity(0.2))
-                    .frame(height: 20)
-                
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .foregroundColor(.red)
-                        .font(.system(size: 16))
-                    Text("Too Heavy")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.vertical, 12)
-            .background(Color(white: 0.15))
-            .cornerRadius(8)
-        }
-    }
-    
-    // MARK: - Slide 4: Get Started
-    
-    struct OnboardingStartSlide: View {
-        @EnvironmentObject var themeManager: ThemeManager
-        var onStart: () -> Void
-        
-        var body: some View {
-            VStack(spacing: 0) {
-                Spacer()
-                
-                VStack(spacing: 24) {
-                    ZStack {
-                        Circle()
-                            .fill(Theme.active.accent.opacity(0.2))
-                            .frame(width: 100, height: 100)
-                            .blur(radius: 20)
-                        
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 44, weight: .black))
-                            .foregroundColor(themeManager.palette.accent)
-                    }
-                    
-                    Text("Let's Get to Work")
-                        .font(.system(size: 36, weight: .black))
-                        .foregroundColor(.white)
-                    
-                    Text("No excuses. Just reps.")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.vertical, 40)
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                OnboardingNextButton(action: onStart, title: "START LIFTING", icon: "play.fill")
-            }
-        }
-    }
-    
-    #Preview {
-        OnboardingView()
-            .environmentObject(AppDataStore())
-            .environmentObject(ThemeManager.shared)
-    }
-
-// MARK: - Weight Validation Extension
-extension String {
-    var isValidWeight: Bool {
-        let sanitized = self.replacingOccurrences(of: ",", with: ".")
-        guard let weight = Double(sanitized) else { return false }
-        return weight > 0 && weight <= 300
-    }
+#Preview {
+    OnboardingView()
+        .environmentObject(AppDataStore())
+        .environmentObject(ThemeManager.shared)
 }

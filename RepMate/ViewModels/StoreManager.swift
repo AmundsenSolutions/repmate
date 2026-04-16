@@ -11,7 +11,8 @@ class StoreManager: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var restoreMessage: String? = nil
     
-    private let proProductID = "repmate_pro_lifetime"
+    private let legacyProProductID = "repmate_pro_lifetime"
+    private let activeProProductID = "repmate_pro_monthly"
     private var updateListenerTask: Task<Void, Error>? = nil
     
     init() {
@@ -29,7 +30,7 @@ class StoreManager: ObservableObject {
     
     func requestProducts() async {
         do {
-            let storeProducts = try await Product.products(for: [proProductID])
+            let storeProducts = try await Product.products(for: [activeProProductID, legacyProProductID])
             self.products = storeProducts
         } catch {
             self.errorMessage = "Failed to load store products."
@@ -90,8 +91,8 @@ class StoreManager: ObservableObject {
         
         self.purchasedProductIDs = purchasedIDs
         
-        // Update user state if they have the Pro product.
-        self.isPro = purchasedIDs.contains(proProductID)
+        // Update user state if they have the active monthly sub OR the legacy lifetime product.
+        self.isPro = purchasedIDs.contains(activeProProductID) || purchasedIDs.contains(legacyProProductID)
     }
     
     // Listen for transactions that might happen outside the app (e.g. Ask to Buy)

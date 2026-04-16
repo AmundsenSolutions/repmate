@@ -12,6 +12,7 @@ struct WorkoutsView: View {
     @State private var showAddCategoryAlert = false
     @State private var newCategoryName = ""
     @State private var showPaywall = false
+    @State private var showAIGenerator = false
     @EnvironmentObject var storeManager: StoreManager
     
     // Derived filters based on template names or hardcoded common ones
@@ -77,6 +78,13 @@ struct WorkoutsView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showAIGenerator) {
+                AIGeneratorSheet()
+                    .environmentObject(themeManager)
+                    .environmentObject(store)
+                    .presentationDragIndicator(.hidden)
+                    .presentationDetents([.large])
             }
         }
     }
@@ -153,15 +161,26 @@ struct WorkoutsView: View {
     
     private var contentList: some View {
         Group {
-            if filteredTemplates.isEmpty {
-                 VStack {
-                    Text("No workouts found.")
+            if filteredTemplates.isEmpty && searchText.isEmpty && selectedFilter == nil {
+                VStack {
+                    aiGeneratorBanner
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                    Text("No workouts yet.")
                         .foregroundColor(.gray)
-                        .padding(.top, 40)
+                        .padding(.top, 24)
                     Spacer()
                 }
             } else {
                 List {
+                    // AI Generator Banner
+                    Section {
+                        aiGeneratorBanner
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                    }
+
                     ForEach(filteredTemplates) { template in
                         WorkoutCard(template: template,
                                     exerciseNames: exerciseNames(for: template),
@@ -221,6 +240,64 @@ struct WorkoutsView: View {
         .ignoresSafeArea(edges: .bottom)
     }
     
+    // MARK: - AI Generator Banner
+
+    private var aiGeneratorBanner: some View {
+        Button {
+            showAIGenerator = true
+            HapticManager.shared.lightImpact()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(themeManager.palette.accent.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(themeManager.palette.gradient)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Create Workout with AI")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Describe your goal to get a custom plan.")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color.white.opacity(0.5))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(themeManager.palette.accent.opacity(0.8))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(themeManager.palette.accent.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [themeManager.palette.accent.opacity(0.5),
+                                             themeManager.palette.accent.opacity(0.15)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 1.2
+                            )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Add Template Button
+
     private var addTemplateButton: some View {
         Button {
              if !storeManager.isPro && store.workoutTemplates.count >= 3 {

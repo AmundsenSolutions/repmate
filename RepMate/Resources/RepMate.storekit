@@ -14,23 +14,9 @@
 
   ],
   "products" : [
-    {
-      "displayPrice" : "4.99",
-      "familyShareable" : false,
-      "internalID" : "F7AA1A67",
-      "localizations" : [
-        {
-          "description" : "",
-          "displayName" : "",
-          "locale" : "en_US"
-        }
-      ],
-      "productID" : "repmate_pro_lifetime",
-      "referenceName" : "RepMate Pro Liftetime",
-      "type" : "NonConsumable"
-    }
+
   ],
-  "settings" : {
+    "settings" : {
     "_askToBuyEnabled" : false,
     "_billingGracePeriodEnabled" : false,
     "_billingIssuesEnabled" : false,
@@ -45,7 +31,40 @@
     "_timeRate" : 0
   },
   "subscriptionGroups" : [
+    {
+      "id" : "D6CB6A96",
+      "localizations" : [
 
+      ],
+      "name" : "RepMate Pro Subscriptions",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "01234567",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly access to everything",
+              "displayName" : "RepMate Pro",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "repmate_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "RepMate Pro Monthly",
+          "subscriptionGroupID" : "D6CB6A96",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
   ],
   "version" : {
     "major" : 4,

@@ -28,21 +28,22 @@ struct PaywallView: View {
                 .padding(.bottom, 24)
                 
                 // Title
-                Text("Lifetime Access")
+                Text("RepMate Pro")
                     .font(.system(size: 36, weight: .black, design: .default))
                     .foregroundColor(Theme.Colors.textPrimary)
                     .padding(.bottom, 4)
                 
-                Text("One payment. Forever Yours.")
+                Text("Unlock Everything.")
                     .font(.headline)
                     .foregroundColor(Theme.Colors.accent)
                     .padding(.bottom, 32)
                 
                 // Features List
                 VStack(alignment: .leading, spacing: 24) {
-                    FeatureRow(icon: "infinity", title: "Unlimited Workouts", subtitle: "Remove all limits. Build the ultimate routine library.")
-                    FeatureRow(icon: "chart.bar.fill", title: "Master Your Progress", subtitle: "Deep insights into 1RM projections and volume trends.")
-                    FeatureRow(icon: "paintpalette.fill", title: "Legendary Aesthetics", subtitle: "Unlock exclusive custom themes and premium app icons.")
+                    FeatureRow(icon: "sparkles", title: "50 Daily AI Sessions", subtitle: "Free tier is limited to 5.")
+                    FeatureRow(icon: "infinity", title: "Unlimited Workouts", subtitle: "Free tier is limited to 3 templates.")
+                    FeatureRow(icon: "chart.bar.fill", title: "Pro Analytics", subtitle: "Deep insights with Muscle Map & Heatmaps.")
+                    FeatureRow(icon: "paintpalette.fill", title: "Premium Branding", subtitle: "Exclusive custom themes and app icons.")
                 }
                 .padding(.horizontal, 32)
                 
@@ -51,7 +52,7 @@ struct PaywallView: View {
                 // Pricing & Purchase Button
                 VStack(spacing: 16) {
                     if !storeManager.isPro {
-                        if let product = storeManager.products.first(where: { $0.id == "repmate_pro_lifetime" }) {
+                        if let product = storeManager.products.first(where: { $0.id == "repmate_pro_monthly" }) {
                             Button {
                                 Task {
                                     try? await storeManager.purchase(product)
@@ -61,9 +62,9 @@ struct PaywallView: View {
                                 }
                             } label: {
                                 VStack(spacing: 2) {
-                                    Text("Get Pro for \(product.displayPrice)")
+                                    Text("Get Pro for \(product.displayPrice) / month")
                                         .font(.system(size: 19, weight: .bold))
-                                    Text("LIFETIME ACCESS • ONE-TIME PAYMENT")
+                                    Text("AUTO-RENEWING SUBSCRIPTION")
                                         .font(.system(size: 10, weight: .black))
                                         .opacity(0.7)
                                 }
@@ -72,9 +73,11 @@ struct PaywallView: View {
                             .glowingPanelButton()
                             .padding(.horizontal, 32)
                             
-                            Text("No subscriptions. No hidden fees.")
-                                .font(.caption2)
+                            Text("Payment is charged to your Apple ID. Renews automatically unless canceled 24h before period ends.")
+                                .font(.system(size: 10))
                                 .foregroundColor(Theme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
                                 .padding(.top, 4)
                         } else {
                             // Product not loaded yet — show loading state

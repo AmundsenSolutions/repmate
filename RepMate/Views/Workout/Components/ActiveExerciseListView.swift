@@ -157,12 +157,13 @@ struct ActiveExerciseListView: View {
                     .buttonStyle(.plain)
                 }
                 
-                // Spacing i bunnen
-                if focusedField != nil {
-                    Color.clear.frame(height: 150)
-                         .listRowBackground(Color.clear)
-                         .listRowSeparator(.hidden)
-                }
+                // Permanent bottom spacer: ensures the "Add Exercise" button is
+                // never occluded by the floating "Finish Workout" pill (~66pt).
+                // Grows when the keyboard is visible to keep active fields scrollable.
+                Color.clear
+                    .frame(height: focusedField != nil ? 240 : 90)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden) 

@@ -28,6 +28,7 @@ class ProteinAIService {
 
     enum AIError: Error {
         case serverError(code: String, message: String)
+        case rateLimitReached(isPro: Bool)
         case invalidImage
         case noInput
         case networkError(Error)
@@ -50,7 +51,7 @@ class ProteinAIService {
     // MARK: - Unified entry point
     /// Sends either an image, free-text, or both to the Lambda endpoint.
     /// At least one of `image` or `text` must be non-nil.
-    func analyzeInput(image: UIImage? = nil, text: String? = nil) async throws -> ProteinResponse {
+    func analyzeInput(image: UIImage? = nil, text: String? = nil, isPro: Bool) async throws -> ProteinResponse {
         guard image != nil || (text != nil && !text!.trimmingCharacters(in: .whitespaces).isEmpty) else {
             throw AIError.noInput
         }
@@ -59,8 +60,11 @@ class ProteinAIService {
         print("🔵 [ProteinAIService] Starting analysis — image: \(image != nil), text: \(text != nil)")
         #endif
 
-        // Build JSON body — include base64 image only when an image is provided
-        var bodyDict: [String: String] = [:]
+        // Build JSON body
+        var bodyDict: [String: Any] = [
+            "userId": UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString,
+            "isPro": isPro
+        ]
 
         if let img = image {
             let uploadImage: UIImage = {
@@ -92,7 +96,7 @@ class ProteinAIService {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(AppConfig.appSecretKey, forHTTPHeaderField: "x-app-key")
-        request.httpBody = try? JSONEncoder().encode(bodyDict)
+        request.httpBody = try? JSONSerialization.data(withJSONObject: bodyDict)
 
         let data: Data
         let urlResponse: URLResponse
@@ -115,11 +119,28 @@ class ProteinAIService {
         #endif
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            // Priority check: API Gateway Throttling or Lambda Rate Limit
+            if httpResponse.statusCode == 429 {
+                throw AIError.rateLimitReached(isPro: isPro)
+            }
+
             if let errorResponse = try? JSONDecoder().decode(AIErrorResponse.self, from: data) {
                 #if DEBUG
                 print("🔴 [ProteinAIService] Server Error Code: \(errorResponse.error)")
                 #endif
-                throw AIError.serverError(code: errorResponse.error, message: errorResponse.message)
+                if errorResponse.error == "RATE_LIMITED" {
+                    throw AIError.rateLimitReached(isPro: isPro)
+                }
+
+                // Map known error codes to user-friendly messages
+                let friendlyMessage: String
+                switch errorResponse.error {
+                case "FORBIDDEN":
+                    friendlyMessage = "App authentication failed. Please update the app."
+                default:
+                    friendlyMessage = errorResponse.message
+                }
+                throw AIError.serverError(code: errorResponse.error, message: friendlyMessage)
             }
 
             #if DEBUG
@@ -148,7 +169,7 @@ class ProteinAIService {
     }
 
     // MARK: - Convenience wrapper (camera flow — unchanged callers)
-    func analyzeImage(_ image: UIImage) async throws -> ProteinResponse {
-        try await analyzeInput(image: image)
+    func analyzeImage(_ image: UIImage, isPro: Bool) async throws -> ProteinResponse {
+        try await analyzeInput(image: image, isPro: isPro)
     }
 }

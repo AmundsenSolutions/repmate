@@ -16,6 +16,9 @@ struct AddProteinEntryView: View {
     @State private var scanError: String?
     @State private var isAIProcessing = false
     @State private var aiNoteError: String?
+    @State private var showRateLimitAlert = false
+    @State private var isRateLimitFreeError = false
+    @State private var rateLimitAlertMessage = ""
 
     private let aiService = ProteinAIService()
     
@@ -85,11 +88,7 @@ struct AddProteinEntryView: View {
                                 // Sparkle button — visible only when note has text
                                 if !note.trimmingCharacters(in: .whitespaces).isEmpty {
                                     Button {
-                                        if storeManager.isPro {
-                                            processNotesWithAI()
-                                        } else {
-                                            showPaywall = true
-                                        }
+                                        processNotesWithAI()
                                         HapticManager.shared.lightImpact()
                                     } label: {
                                         Image(systemName: "sparkles")
@@ -107,11 +106,7 @@ struct AddProteinEntryView: View {
 
                             // AI Camera Button
                             Button {
-                                if storeManager.isPro {
-                                    showCamera = true
-                                } else {
-                                    showPaywall = true
-                                }
+                                showCamera = true
                                 HapticManager.shared.lightImpact()
                             } label: {
                                 Image(systemName: "camera.fill")
@@ -346,6 +341,14 @@ struct AddProteinEntryView: View {
             PaywallView()
                 .environmentObject(storeManager)
         }
+        .alert(isRateLimitFreeError ? "Daily Limit Reached" : "Limit Reached", isPresented: $showRateLimitAlert) {
+            if isRateLimitFreeError {
+                Button("Upgrade to Pro") { showPaywall = true }
+            }
+            Button(isRateLimitFreeError ? "Cancel" : "OK", role: .cancel) {}
+        } message: {
+            Text(rateLimitAlertMessage)
+        }
     }
     
     // MARK: - Subviews
@@ -481,7 +484,7 @@ struct AddProteinEntryView: View {
 
         Task {
             do {
-                let response = try await aiService.analyzeInput(text: trimmed)
+                let response = try await aiService.analyzeInput(text: trimmed, isPro: storeManager.isPro)
                 await MainActor.run {
                     // Dismiss keyboard and apply result in the same frame.
                     focusedField = nil
@@ -497,6 +500,16 @@ struct AddProteinEntryView: View {
                             HapticManager.shared.success()
                         }
                     }
+                }
+            } catch ProteinAIService.AIError.rateLimitReached(let isPro) {
+                await MainActor.run {
+                    focusedField = nil
+                    isAIProcessing = false
+                    isRateLimitFreeError = !isPro
+                    rateLimitAlertMessage = isPro ? "You've reached your 50 daily Pro sessions. Take some rest and come back tomorrow!" 
+                                                  : "You've used your 5 free AI sessions for today. Upgrade to RepMate Pro for 50 daily sessions!"
+                    showRateLimitAlert = true
+                    HapticManager.shared.error()
                 }
             } catch ProteinAIService.AIError.serverError(_, let message) {
                 await MainActor.run {

@@ -5,6 +5,7 @@ import SwiftUI
 struct RepMateApp: App {
     @StateObject private var store = AppDataStore()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("hasSeenAIOnboarding") private var hasSeenAIOnboarding = false
     
     // Deep-link import state
     @State private var pendingImport: ShareableTemplate?
@@ -18,6 +19,16 @@ struct RepMateApp: App {
             Group {
                 if hasSeenOnboarding {
                     AppTabView()
+                        .fullScreenCover(isPresented: Binding(
+                            get: { !hasSeenAIOnboarding },
+                            set: { if !$0 { hasSeenAIOnboarding = true } }
+                        )) {
+                            ExistingUserAIOnboardingView(onDismiss: {
+                                hasSeenAIOnboarding = true
+                            })
+                            .environmentObject(store)
+                            .environmentObject(ThemeManager.shared)
+                        }
                 } else {
                     OnboardingView()
                 }

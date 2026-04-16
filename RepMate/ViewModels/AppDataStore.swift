@@ -103,7 +103,7 @@ final class AppDataStore: ObservableObject {
         customBarcodes = [:]
         
         // Re-seed default workouts
-        seedDefaultWorkouts()
+        _ = seedDefaultWorkouts()
         
         save()
     }
@@ -361,7 +361,7 @@ final class AppDataStore: ObservableObject {
             workoutCategories = defaultWorkoutCategories()
             customBarcodes = [:]
             
-            seedDefaultWorkouts()
+            _ = seedDefaultWorkouts()
         } catch {
             lastErrorMessage = "Failed to load data. Resetting to defaults."
             
@@ -377,7 +377,7 @@ final class AppDataStore: ObservableObject {
             workoutCategories = defaultWorkoutCategories()
             customBarcodes = [:]
             
-            seedDefaultWorkouts()
+            _ = seedDefaultWorkouts()
         }
     }
 
@@ -796,11 +796,24 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Seeding
     
-    @discardableResult
+    /// Call this after AI onboarding resolves (save or skip) so default templates
+    /// only appear when the user didn't receive an AI-generated plan.
+    func seedDefaultWorkoutsIfNeeded() {
+        if seedDefaultWorkouts() { save() }
+    }
+
     private func seedDefaultWorkouts() -> Bool {
         let defaults = DefaultData.workouts
         let hasSeeded = UserDefaults.standard.bool(forKey: "hasSeededDefaultWorkouts")
-        
+
+        // For brand-new installs: defer seeding until AI onboarding completes or is skipped.
+        // This prevents default Upper/Lower templates from appearing if the user gets an AI plan.
+        // Existing users (hasSeeded = true) skip this guard entirely — no data impact.
+        let hasSeenAIOnboarding = UserDefaults.standard.bool(forKey: "hasSeenAIOnboarding")
+        if !hasSeeded && !hasSeenAIOnboarding {
+            return false
+        }
+
         var hasChanges = false
         
         for def in defaults {

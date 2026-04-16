@@ -8,6 +8,7 @@ enum ImageSourceType: Identifiable {
 
 struct CameraView: View {
     @EnvironmentObject var store: AppDataStore
+    @EnvironmentObject var storeManager: StoreManager
     @Environment(\.dismiss) var dismiss
     @State private var image: UIImage?
     @State private var activeSource: ImageSourceType? = nil
@@ -24,6 +25,10 @@ struct CameraView: View {
     ]
     @State private var aiResponse: ProteinResponse?
     @State private var error: String?
+    @State private var showRateLimitAlert = false
+    @State private var isRateLimitFreeError = false
+    @State private var rateLimitAlertMessage = ""
+    @State private var showPaywall = false
     
     private let aiService = ProteinAIService()
     
@@ -183,6 +188,18 @@ struct CameraView: View {
             .onChange(of: image) { oldImage, newImage in
                 if newImage != nil { analyzeImage() }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(storeManager)
+            }
+            .alert(isRateLimitFreeError ? "Daily Limit Reached" : "Limit Reached", isPresented: $showRateLimitAlert) {
+                if isRateLimitFreeError {
+                    Button("Upgrade to Pro") { showPaywall = true }
+                }
+                Button(isRateLimitFreeError ? "Cancel" : "OK", role: .cancel) {}
+            } message: {
+                Text(rateLimitAlertMessage)
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -208,7 +225,7 @@ struct CameraView: View {
         
         Task {
             do {
-                let response = try await aiService.analyzeImage(image)
+                let response = try await aiService.analyzeImage(image, isPro: storeManager.isPro)
                 await MainActor.run {
                     self.isLoading = false
                     self.phraseTask?.cancel()
@@ -221,6 +238,17 @@ struct CameraView: View {
                         self.aiResponse = response
                         HapticManager.shared.success()
                     }
+                }
+            } catch ProteinAIService.AIError.rateLimitReached(let isPro) {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.phraseTask?.cancel()
+                    self.phraseTask = nil
+                    self.isRateLimitFreeError = !isPro
+                    self.rateLimitAlertMessage = isPro ? "You've reached your 50 daily Pro sessions. Take some rest and come back tomorrow!"
+                                                       : "You've used your 5 free AI sessions for today. Upgrade to RepMate Pro for 50 daily sessions!"
+                    self.showRateLimitAlert = true
+                    HapticManager.shared.error()
                 }
             } catch ProteinAIService.AIError.serverError(_, let message) {
                 await MainActor.run {

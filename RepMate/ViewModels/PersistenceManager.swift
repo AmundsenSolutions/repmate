@@ -38,16 +38,19 @@ class PersistenceManager {
                 if self.fileManager.fileExists(atPath: url.path) {
                     try? self.fileManager.removeItem(at: backupUrl) // Remove old backup
                     try? self.fileManager.copyItem(at: url, to: backupUrl)
-                    // Explicitly enforce hardware-level encryption on the backup file.
+                    // Use .completeUnlessOpen so the backup is hardware-encrypted at rest,
+                    // but still readable during an iCloud restore before the first unlock.
                     try? self.fileManager.setAttributes(
-                        [.protectionKey: FileProtectionType.complete],
+                        [.protectionKey: FileProtectionType.completeUnlessOpen],
                         ofItemAtPath: backupUrl.path
                     )
                 }
                 
-                // 2. Write new data atomically with hardware-level encryption
+                // 2. Write new data atomically with hardware-level encryption.
+                // .completeFileProtectionUnlessOpen = encrypted at rest, but iOS can open
+                // the file even while locked — critical for iCloud restore to succeed.
                 let data = try JSONEncoder().encode(object)
-                try data.write(to: url, options: [.atomic, .completeFileProtection])
+                try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
                 completion?(.success(()))
             } catch {
                 completion?(.failure(.writingFailed(error)))

@@ -1,7 +1,13 @@
 import Foundation
 
 struct AppConfig {
-    static let aiProteinEndpoint = URL(string: "https://a5xnl4z4nhlqmp6tspvrne4wzq0avaga.lambda-url.us-east-1.on.aws/")!
+    /// Existing protein analysis Lambda endpoint.
+    /// Value lives in the gitignored Secrets.swift — never hardcoded here.
+    static var aiProteinEndpoint: URL { URL(string: Secrets.aiProteinEndpointString)! }
+
+    /// AI plan generation Lambda endpoint.
+    /// Value lives in the gitignored Secrets.swift — never hardcoded here.
+    static var aiPlanEndpoint: URL { URL(string: Secrets.aiPlanEndpointString)! }
 
     /// Shared app secret sent as `x-app-key` on every AI request.
     /// Value lives in the gitignored Secrets.swift — never hardcoded here.
