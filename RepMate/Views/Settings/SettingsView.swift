@@ -665,8 +665,10 @@ struct SettingsView: View {
     
     private var proHeaderCard: some View {
         Button {
-            showPaywall = true
-            HapticManager.shared.lightImpact()
+            if !storeManager.isPro {
+                showPaywall = true
+                HapticManager.shared.lightImpact()
+            }
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -689,15 +691,20 @@ struct SettingsView: View {
                 Spacer()
                 
                 if storeManager.isPro {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 34))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .top,
-                                endPoint: .bottom
+                    HStack(spacing: 6) {
+                        Text("Active")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.orange)
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.yellow, .orange],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
-                        )
+                    }
                 } else {
                     Text("Get Pro")
                         .font(.system(size: 15, weight: .bold))

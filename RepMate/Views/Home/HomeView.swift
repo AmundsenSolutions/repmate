@@ -366,7 +366,14 @@ struct HomeView: View {
             
             VStack(spacing: 8) {
                 ForEach(todayEntries.prefix(3)) { entry in
-                    entryRow(for: entry)
+                    SwipeToDeleteWrapper(onDelete: {
+                        withAnimation {
+                            store.deleteProteinEntry(withID: entry.id)
+                        }
+                        HapticManager.shared.success()
+                    }) {
+                        entryRow(for: entry)
+                    }
                 }
             }
             

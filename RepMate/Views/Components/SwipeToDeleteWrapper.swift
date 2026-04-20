@@ -22,74 +22,68 @@ struct SwipeToDeleteWrapper<Content: View>: View {
             // No delete action - just show content without swipe
             content
         } else {
-            GeometryReader { geometry in
-                ZStack(alignment: .trailing) {
-                    // Delete button (revealed on swipe) - clear background
-                    if offset < 0 || dragOffset < 0 {
-                        HStack {
-                            Spacer()
-                            Button {
-                                performDelete()
-                            } label: {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.red)
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "trash.fill")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 14, weight: .semibold))
+            ZStack(alignment: .trailing) {
+                // Delete button background
+                HStack {
+                    Spacer()
+                    Button {
+                        performDelete()
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "trash.fill")
+                                .foregroundColor(.white)
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 8)
+                }
+                .frame(width: deleteButtonWidth)
+                .opacity((offset < 0 || dragOffset < 0) ? 1 : 0)
+                
+                // Main content
+                content
+                    .background(Color.white.opacity(0.001))
+                    .offset(x: min(0, offset + dragOffset))
+                    .gesture(
+                        DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                            .updating($dragOffset) { value, state, _ in
+                                // Only allow left swipe (negative translation)
+                                if value.translation.width < 0 {
+                                    state = value.translation.width
                                 }
                             }
-                            .buttonStyle(.plain)
-                            .padding(.trailing, 8)
-                        }
-                        .frame(width: deleteButtonWidth)
-                        .background(Color.clear)
-                    }
-                    
-                    // Main content
-                    content
-                        .offset(x: min(0, offset + dragOffset))
-                        .gesture(
-                            DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                                .updating($dragOffset) { value, state, _ in
-                                    // Only allow left swipe (negative translation)
-                                    if value.translation.width < 0 {
-                                        state = value.translation.width
+                            .onEnded { value in
+                                let totalOffset = offset + value.translation.width
+                                
+                                if totalOffset < deleteThreshold {
+                                    // Reveal delete button with spring animation
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        offset = -deleteButtonWidth
+                                    }
+                                } else {
+                                    // Snap back with spring animation
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        offset = 0
                                     }
                                 }
-                                .onEnded { value in
-                                    let totalOffset = offset + value.translation.width
-                                    
-                                    if totalOffset < deleteThreshold {
-                                        // Reveal delete button with spring animation
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            offset = -deleteButtonWidth
-                                        }
-                                    } else {
-                                        // Snap back with spring animation
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            offset = 0
-                                        }
+                            }
+                    )
+                    .simultaneousGesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                // Reset offset when tapping content
+                                if offset != 0 {
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                        offset = 0
                                     }
                                 }
-                        )
-                        .simultaneousGesture(
-                            TapGesture()
-                                .onEnded { _ in
-                                    // Reset offset when tapping content
-                                    if offset != 0 {
-                                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                            offset = 0
-                                        }
-                                    }
-                                }
-                        )
-                }
-                .background(Color.clear)
+                            }
+                    )
             }
-            .background(Color.clear)
-            .frame(height: 36) // Match SetRowView height
             .clipped()
             .opacity(isDeleting ? 0 : 1)
             .offset(x: isDeleting ? -100 : 0) // Slide out when deleting

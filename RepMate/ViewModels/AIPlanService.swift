@@ -93,6 +93,13 @@ class AIPlanService {
         #endif
 
         guard (200...299).contains(http.statusCode) else {
+            #if DEBUG
+            print("🔴 [AIPlanService] HTTP Status Error: \(http.statusCode)")
+            if let rawError = String(data: data, encoding: .utf8) {
+                print("🔴 [AIPlanService] Raw Error Payload: \(rawError)")
+            }
+            #endif
+
             // Priority check: API Gateway Throttling or Lambda Rate Limit
             if http.statusCode == 429 {
                 throw AIPlanError.rateLimitReached(isPro: isPro)
