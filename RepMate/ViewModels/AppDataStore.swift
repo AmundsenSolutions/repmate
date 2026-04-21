@@ -330,67 +330,117 @@ final class AppDataStore: ObservableObject {
 
     /// Loads saved data from disk or seeds defaults on first launch.
     private func load() {
+        let url = PersistenceManager.shared.fileURL(for: fileName)
+        guard let url = url, FileManager.default.fileExists(atPath: url.path) else {
+            loadDefaults()
+            return
+        }
+
         do {
-            let decoded = try PersistenceManager.shared.load(PersistedData.self, from: fileName)
-            self.proteinEntries = decoded.proteinEntries
-            self.settings = decoded.storedSettings
-            self.workoutTemplates = decoded.workoutTemplates
-            // Sort sessions by date descending (newest first) to establish the invariant
-            self.workoutSessions = decoded.workoutSessions.sorted { $0.date > $1.date }
-            self.exerciseLibrary = decoded.exerciseLibrary
-            self.activeWorkout = decoded.activeWorkout
-            self.categories = decoded.categories ?? defaultCategories()
-            self.favoriteProteinItems = decoded.favoriteProteinItems ?? []
-            self.workoutCategories = decoded.workoutCategories ?? defaultWorkoutCategories()
-            self.ghostDataSource = decoded.ghostDataSource ?? .latest
-            self.customBarcodes = decoded.customBarcodes ?? [:]
+            let data = try Data(contentsOf: url)
+            let decoder = JSONDecoder()
             
-            // Run all seeds and migrations, consolidate into a single save
-            var needsSave = false
-            needsSave = seedDefaultWorkouts() || needsSave
-            needsSave = migrateSecondaryMuscles() || needsSave
-            needsSave = migrateSetupTimes() || needsSave
-            needsSave = migrateArmsToBicepsTriceps() || needsSave
-            needsSave = migrateLegsToGranularCategories() || needsSave
-            
-            // Backward compatibility for RIR setting
-            if self.settings.optShowRIR == nil {
-                self.settings.optShowRIR = !self.workoutSessions.isEmpty
-                needsSave = true
+            // 1. Attempt full decode
+            do {
+                let decoded = try decoder.decode(PersistedData.self, from: data)
+                applyDecodedData(decoded)
+            } catch {
+                print("Decoding error (Initial): \(error)")
+                
+                // 2. Fallback: Robust Granular Decoding
+                // If the full struct fails, we try to recover as much as possible.
+                // We use a dictionary-based approach to pull out pieces individually.
+                let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+                
+                // Decode components individually
+                func decodePiece<T: Decodable>(_ type: T.Type, key: String) -> T? {
+                    guard let pieceData = try? JSONSerialization.data(withJSONObject: json[key] ?? [:]) else { return nil }
+                    do {
+                        return try decoder.decode(T.self, from: pieceData)
+                    } catch {
+                        print("Decoding error (Piece '\(key)'): \(error)")
+                        return nil
+                    }
+                }
+                
+                func decodeArrayPiece<T: Decodable>(_ type: [T].Type, key: String) -> [T]? {
+                    guard let pieceData = try? JSONSerialization.data(withJSONObject: json[key] ?? []) else { return nil }
+                    do {
+                        return try decoder.decode([T].self, from: pieceData)
+                    } catch {
+                        print("Decoding error (Array Piece '\(key)'): \(error)")
+                        return nil
+                    }
+                }
+
+                self.proteinEntries = decodeArrayPiece([ProteinEntry].self, key: "proteinEntries") ?? []
+                self.settings = decodePiece(AppSettings.self, key: "storedSettings") ?? .default
+                self.workoutTemplates = decodeArrayPiece([WorkoutTemplate].self, key: "workoutTemplates") ?? []
+                self.workoutSessions = (decodeArrayPiece([WorkoutSession].self, key: "workoutSessions") ?? []).sorted { $0.date > $1.date }
+                self.exerciseLibrary = decodeArrayPiece([Exercise].self, key: "exerciseLibrary") ?? defaultExercises
+                self.activeWorkout = decodePiece(ActiveWorkout.self, key: "activeWorkout")
+                self.categories = decodeArrayPiece([String].self, key: "categories") ?? defaultCategories()
+                self.favoriteProteinItems = decodeArrayPiece([FavoriteProtein].self, key: "favoriteProteinItems") ?? []
+                self.workoutCategories = decodeArrayPiece([String].self, key: "workoutCategories") ?? defaultWorkoutCategories()
+                self.ghostDataSource = decodePiece(GhostDataSource.self, key: "ghostDataSource") ?? .latest
+                self.customBarcodes = decodePiece([String: CustomBarcodeEntry].self, key: "customBarcodes") ?? [:]
+                
+                lastErrorMessage = "Some settings were reset due to an update, but your workouts were preserved."
             }
             
-            if needsSave { save() }
-        } catch PersistenceError.fileNotFound {
-            // Defaults
-            activeWorkout = nil
-            proteinEntries = []
-            settings = .default
-            workoutTemplates = []
-            workoutSessions = []
-            exerciseLibrary = defaultExercises
-            categories = defaultCategories()
-            favoriteProteinItems = []
-            workoutCategories = defaultWorkoutCategories()
-            customBarcodes = [:]
+            // Post-load migrations
+            finalizeLoad()
             
-            _ = seedDefaultWorkouts()
         } catch {
-            lastErrorMessage = "Failed to load data. Resetting to defaults."
-            
-            // Reset to defaults on corruption
-            proteinEntries = []
-            settings = .default
-            workoutTemplates = []
-            workoutSessions = []
-            exerciseLibrary = defaultExercises
-            activeWorkout = nil
-            categories = defaultCategories()
-            favoriteProteinItems = []
-            workoutCategories = defaultWorkoutCategories()
-            customBarcodes = [:]
-            
-            _ = seedDefaultWorkouts()
+            print("Critical Load Error: \(error)")
+            loadDefaults()
         }
+    }
+
+    private func applyDecodedData(_ decoded: PersistedData) {
+        self.proteinEntries = decoded.proteinEntries
+        self.settings = decoded.storedSettings
+        self.workoutTemplates = decoded.workoutTemplates
+        self.workoutSessions = decoded.workoutSessions.sorted { $0.date > $1.date }
+        self.exerciseLibrary = decoded.exerciseLibrary
+        self.activeWorkout = decoded.activeWorkout
+        self.categories = decoded.categories ?? defaultCategories()
+        self.favoriteProteinItems = decoded.favoriteProteinItems ?? []
+        self.workoutCategories = decoded.workoutCategories ?? defaultWorkoutCategories()
+        self.ghostDataSource = decoded.ghostDataSource ?? .latest
+        self.customBarcodes = decoded.customBarcodes ?? [:]
+    }
+
+    private func finalizeLoad() {
+        var needsSave = false
+        needsSave = seedDefaultWorkouts() || needsSave
+        needsSave = migrateSecondaryMuscles() || needsSave
+        needsSave = migrateSetupTimes() || needsSave
+        needsSave = migrateArmsToBicepsTriceps() || needsSave
+        needsSave = migrateLegsToGranularCategories() || needsSave
+        
+        // Backward compatibility for RIR setting
+        if self.settings.optShowRIR == nil {
+            self.settings.optShowRIR = !self.workoutSessions.isEmpty
+            needsSave = true
+        }
+        
+        if needsSave { save() }
+    }
+
+    private func loadDefaults() {
+        activeWorkout = nil
+        proteinEntries = []
+        settings = .default
+        workoutTemplates = []
+        workoutSessions = []
+        exerciseLibrary = defaultExercises
+        categories = defaultCategories()
+        favoriteProteinItems = []
+        workoutCategories = defaultWorkoutCategories()
+        customBarcodes = [:]
+        
+        _ = seedDefaultWorkouts()
     }
 
     private func defaultCategories() -> [String] {

@@ -68,6 +68,82 @@ struct AppSettings: Codable {
     var dailyProteinTarget: Int
     var defaultRestTime: Int? // Optional for backward compatibility with existing JSON
 
+    enum CodingKeys: String, CodingKey {
+        case dailyProteinTarget
+        case defaultRestTime
+        case optShowRIR
+        case optExperienceLevel
+        case optEquipmentAccess
+        case targetMinReps
+        case targetMaxReps
+        case neglectedStatsMuscles
+        case hasSeededDefaults
+        case optWorkoutReminderEnabled
+        case optWorkoutReminderTime
+        case optWorkoutReminderDays
+        case optProteinReminderEnabled
+        case optProteinReminderTime
+        case statsOrder
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Mandatory fields with default fallbacks if corrupted
+        self.dailyProteinTarget = (try? container.decode(Int.self, forKey: .dailyProteinTarget)) ?? 150
+        self.hasSeededDefaults = (try? container.decode(Bool.self, forKey: .hasSeededDefaults)) ?? false
+        
+        // Optional/New fields - use decodeIfPresent and wrap in try? for total safety
+        self.defaultRestTime = try? container.decodeIfPresent(Int.self, forKey: .defaultRestTime) ?? nil
+        self.optShowRIR = try? container.decodeIfPresent(Bool.self, forKey: .optShowRIR) ?? nil
+        self.optExperienceLevel = try? container.decodeIfPresent(ExperienceLevel.self, forKey: .optExperienceLevel) ?? nil
+        self.optEquipmentAccess = try? container.decodeIfPresent(EquipmentAccess.self, forKey: .optEquipmentAccess) ?? nil
+        self.targetMinReps = try? container.decodeIfPresent(Int.self, forKey: .targetMinReps) ?? nil
+        self.targetMaxReps = try? container.decodeIfPresent(Int.self, forKey: .targetMaxReps) ?? nil
+        self.neglectedStatsMuscles = try? container.decodeIfPresent([String].self, forKey: .neglectedStatsMuscles) ?? nil
+        
+        self.optWorkoutReminderEnabled = try? container.decodeIfPresent(Bool.self, forKey: .optWorkoutReminderEnabled) ?? nil
+        self.optWorkoutReminderTime = try? container.decodeIfPresent(Date.self, forKey: .optWorkoutReminderTime) ?? nil
+        self.optWorkoutReminderDays = try? container.decodeIfPresent([Int].self, forKey: .optWorkoutReminderDays) ?? nil
+        self.optProteinReminderEnabled = try? container.decodeIfPresent(Bool.self, forKey: .optProteinReminderEnabled) ?? nil
+        self.optProteinReminderTime = try? container.decodeIfPresent(Date.self, forKey: .optProteinReminderTime) ?? nil
+        
+        self.statsOrder = try? container.decodeIfPresent([StatCardType].self, forKey: .statsOrder) ?? nil
+    }
+
+    // Default initializer for manual creation (e.g., .default)
+    init(dailyProteinTarget: Int,
+         defaultRestTime: Int? = nil,
+         optShowRIR: Bool? = nil,
+         optExperienceLevel: ExperienceLevel? = nil,
+         optEquipmentAccess: EquipmentAccess? = nil,
+         targetMinReps: Int? = nil,
+         targetMaxReps: Int? = nil,
+         neglectedStatsMuscles: [String]? = nil,
+         hasSeededDefaults: Bool = false,
+         optWorkoutReminderEnabled: Bool? = nil,
+         optWorkoutReminderTime: Date? = nil,
+         optWorkoutReminderDays: [Int]? = nil,
+         optProteinReminderEnabled: Bool? = nil,
+         optProteinReminderTime: Date? = nil,
+         statsOrder: [StatCardType]? = nil) {
+        self.dailyProteinTarget = dailyProteinTarget
+        self.defaultRestTime = defaultRestTime
+        self.optShowRIR = optShowRIR
+        self.optExperienceLevel = optExperienceLevel
+        self.optEquipmentAccess = optEquipmentAccess
+        self.targetMinReps = targetMinReps
+        self.targetMaxReps = targetMaxReps
+        self.neglectedStatsMuscles = neglectedStatsMuscles
+        self.hasSeededDefaults = hasSeededDefaults
+        self.optWorkoutReminderEnabled = optWorkoutReminderEnabled
+        self.optWorkoutReminderTime = optWorkoutReminderTime
+        self.optWorkoutReminderDays = optWorkoutReminderDays
+        self.optProteinReminderEnabled = optProteinReminderEnabled
+        self.optProteinReminderTime = optProteinReminderTime
+        self.statsOrder = statsOrder
+    }
+
     var restTime: Int {
         get { defaultRestTime ?? 90 }
         set { defaultRestTime = newValue }
