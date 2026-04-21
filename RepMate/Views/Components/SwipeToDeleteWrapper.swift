@@ -6,8 +6,8 @@ struct SwipeToDeleteWrapper<Content: View>: View {
     let onDelete: (() -> Void)?
     
     @State private var offset: CGFloat = 0
+    @State private var previousOffset: CGFloat = 0
     @State private var isDeleting = false
-    @GestureState private var dragOffset: CGFloat = 0
     
     private let deleteButtonWidth: CGFloat = 50
     private let deleteThreshold: CGFloat = -40
@@ -42,32 +42,33 @@ struct SwipeToDeleteWrapper<Content: View>: View {
                     .padding(.trailing, 8)
                 }
                 .frame(width: deleteButtonWidth)
-                .opacity((offset < 0 || dragOffset < 0) ? 1 : 0)
+                .opacity(offset < 0 ? 1 : 0)
                 
                 // Main content
                 content
                     .background(Color.white.opacity(0.001))
-                    .offset(x: min(0, offset + dragOffset))
+                    .offset(x: offset)
                     .gesture(
-                        DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                            .updating($dragOffset) { value, state, _ in
-                                // Only allow left swipe (negative translation)
-                                if value.translation.width < 0 {
-                                    state = value.translation.width
+                        DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                            .onChanged { value in
+                                let newOffset = previousOffset + value.translation.width
+                                // Allow interactive dragging, constrained to 0
+                                withAnimation(.interactiveSpring(response: 0.2, dampingFraction: 0.9)) {
+                                    offset = min(0, max(-deleteButtonWidth * 1.5, newOffset))
                                 }
                             }
                             .onEnded { value in
-                                let totalOffset = offset + value.translation.width
+                                let finalOffset = previousOffset + value.translation.width
                                 
-                                if totalOffset < deleteThreshold {
-                                    // Reveal delete button with spring animation
+                                if finalOffset < deleteThreshold {
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                         offset = -deleteButtonWidth
+                                        previousOffset = -deleteButtonWidth
                                     }
                                 } else {
-                                    // Snap back with spring animation
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                         offset = 0
+                                        previousOffset = 0
                                     }
                                 }
                             }
@@ -75,10 +76,10 @@ struct SwipeToDeleteWrapper<Content: View>: View {
                     .simultaneousGesture(
                         TapGesture()
                             .onEnded { _ in
-                                // Reset offset when tapping content
                                 if offset != 0 {
                                     withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                                         offset = 0
+                                        previousOffset = 0
                                     }
                                 }
                             }

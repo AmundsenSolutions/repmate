@@ -27,498 +27,15 @@ struct SettingsView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 24) {
-                        
-                        // MARK: - Pro Status Header
                         proHeaderCard
-                        
-                        // MARK: - Appearance
-                        cyberGlassSection(title: "Appearance") {
-                            // Theme Picker
-                            settingsRow(title: "Theme", icon: "paintpalette") {
-                                Menu {
-                                    ForEach(ThemeManager.availableThemes) { theme in
-                                        Button {
-                                            themeManager.activeTheme = theme
-                                            HapticManager.shared.lightImpact()
-                                        } label: {
-                                            HStack {
-                                                Text(theme.displayName)
-                                                if themeManager.activeTheme == theme {
-                                                    Image(systemName: "checkmark")
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    Button {
-                                        if storeManager.isPro {
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                                showingCustomTheme = true
-                                            }
-                                        } else {
-                                            showPaywall = true
-                                        }
-                                        HapticManager.shared.lightImpact()
-                                    } label: {
-                                        if storeManager.isPro {
-                                            Label("Create Custom Theme", systemImage: "paintbrush.fill")
-                                        } else {
-                                            Label("Custom Theme (Pro)", systemImage: "crown.fill")
-                                        }
-                                    }
-                                    
-                                } label: {
-                                    valueDisplay(
-                                        text: themeManager.activeTheme.displayName,
-                                        icon: "chevron.up.chevron.down",
-                                        accentPrefix: true
-                                    )
-                                }
-                            }
-                            
-                            divider
-                            
-                            // App Icon
-                            NavigationLink(destination: CustomIconPickerView()) {
-                                navRow(title: "App Icon", icon: "app.badge")
-                            }
-                        }
-                        
-                        // MARK: - Training
-                        cyberGlassSection(title: "Training") {
-                            // Default Rest Time
-                            settingsRow(title: "Default Rest Time", icon: "timer") {
-                                Menu {
-                                    Picker("Rest Time", selection: Binding(
-                                        get: { store.settings.restTime },
-                                        set: { store.updateRestTime($0) }
-                                    )) {
-                                        Text("30s").tag(30)
-                                        Text("45s").tag(45)
-                                        Text("60s").tag(60)
-                                        Text("90s").tag(90)
-                                        Text("120s").tag(120)
-                                        Text("180s").tag(180)
-                                        Text("240s").tag(240)
-                                        Text("300s").tag(300)
-                                    }
-                                } label: {
-                                    valueDisplay(
-                                        text: "\(store.settings.restTime)s",
-                                        icon: "chevron.up.chevron.down"
-                                    )
-                                }
-                            }
-                            
-                            divider
-                            
-                            // Target Rep Range
-                            settingsRow(title: "Target Rep Range", icon: "arrow.up.arrow.down") {
-                                Button {
-                                    showRepRangeSheet = true
-                                    HapticManager.shared.lightImpact()
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Text("\(store.settings.minReps)")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(themeManager.palette.accent)
-                                            .frame(minWidth: 20, alignment: .trailing)
-                                        
-                                        Text("–")
-                                            .font(.system(size: 14, weight: .light))
-                                            .foregroundColor(themeManager.palette.accent.opacity(0.8))
-                                        
-                                        Text("\(store.settings.maxReps)")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(themeManager.palette.accent)
-                                            .frame(minWidth: 20, alignment: .leading)
-                                    }
-                                    .padding(.horizontal, 14)
-                                    .frame(height: 38)
-                                    .background(Color.white.opacity(0.06))
-                                    .cornerRadius(19)
-                                }
-                            }
-                        }
-                        
-                        // MARK: - Nutrition
-                        cyberGlassSection(title: "Nutrition") {
-                            // Daily Target
-                            settingsRow(title: "Daily Target (g)", icon: "fork.knife") {
-                                BufferedInputView(
-                                    value: $targetText,
-                                    placeholder: "150",
-                                    keyboardType: .numberPad,
-                                    color: Theme.Colors.accent,
-                                    alignment: .center,
-                                    font: Theme.Fonts.value,
-                                    backgroundColor: Color.white.opacity(0.06),
-                                    cornerRadius: Theme.Spacing.compact
-                                )
-                                .frame(width: 80, height: 44)
-                                .onChange(of: targetText) { _, newValue in
-                                    if let grams = Int(newValue), grams > 0 {
-                                        store.updateDailyProteinTarget(grams)
-                                    }
-                                }
-                            }
-                            
-                            divider
-                            
-                            // Protein Calculator
-                            VStack(spacing: Theme.Spacing.compact) {
-                                HStack(spacing: 8) {
-                                    BufferedInputView(
-                                        value: $weightString,
-                                        placeholder: "Weight (kg)",
-                                        keyboardType: .decimalPad,
-                                        color: .white,
-                                        alignment: .leading,
-                                        font: Theme.Fonts.body,
-                                        backgroundColor: Color.white.opacity(0.06),
-                                        cornerRadius: Theme.Spacing.compact
-                                    )
-                                    .frame(height: 44)
-                                    
-                                    Button(action: {
-                                        calculateProtein()
-                                        hideKeyboard()
-                                        HapticManager.shared.lightImpact()
-                                    }) {
-                                        Text("Calculate")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(Theme.Colors.accent)
-                                            .frame(height: 44)
-                                            .padding(.horizontal, 16)
-                                            .background(Color.white.opacity(0.06))
-                                            .cornerRadius(Theme.Spacing.compact)
-                                    }
-                                }
-                                
-                                if let result = calculatedProtein {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        divider.padding(.vertical, 4)
-                                        
-                                        Text("Recommended: ~\(result) g/day")
-                                            .font(.headline)
-                                            .foregroundColor(Theme.Colors.accent)
-                                        
-                                        Text("Based on ~1.6g protein per kg bodyweight.")
-                                            .font(.caption)
-                                            .foregroundColor(Theme.Colors.textSecondary)
-                                        
-                                        Button(action: {
-                                            targetText = String(result)
-                                            store.updateDailyProteinTarget(result)
-                                            calculatedProtein = nil
-                                            HapticManager.shared.success()
-                                        }) {
-                                            Text("Set Target to \(result)g")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .foregroundColor(.black)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Theme.Colors.accent)
-                                                .cornerRadius(Theme.Spacing.compact)
-                                        }
-                                        .padding(.top, 4)
-                                    }
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
-                                    .padding(.top, 4)
-                                }
-                            }
-                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: calculatedProtein)
-                        }
-                        
-                        // MARK: - Reminders
-                        cyberGlassSection(title: "Reminders") {
-                            // Workout Reminder
-                            settingsRow(title: "Workout Reminder", icon: "bell.fill") {
-                                Toggle("", isOn: Binding(
-                                    get: { store.settings.workoutReminderEnabled },
-                                    set: { newValue in
-                                        store.settings.workoutReminderEnabled = newValue
-                                        if newValue {
-                                            notificationManager.scheduleWorkoutReminders(
-                                                on: store.settings.workoutReminderDays,
-                                                at: store.settings.workoutReminderTime
-                                            )
-                                        } else {
-                                            notificationManager.cancelWorkoutReminders()
-                                        }
-                                        store.saveSettings()
-                                    }
-                                ))
-                                .labelsHidden()
-                                .tint(themeManager.palette.accent)
-                                .opacity(store.settings.workoutReminderEnabled ? 1.0 : 0.5)
-                            }
-                            
-                            if store.settings.workoutReminderEnabled {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    HStack {
-                                        Text("Time")
-                                            .font(Theme.Fonts.body)
-                                            .foregroundColor(.white)
-                                        Spacer()
-                                        DatePicker("", selection: Binding(
-                                            get: { store.settings.workoutReminderTime },
-                                            set: { newValue in
-                                                store.settings.workoutReminderTime = newValue
-                                                notificationManager.scheduleWorkoutReminders(
-                                                    on: store.settings.workoutReminderDays,
-                                                    at: newValue
-                                                )
-                                                store.saveSettings()
-                                            }
-                                        ), displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
-                                    }
-                                    
-                                    HStack(spacing: 8) {
-                                        let days = [("S", 1), ("M", 2), ("T", 3), ("O", 4), ("T", 5), ("F", 6), ("L", 7)]
-                                        ForEach(days, id: \.1) { label, day in
-                                            let isSelected = store.settings.workoutReminderDays.contains(day)
-                                            Button {
-                                                if isSelected {
-                                                    store.settings.workoutReminderDays.removeAll { $0 == day }
-                                                } else {
-                                                    store.settings.workoutReminderDays.append(day)
-                                                }
-                                                notificationManager.scheduleWorkoutReminders(
-                                                    on: store.settings.workoutReminderDays,
-                                                    at: store.settings.workoutReminderTime
-                                                )
-                                                store.saveSettings()
-                                                HapticManager.shared.lightImpact()
-                                            } label: {
-                                                Text(label)
-                                                    .font(Theme.Fonts.body.weight(.bold))
-                                                    .frame(width: 32, height: 32)
-                                                    .background(isSelected ? themeManager.palette.accent : Theme.Colors.cardBackground)
-                                                    .foregroundColor(isSelected ? .black : .white)
-                                                    .clipShape(Circle())
-                                                    .overlay(
-                                                        Circle()
-                                                            .stroke(Color.white.opacity(0.1), lineWidth: isSelected ? 0 : 1)
-                                                    )
-                                            }
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 4)
-                                    
-                                    Button {
-                                        store.settings.workoutReminderDays = suggestedWorkoutDays
-                                        notificationManager.scheduleWorkoutReminders(
-                                            on: store.settings.workoutReminderDays,
-                                            at: store.settings.workoutReminderTime
-                                        )
-                                        store.saveSettings()
-                                        HapticManager.shared.success()
-                                    } label: {
-                                        Text("Use my usual days")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(Color.white.opacity(0.1))
-                                            .cornerRadius(16)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                }
-                                .padding(.top, 4)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                            
-                            divider
-                            
-                            // Protein Reminder
-                            settingsRow(title: "Protein Reminder", icon: "bell.fill") {
-                                Toggle("", isOn: Binding(
-                                    get: { store.settings.proteinReminderEnabled },
-                                    set: { newValue in
-                                        store.settings.proteinReminderEnabled = newValue
-                                        if newValue {
-                                            notificationManager.scheduleProteinReminder(at: store.settings.proteinReminderTime)
-                                        } else {
-                                            notificationManager.cancelProteinReminder()
-                                        }
-                                        store.saveSettings()
-                                    }
-                                ))
-                                .labelsHidden()
-                                .tint(themeManager.palette.accent)
-                                .opacity(store.settings.proteinReminderEnabled ? 1.0 : 0.5)
-                            }
-                            
-                            if store.settings.proteinReminderEnabled {
-                                HStack {
-                                    Text("Time")
-                                        .font(Theme.Fonts.body)
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    DatePicker("", selection: Binding(
-                                        get: { store.settings.proteinReminderTime },
-                                        set: { newValue in
-                                            store.settings.proteinReminderTime = newValue
-                                            notificationManager.scheduleProteinReminder(at: newValue)
-                                            store.saveSettings()
-                                        }
-                                    ), displayedComponents: .hourAndMinute)
-                                    .labelsHidden()
-                                }
-                                .padding(.top, 4)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                        }
-                        
-                        // MARK: - Management
-                        cyberGlassSection(title: "Management") {
-                            NavigationLink(destination: ExerciseLibraryView()) {
-                                navRow(title: "Exercises & Categories", icon: "dumbbell")
-                            }
-                        }
-                        
-                        // MARK: - About & Support
-                        cyberGlassSection(title: "About & Support") {
-                            Button(action: {
-                                showEmailOptions = true
-                            }) {
-                                navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
-                            }
-                            .confirmationDialog("Choose Email App", isPresented: $showEmailOptions, titleVisibility: .visible) {
-                                Button("Apple Mail") {
-                                    if let url = URL(string: "mailto:amundsen.dev@gmail.com") {
-                                        UIApplication.shared.open(url)
-                                    }
-                                }
-                                Button("Gmail") {
-                                    if let url = URL(string: "googlegmail://co?to=amundsen.dev@gmail.com") {
-                                        if UIApplication.shared.canOpenURL(url) {
-                                            UIApplication.shared.open(url)
-                                        } else {
-                                            showEmailFallbackAlert = true
-                                        }
-                                    }
-                                }
-                                Button("Outlook") {
-                                    if let url = URL(string: "ms-outlook://compose?to=amundsen.dev@gmail.com") {
-                                        if UIApplication.shared.canOpenURL(url) {
-                                            UIApplication.shared.open(url)
-                                        } else {
-                                            showEmailFallbackAlert = true
-                                        }
-                                    }
-                                }
-                                Button("Yahoo Mail") {
-                                    if let url = URL(string: "ymail://mail/compose?to=amundsen.dev@gmail.com") {
-                                        if UIApplication.shared.canOpenURL(url) {
-                                            UIApplication.shared.open(url)
-                                        } else {
-                                            showEmailFallbackAlert = true
-                                        }
-                                    }
-                                }
-                                Button("Copy Email Address") {
-                                    UIPasteboard.general.string = "amundsen.dev@gmail.com"
-                                    HapticManager.shared.success()
-                                }
-                                Button("Cancel", role: .cancel) {}
-                            } message: {
-                                Text("How would you like to send your feedback?")
-                            }
-                            
-                            divider
-                            
-                            Link(destination: URL(string: "https://apps.apple.com/app/id6760585720?action=write-review")!) {
-                                navRow(title: "Rate on App Store", icon: "star.fill")
-                            }
-                            
-                            divider
-                            
-                            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/")!) {
-                                navRow(title: "Support & Feedback", icon: "questionmark.circle.fill", isExternal: true)
-                            }
-                            
-                            divider
-                            
-                            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/privacy.html")!) {
-                                navRow(title: "Privacy & Terms", icon: "doc.text.fill", isExternal: true)
-                            }
-                        }
-                        
-                        // MARK: - Advanced
-                        cyberGlassSection(title: "Advanced") {
-#if DEBUG
-                            Button(action: {
-                                UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
-                                HapticManager.shared.success()
-                            }) {
-                                HStack {
-                                    Label("Replay Onboarding", systemImage: "arrow.counterclockwise")
-                                        .font(Theme.Fonts.value)
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Text("Restart app")
-                                        .font(.caption)
-                                        .foregroundColor(Theme.Colors.textDim)
-                                }
-                                .frame(height: 44)
-                            }
-                            
-                            divider
-#endif
-                            
-                            if storeManager.isPro {
-                                ShareLink(
-                                    item: DataExportManager.CSVExport(
-                                        csvText: DataExportManager.generateWorkoutsCSV(
-                                            sessions: store.workoutSessions,
-                                            exerciseLibrary: store.exerciseLibrary
-                                        )
-                                    ),
-                                    preview: SharePreview("RepMate Workouts Data")
-                                ) {
-                                    HStack {
-                                        Label("Export Data (CSV)", systemImage: "square.and.arrow.up")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(.white)
-                                        Spacer()
-                                    }
-                                    .frame(height: 44)
-                                }
-                            } else {
-                                Button(action: {
-                                    showPaywall = true
-                                    HapticManager.shared.lightImpact()
-                                }) {
-                                    HStack {
-                                        Label("Export Data (Pro)", systemImage: "crown.fill")
-                                            .font(Theme.Fonts.value)
-                                            .foregroundColor(.yellow)
-                                        Spacer()
-                                    }
-                                    .frame(height: 44)
-                                }
-                            }
-                            
-                            divider
-                            
-                            Button(action: {
-                                showResetAlert = true
-                            }) {
-                                HStack {
-                                    Label("Reset All Data", systemImage: "trash.fill")
-                                        .font(Theme.Fonts.value)
-                                        .foregroundColor(.red)
-                                    Spacer()
-                                }
-                                .frame(height: 44)
-                            }
-                        }
+                        appearanceSection
+                        trainingSection
+                        aiCoachProfileSection
+                        nutritionSection
+                        remindersSection
+                        managementSection
+                        aboutSupportSection
+                        advancedSection
                     }
                     .padding()
                     .padding(.bottom, store.activeWorkout != nil ? 100 : 20)
@@ -568,6 +85,598 @@ struct SettingsView: View {
         .sheet(isPresented: $showRepRangeSheet) {
             TargetRepRangeSheet(minReps: store.settings.minReps, maxReps: store.settings.maxReps) { newMin, newMax in
                 store.updateTargetRepRange(min: newMin, max: newMax)
+            }
+        }
+    }
+    
+    
+    // MARK: - Section Components
+    
+    @ViewBuilder
+    private var appearanceSection: some View {
+        cyberGlassSection(title: "Appearance") {
+            // Theme Picker
+            settingsRow(title: "Theme", icon: "paintpalette") {
+                Menu {
+                    ForEach(ThemeManager.availableThemes) { theme in
+                        Button {
+                            themeManager.activeTheme = theme
+                            HapticManager.shared.lightImpact()
+                        } label: {
+                            HStack {
+                                Text(theme.displayName)
+                                if themeManager.activeTheme == theme {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    Button {
+                        if storeManager.isPro {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                showingCustomTheme = true
+                            }
+                        } else {
+                            showPaywall = true
+                        }
+                        HapticManager.shared.lightImpact()
+                    } label: {
+                        if storeManager.isPro {
+                            Label("Create Custom Theme", systemImage: "paintbrush.fill")
+                        } else {
+                            Label("Custom Theme (Pro)", systemImage: "crown.fill")
+                        }
+                    }
+                    
+                } label: {
+                    valueDisplay(
+                        text: themeManager.activeTheme.displayName,
+                        icon: "chevron.up.chevron.down",
+                        accentPrefix: true
+                    )
+                }
+            }
+            
+            divider
+            
+            // App Icon
+            NavigationLink(destination: CustomIconPickerView()) {
+                navRow(title: "App Icon", icon: "app.badge")
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var trainingSection: some View {
+        cyberGlassSection(title: "Training") {
+            // Default Rest Time
+            settingsRow(title: "Default Rest Time", icon: "timer") {
+                Menu {
+                    Picker("Rest Time", selection: Binding(
+                        get: { store.settings.restTime },
+                        set: { store.updateRestTime($0) }
+                    )) {
+                        Text("30s").tag(30)
+                        Text("45s").tag(45)
+                        Text("60s").tag(60)
+                        Text("90s").tag(90)
+                        Text("120s").tag(120)
+                        Text("180s").tag(180)
+                        Text("240s").tag(240)
+                        Text("300s").tag(300)
+                    }
+                } label: {
+                    valueDisplay(
+                        text: "\(store.settings.restTime)s",
+                        icon: "chevron.up.chevron.down"
+                    )
+                }
+            }
+            
+            divider
+            
+            // Target Rep Range
+            settingsRow(title: "Target Rep Range", icon: "arrow.up.arrow.down") {
+                Button {
+                    showRepRangeSheet = true
+                    HapticManager.shared.lightImpact()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("\(store.settings.minReps)")
+                            .font(Theme.Fonts.value)
+                            .foregroundColor(themeManager.palette.accent)
+                            .frame(minWidth: 20, alignment: .trailing)
+                        
+                        Text("–")
+                            .font(.system(size: 14, weight: .light))
+                            .foregroundColor(themeManager.palette.accent.opacity(0.8))
+                        
+                        Text("\(store.settings.maxReps)")
+                            .font(Theme.Fonts.value)
+                            .foregroundColor(themeManager.palette.accent)
+                            .frame(minWidth: 20, alignment: .leading)
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(height: 38)
+                    .background(Color.white.opacity(0.06))
+                    .cornerRadius(19)
+                }
+            }
+            
+            divider
+            
+            // Show RIR Toggle
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(isOn: Binding(
+                    get: { store.settings.showRIR },
+                    set: { newValue in
+                        store.settings.showRIR = newValue
+                        store.saveSettings()
+                        HapticManager.shared.lightImpact()
+                    }
+                )) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "number.square.fill")
+                                .foregroundColor(themeManager.palette.accent)
+                                .font(.system(size: 16))
+                        }
+                        Text("Show RIR Field")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                }
+                .tint(themeManager.palette.accent)
+                
+                Text("Reps in Reserve (RIR) helps you track intensity by measuring how close you are to failure. Recommended for advanced users.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 44) // Align with title text
+            }
+            .padding(.vertical, 8)
+        }
+    }
+    
+    @ViewBuilder
+    private var aiCoachProfileSection: some View {
+        cyberGlassSection(title: "AI Coach Profile") {
+            settingsRow(title: "Experience Level", icon: "figure.strengthtraining.traditional") {
+                Menu {
+                    Picker("Experience Level", selection: Binding(
+                        get: { store.settings.experienceLevel },
+                        set: { newValue in
+                            store.settings.experienceLevel = newValue
+                            store.saveSettings()
+                            HapticManager.shared.selection()
+                        }
+                    )) {
+                        ForEach(ExperienceLevel.allCases, id: \.self) { level in
+                            Text(level.rawValue).tag(level)
+                        }
+                    }
+                } label: {
+                    valueDisplay(
+                        text: store.settings.experienceLevel.rawValue,
+                        icon: "chevron.up.chevron.down"
+                    )
+                }
+            }
+
+            divider
+
+            settingsRow(title: "Equipment Access", icon: "dumbbell.fill") {
+                Menu {
+                    Picker("Equipment Access", selection: Binding(
+                        get: { store.settings.equipmentAccess },
+                        set: { newValue in
+                            store.settings.equipmentAccess = newValue
+                            store.saveSettings()
+                            HapticManager.shared.selection()
+                        }
+                    )) {
+                        ForEach(EquipmentAccess.allCases, id: \.self) { equipment in
+                            Text(equipment.rawValue).tag(equipment)
+                        }
+                    }
+                } label: {
+                    valueDisplay(
+                        text: store.settings.equipmentAccess.rawValue,
+                        icon: "chevron.up.chevron.down"
+                    )
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var nutritionSection: some View {
+        cyberGlassSection(title: "Nutrition") {
+            // Daily Target
+            settingsRow(title: "Daily Target (g)", icon: "fork.knife") {
+                BufferedInputView(
+                    value: $targetText,
+                    placeholder: "150",
+                    keyboardType: .numberPad,
+                    color: Theme.Colors.accent,
+                    alignment: .center,
+                    font: Theme.Fonts.value,
+                    backgroundColor: Color.white.opacity(0.06),
+                    cornerRadius: Theme.Spacing.compact
+                )
+                .frame(width: 80, height: 44)
+                .onChange(of: targetText) { _, newValue in
+                    if let grams = Int(newValue), grams > 0 {
+                        store.updateDailyProteinTarget(grams)
+                    }
+                }
+            }
+            
+            divider
+            
+            // Protein Calculator
+            VStack(spacing: Theme.Spacing.compact) {
+                HStack(spacing: 8) {
+                    BufferedInputView(
+                        value: $weightString,
+                        placeholder: "Weight (kg)",
+                        keyboardType: .decimalPad,
+                        color: .white,
+                        alignment: .leading,
+                        font: Theme.Fonts.body,
+                        backgroundColor: Color.white.opacity(0.06),
+                        cornerRadius: Theme.Spacing.compact
+                    )
+                    .frame(height: 44)
+                    
+                    Button(action: {
+                        calculateProtein()
+                        hideKeyboard()
+                        HapticManager.shared.lightImpact()
+                    }) {
+                        Text("Calculate")
+                            .font(Theme.Fonts.value)
+                            .foregroundColor(Theme.Colors.accent)
+                            .frame(height: 44)
+                            .padding(.horizontal, 16)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(Theme.Spacing.compact)
+                    }
+                }
+                
+                if let result = calculatedProtein {
+                    VStack(alignment: .leading, spacing: 8) {
+                        divider.padding(.vertical, 4)
+                        
+                        Text("Recommended: ~\(result) g/day")
+                            .font(.headline)
+                            .foregroundColor(Theme.Colors.accent)
+                        
+                        Text("Based on ~1.6g protein per kg bodyweight.")
+                            .font(.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                        
+                        Button(action: {
+                            targetText = String(result)
+                            store.updateDailyProteinTarget(result)
+                            calculatedProtein = nil
+                            HapticManager.shared.success()
+                        }) {
+                            Text("Set Target to \(result)g")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Theme.Colors.accent)
+                                .cornerRadius(Theme.Spacing.compact)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .padding(.top, 4)
+                }
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: calculatedProtein)
+        }
+    }
+    
+    @ViewBuilder
+    private var remindersSection: some View {
+        cyberGlassSection(title: "Reminders") {
+            // Workout Reminder
+            settingsRow(title: "Workout Reminder", icon: "bell.fill") {
+                Toggle("", isOn: Binding(
+                    get: { store.settings.workoutReminderEnabled },
+                    set: { newValue in
+                        store.settings.workoutReminderEnabled = newValue
+                        if newValue {
+                            notificationManager.scheduleWorkoutReminders(
+                                on: store.settings.workoutReminderDays,
+                                at: store.settings.workoutReminderTime
+                            )
+                        } else {
+                            notificationManager.cancelWorkoutReminders()
+                        }
+                        store.saveSettings()
+                    }
+                ))
+                .labelsHidden()
+                .tint(themeManager.palette.accent)
+                .opacity(store.settings.workoutReminderEnabled ? 1.0 : 0.5)
+            }
+            
+            if store.settings.workoutReminderEnabled {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Time")
+                            .font(Theme.Fonts.body)
+                            .foregroundColor(.white)
+                        Spacer()
+                        DatePicker("", selection: Binding(
+                            get: { store.settings.workoutReminderTime },
+                            set: { newValue in
+                                store.settings.workoutReminderTime = newValue
+                                notificationManager.scheduleWorkoutReminders(
+                                    on: store.settings.workoutReminderDays,
+                                    at: newValue
+                                )
+                                store.saveSettings()
+                            }
+                        ), displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                    }
+                    
+                    HStack(spacing: 8) {
+                        let daysArr = [("S", 1), ("M", 2), ("T", 3), ("O", 4), ("T", 5), ("F", 6), ("L", 7)]
+                        ForEach(daysArr, id: \.1) { label, day in
+                            let isSelected = store.settings.workoutReminderDays.contains(day)
+                            Button {
+                                if isSelected {
+                                    store.settings.workoutReminderDays.removeAll { $0 == day }
+                                } else {
+                                    store.settings.workoutReminderDays.append(day)
+                                }
+                                notificationManager.scheduleWorkoutReminders(
+                                    on: store.settings.workoutReminderDays,
+                                    at: store.settings.workoutReminderTime
+                                )
+                                store.saveSettings()
+                                HapticManager.shared.lightImpact()
+                            } label: {
+                                Text(label)
+                                    .font(Theme.Fonts.body.weight(.bold))
+                                    .frame(width: 32, height: 32)
+                                    .background(isSelected ? themeManager.palette.accent : Theme.Colors.cardBackground)
+                                    .foregroundColor(isSelected ? .black : .white)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.1), lineWidth: isSelected ? 0 : 1)
+                                    )
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    
+                    Button {
+                        store.settings.workoutReminderDays = suggestedWorkoutDays
+                        notificationManager.scheduleWorkoutReminders(
+                            on: store.settings.workoutReminderDays,
+                            at: store.settings.workoutReminderTime
+                        )
+                        store.saveSettings()
+                        HapticManager.shared.success()
+                    } label: {
+                        Text("Use my usual days")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(16)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .padding(.top, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+            
+            divider
+            
+            // Protein Reminder
+            settingsRow(title: "Protein Reminder", icon: "bell.fill") {
+                Toggle("", isOn: Binding(
+                    get: { store.settings.proteinReminderEnabled },
+                    set: { newValue in
+                        store.settings.proteinReminderEnabled = newValue
+                        if newValue {
+                            notificationManager.scheduleProteinReminder(at: store.settings.proteinReminderTime)
+                        } else {
+                            notificationManager.cancelProteinReminder()
+                        }
+                        store.saveSettings()
+                    }
+                ))
+                .labelsHidden()
+                .tint(themeManager.palette.accent)
+                .opacity(store.settings.proteinReminderEnabled ? 1.0 : 0.5)
+            }
+            
+            if store.settings.proteinReminderEnabled {
+                HStack {
+                    Text("Time")
+                        .font(Theme.Fonts.body)
+                        .foregroundColor(.white)
+                    Spacer()
+                    DatePicker("", selection: Binding(
+                        get: { store.settings.proteinReminderTime },
+                        set: { newValue in
+                            store.settings.proteinReminderTime = newValue
+                            notificationManager.scheduleProteinReminder(at: newValue)
+                            store.saveSettings()
+                        }
+                    ), displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                }
+                .padding(.top, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var managementSection: some View {
+        cyberGlassSection(title: "Management") {
+            NavigationLink(destination: ExerciseLibraryView()) {
+                navRow(title: "Exercises & Categories", icon: "dumbbell")
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var aboutSupportSection: some View {
+        cyberGlassSection(title: "About & Support") {
+            Button(action: {
+                showEmailOptions = true
+            }) {
+                navRow(title: "Send Feedback", icon: "envelope.fill", isExternal: true)
+            }
+            .confirmationDialog("Choose Email App", isPresented: $showEmailOptions, titleVisibility: .visible) {
+                Button("Apple Mail") {
+                    if let url = URL(string: "mailto:amundsen.dev@gmail.com") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Gmail") {
+                    if let url = URL(string: "googlegmail://co?to=amundsen.dev@gmail.com") {
+                        if UIApplication.shared.canOpenURL(url) {
+                            UIApplication.shared.open(url)
+                        } else {
+                            showEmailFallbackAlert = true
+                        }
+                    }
+                }
+                Button("Outlook") {
+                    if let url = URL(string: "ms-outlook://compose?to=amundsen.dev@gmail.com") {
+                        if UIApplication.shared.canOpenURL(url) {
+                            UIApplication.shared.open(url)
+                        } else {
+                            showEmailFallbackAlert = true
+                        }
+                    }
+                }
+                Button("Yahoo Mail") {
+                    if let url = URL(string: "ymail://mail/compose?to=amundsen.dev@gmail.com") {
+                        if UIApplication.shared.canOpenURL(url) {
+                            UIApplication.shared.open(url)
+                        } else {
+                            showEmailFallbackAlert = true
+                        }
+                    }
+                }
+                Button("Copy Email Address") {
+                    UIPasteboard.general.string = "amundsen.dev@gmail.com"
+                    HapticManager.shared.success()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("How would you like to send your feedback?")
+            }
+            
+            divider
+            
+            Link(destination: URL(string: "https://apps.apple.com/app/id6760585720?action=write-review")!) {
+                navRow(title: "Rate on App Store", icon: "star.fill")
+            }
+            
+            divider
+            
+            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/")!) {
+                navRow(title: "Support & Feedback", icon: "questionmark.circle.fill", isExternal: true)
+            }
+            
+            divider
+            
+            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/privacy.html")!) {
+                navRow(title: "Privacy & Terms", icon: "doc.text.fill", isExternal: true)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var advancedSection: some View {
+        cyberGlassSection(title: "Advanced") {
+#if DEBUG
+            Button(action: {
+                UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
+                HapticManager.shared.success()
+            }) {
+                HStack {
+                    Label("Replay Onboarding", systemImage: "arrow.counterclockwise")
+                        .font(Theme.Fonts.value)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text("Restart app")
+                        .font(.caption)
+                        .foregroundColor(Theme.Colors.textDim)
+                }
+                .frame(height: 44)
+            }
+            
+            divider
+#endif
+            
+            if storeManager.isPro {
+                ShareLink(
+                    item: DataExportManager.CSVExport(
+                        csvText: DataExportManager.generateWorkoutsCSV(
+                            sessions: store.workoutSessions,
+                            exerciseLibrary: store.exerciseLibrary
+                        )
+                    ),
+                    preview: SharePreview("RepMate Workouts Data")
+                ) {
+                    HStack {
+                        Label("Export Data (CSV)", systemImage: "square.and.arrow.up")
+                            .font(Theme.Fonts.value)
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    .frame(height: 44)
+                }
+            } else {
+                Button(action: {
+                    showPaywall = true
+                    HapticManager.shared.lightImpact()
+                }) {
+                    HStack {
+                        Label("Export Data (Pro)", systemImage: "crown.fill")
+                            .font(Theme.Fonts.value)
+                            .foregroundColor(.yellow)
+                        Spacer()
+                    }
+                    .frame(height: 44)
+                }
+            }
+            
+            divider
+            
+            Button(action: {
+                showResetAlert = true
+            }) {
+                HStack {
+                    Label("Reset All Data", systemImage: "trash.fill")
+                        .font(Theme.Fonts.value)
+                        .foregroundColor(.red)
+                    Spacer()
+                }
+                .frame(height: 44)
             }
         }
     }

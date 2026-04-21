@@ -457,19 +457,21 @@ struct WorkoutDetailView: View {
                 )
                 
                 // RIR
-                targetCell(
-                    label: "RIR",
-                    value: Binding(
-                        get: { targets[exercise.id]?.rir ?? "" },
-                        set: {
-                            var t = targets[exercise.id] ?? defaultTarget
-                            t.rir = $0
-                            targets[exercise.id] = t
-                        }
-                    ),
-                    ghostText: "2",
-                    keyboardType: .numberPad
-                )
+                if store.settings.showRIR {
+                    targetCell(
+                        label: "RIR",
+                        value: Binding(
+                            get: { targets[exercise.id]?.rir ?? "" },
+                            set: {
+                                var t = targets[exercise.id] ?? defaultTarget
+                                t.rir = $0
+                                targets[exercise.id] = t
+                            }
+                        ),
+                        ghostText: "2",
+                        keyboardType: .numberPad
+                    )
+                }
                 
                 // REST
                  targetCell(

@@ -125,6 +125,7 @@ struct WorkoutSessionDetailView: View {
                                 targetReps: template?.targets?[exercise.id]?.reps,
                                 targetRir: template?.targets?[exercise.id]?.rir, // Show valid targets if we have them
                                 targetRest: template?.targets?[exercise.id]?.rest ?? 0,
+                                showRIR: store.settings.showRIR,
                                 note: bindingExerciseNote(for: exercise.id),
                                 ghostNote: nil
                             ) {
@@ -293,6 +294,7 @@ struct WorkoutSessionDetailView: View {
                 reps: bindingReps(for: set.id),
                 rir: bindingRir(for: set.id),
                 isCompleted: .constant(true),
+                showRIR: store.settings.showRIR,
                 rowId: set.id,
                 focusedField: $focusedField
             )

@@ -125,6 +125,9 @@ struct AIGeneratorSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
 
+                    aiProfileChips
+                        .padding(.horizontal, 20)
+
                     // Text Editor
                     ZStack(alignment: .topLeading) {
                         // Placeholder
@@ -241,6 +244,84 @@ struct AIGeneratorSheet: View {
 
     // MARK: - Logic
 
+    private var aiProfileChips: some View {
+        HStack(spacing: 10) {
+            profileChip(
+                icon: "person.fill",
+                title: store.settings.experienceLevel.rawValue
+            ) {
+                Picker("Experience Level", selection: Binding(
+                    get: { store.settings.experienceLevel },
+                    set: { newValue in
+                        store.settings.experienceLevel = newValue
+                        store.saveSettings()
+                        HapticManager.shared.selection()
+                    }
+                )) {
+                    ForEach(ExperienceLevel.allCases, id: \.self) { level in
+                        Text(level.rawValue).tag(level)
+                    }
+                }
+            }
+
+            profileChip(
+                icon: "dumbbell.fill",
+                title: store.settings.equipmentAccess.rawValue
+            ) {
+                Picker("Equipment Access", selection: Binding(
+                    get: { store.settings.equipmentAccess },
+                    set: { newValue in
+                        store.settings.equipmentAccess = newValue
+                        store.saveSettings()
+                        HapticManager.shared.selection()
+                    }
+                )) {
+                    ForEach(EquipmentAccess.allCases, id: \.self) { equipment in
+                        Text(equipment.rawValue).tag(equipment)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func profileChip<Content: View>(
+        icon: String,
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        Menu {
+            content()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(themeManager.palette.accent)
+
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color.white.opacity(0.86))
+                    .lineLimit(1)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(Color.white.opacity(0.45))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.06))
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private func generate() {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 5 else { return }
@@ -250,7 +331,8 @@ struct AIGeneratorSheet: View {
 
         Task {
             do {
-                let plan = try await service.generateAIPlan(answers: trimmed, isPro: storeManager.isPro)
+                let formattedAnswers = "User Profile: \(store.settings.experienceLevel.rawValue). Equipment Access: \(store.settings.equipmentAccess.rawValue). Custom Request: \(trimmed)"
+                let plan = try await service.generateAIPlan(answers: formattedAnswers, isPro: storeManager.isPro)
                 await MainActor.run {
                     withAnimation { isLoading = false }
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {

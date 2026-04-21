@@ -71,6 +71,7 @@ struct ActiveExerciseListView: View {
                             in: store.workoutSessions,
                             settings: store.settings
                         ),
+                        showRIR: store.settings.showRIR,
                         note: bindingNote(for: exerciseId),
                         ghostNote: store.ghostExerciseNote(for: exerciseId),
                         menuContent: {
@@ -308,6 +309,7 @@ struct ActiveExerciseListView: View {
                 reps: bindingReps(exerciseId: exerciseId, rowId: row.id),
                 rir: bindingRir(exerciseId: exerciseId, rowId: row.id),
                 isCompleted: bindingIsCompleted(exerciseId: exerciseId, rowId: row.id),
+                showRIR: store.settings.showRIR,
                 rowId: row.id,
                 focusedField: $focusedField,
                 isPR: prCache[row.id] ?? false,

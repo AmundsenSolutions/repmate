@@ -9,6 +9,7 @@ struct SetRowView: View {
     
     // Configuration
     @Binding var isCompleted: Bool
+    var showRIR: Bool = true
     
     // Identity for global focus
     let rowId: UUID
@@ -108,18 +109,20 @@ struct SetRowView: View {
             .frame(maxWidth: .infinity)
             
             // RIR
-            BufferedInputView(
-                value: $rir,
-                placeholder: ghostRir ?? "-",
-                keyboardType: .numberPad,
-                color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
-                alignment: .center,
-                font: .system(size: 15, weight: .semibold, design: .monospaced),
-                backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
-                cornerRadius: 6
-            )
-            .focused($focusedField, equals: .rir(setId: rowId))
-            .frame(maxWidth: .infinity)
+            if showRIR {
+                BufferedInputView(
+                    value: $rir,
+                    placeholder: ghostRir ?? "-",
+                    keyboardType: .numberPad,
+                    color: isPR && isCompleted ? Theme.Colors.prGold : (isCompleted ? Theme.Colors.success : Theme.Colors.accent),
+                    alignment: .center,
+                    font: .system(size: 15, weight: .semibold, design: .monospaced),
+                    backgroundColor: isCompleted ? Theme.Colors.inputBackground.opacity(0.6) : Theme.Colors.inputBackground,
+                    cornerRadius: 6
+                )
+                .focused($focusedField, equals: .rir(setId: rowId))
+                .frame(maxWidth: .infinity)
+            }
         }
         .background(
             // Subtle PR glow effect

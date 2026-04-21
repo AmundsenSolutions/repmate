@@ -47,6 +47,20 @@ enum StatCardType: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+// MARK: - AI Coach Profile
+
+enum ExperienceLevel: String, CaseIterable, Codable {
+    case beginner = "Beginner"
+    case intermediate = "Intermediate"
+    case advanced = "Advanced"
+}
+
+enum EquipmentAccess: String, CaseIterable, Codable {
+    case bodyweightAndBands = "Bodyweight & Bands"
+    case homeGym = "Home Gym"
+    case fullGym = "Full Gym"
+}
+
 // MARK: - App Settings
 
 /// Persistent user settings for the app.
@@ -57,6 +71,28 @@ struct AppSettings: Codable {
     var restTime: Int {
         get { defaultRestTime ?? 90 }
         set { defaultRestTime = newValue }
+    }
+    
+    // Feature Toggles
+    var optShowRIR: Bool?
+
+    // AI Coach Profile
+    var optExperienceLevel: ExperienceLevel?
+    var optEquipmentAccess: EquipmentAccess?
+    
+    var showRIR: Bool {
+        get { optShowRIR ?? false }
+        set { optShowRIR = newValue }
+    }
+
+    var experienceLevel: ExperienceLevel {
+        get { optExperienceLevel ?? .beginner }
+        set { optExperienceLevel = newValue }
+    }
+
+    var equipmentAccess: EquipmentAccess {
+        get { optEquipmentAccess ?? .fullGym }
+        set { optEquipmentAccess = newValue }
     }
 
     // Progressive Overload Targets
@@ -126,6 +162,9 @@ struct AppSettings: Codable {
     static let `default` = AppSettings(
         dailyProteinTarget: 150,
         defaultRestTime: 90,
+        optShowRIR: false,
+        optExperienceLevel: .beginner,
+        optEquipmentAccess: .fullGym,
         targetMinReps: 4,
         targetMaxReps: 8,
         neglectedStatsMuscles: ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves"],

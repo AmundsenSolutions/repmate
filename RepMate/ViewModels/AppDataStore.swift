@@ -9,7 +9,12 @@ final class AppDataStore: ObservableObject {
     private let appGroup = "group.no.amundsen.repmate"
     // Published = SwiftUI updates UI automatically when these change
     @Published var proteinEntries: [ProteinEntry] = []
-    @Published var settings: AppSettings = .default
+    // Manually notify changes for settings to resolve compiler errors with @Published
+    var settings: AppSettings = .default {
+        willSet {
+            objectWillChange.send()
+        }
+    }
     @Published var workoutTemplates: [WorkoutTemplate] = []
     @Published var workoutSessions: [WorkoutSession] = []
     @Published var exerciseLibrary: [Exercise] = []
@@ -193,26 +198,26 @@ final class AppDataStore: ObservableObject {
     /// Updates the daily protein target and persists settings.
     func updateDailyProteinTarget(_ grams: Int) {
         let capped = min(max(grams, 0), 1000)
-        settings.dailyProteinTarget = capped
+        self.settings.dailyProteinTarget = capped
         save()
     }
     
     /// Updates the default rest time and persists settings.
     func updateRestTime(_ seconds: Int) {
         let capped = min(max(seconds, 0), 600)
-        settings.restTime = capped
+        self.settings.restTime = capped
         save()
     }
     
     func updateTargetRepRange(min: Int, max: Int) {
-        settings.minReps = min
-        settings.maxReps = max
+        self.settings.minReps = min
+        self.settings.maxReps = max
         save()
     }
     
     /// Updates the specific muscle groups tracked in the Neglected Stats view.
     func updateTrackedMuscles(_ muscles: [String]) {
-        settings.trackedMuscles = muscles
+        self.settings.trackedMuscles = muscles
         save()
     }
 
@@ -311,7 +316,7 @@ final class AppDataStore: ObservableObject {
     /// Container for encoding/decoding the persisted state.
     private struct PersistedData: Codable {
         var proteinEntries: [ProteinEntry]
-        var settings: AppSettings
+        var storedSettings: AppSettings
         var workoutTemplates: [WorkoutTemplate]
         var workoutSessions: [WorkoutSession]
         var exerciseLibrary: [Exercise]
@@ -328,7 +333,7 @@ final class AppDataStore: ObservableObject {
         do {
             let decoded = try PersistenceManager.shared.load(PersistedData.self, from: fileName)
             self.proteinEntries = decoded.proteinEntries
-            self.settings = decoded.settings
+            self.settings = decoded.storedSettings
             self.workoutTemplates = decoded.workoutTemplates
             // Sort sessions by date descending (newest first) to establish the invariant
             self.workoutSessions = decoded.workoutSessions.sorted { $0.date > $1.date }
@@ -347,6 +352,13 @@ final class AppDataStore: ObservableObject {
             needsSave = migrateSetupTimes() || needsSave
             needsSave = migrateArmsToBicepsTriceps() || needsSave
             needsSave = migrateLegsToGranularCategories() || needsSave
+            
+            // Backward compatibility for RIR setting
+            if self.settings.optShowRIR == nil {
+                self.settings.optShowRIR = !self.workoutSessions.isEmpty
+                needsSave = true
+            }
+            
             if needsSave { save() }
         } catch PersistenceError.fileNotFound {
             // Defaults
@@ -447,7 +459,7 @@ final class AppDataStore: ObservableObject {
         
         let payload = PersistedData(
             proteinEntries: proteinEntries,
-            settings: settings,
+            storedSettings: settings,
             workoutTemplates: workoutTemplates,
             workoutSessions: workoutSessions,
             exerciseLibrary: exerciseLibrary,

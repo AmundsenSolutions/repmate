@@ -11,6 +11,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
     
     // Progressive Overload Indicator
     var overloadStatus: OverloadDirection = .none
+    var showRIR: Bool = true
     
     // Actions
     var menuContent: MenuContent
@@ -29,6 +30,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
         targetRir: String? = nil,
         targetRest: Int = 0,
         overloadStatus: OverloadDirection = .none,
+        showRIR: Bool = true,
         note: Binding<String>,
         ghostNote: String? = nil,
         @ViewBuilder menuContent: () -> MenuContent,
@@ -40,6 +42,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
         self.targetRir = targetRir
         self.targetRest = targetRest
         self.overloadStatus = overloadStatus
+        self.showRIR = showRIR
         self._note = note
         self.ghostNote = ghostNote
         self.menuContent = menuContent()
@@ -87,7 +90,7 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
                                     Text("\(reps)")
                                 }
                             }
-                            if let rir = targetRir, !rir.isEmpty {
+                            if showRIR, let rir = targetRir, !rir.isEmpty {
                                 HStack(spacing: 2) {
                                     Image(systemName: "chart.bar.fill")
                                     Text("RIR \(rir)")
@@ -125,8 +128,10 @@ struct ExerciseCardView<Content: View, MenuContent: View>: View {
                     .frame(maxWidth: .infinity)
                 Text("REPS")
                     .frame(maxWidth: .infinity)
-                Text("RIR")
-                    .frame(maxWidth: .infinity)
+                if showRIR {
+                    Text("RIR")
+                        .frame(maxWidth: .infinity)
+                }
                 
                 // Placeholder for Action Column
                 Text("")
@@ -155,6 +160,7 @@ extension ExerciseCardView where MenuContent == EmptyView {
         targetRir: String? = nil,
         targetRest: Int = 0,
         overloadStatus: OverloadDirection = .none,
+        showRIR: Bool = true,
         note: Binding<String>,
         ghostNote: String? = nil,
         @ViewBuilder content: () -> Content
@@ -165,6 +171,7 @@ extension ExerciseCardView where MenuContent == EmptyView {
         self.targetRir = targetRir
         self.targetRest = targetRest
         self.overloadStatus = overloadStatus
+        self.showRIR = showRIR
         self._note = note
         self.ghostNote = ghostNote
         self.menuContent = EmptyView()
