@@ -591,20 +591,26 @@ struct SettingsView: View {
             
             divider
             
-            Link(destination: URL(string: "https://apps.apple.com/app/id6760585720?action=write-review")!) {
-                navRow(title: "Rate on App Store", icon: "star.fill")
+            if let url = URL(string: "https://apps.apple.com/app/id6760585720?action=write-review") {
+                Link(destination: url) {
+                    navRow(title: "Rate on App Store", icon: "star.fill")
+                }
+                
+                divider
             }
             
-            divider
-            
-            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/")!) {
-                navRow(title: "Support & Feedback", icon: "questionmark.circle.fill", isExternal: true)
+            if let url = URL(string: "https://amundsensolutions.github.io/repmate-web/") {
+                Link(destination: url) {
+                    navRow(title: "Support & Feedback", icon: "questionmark.circle.fill", isExternal: true)
+                }
+                
+                divider
             }
             
-            divider
-            
-            Link(destination: URL(string: "https://amundsensolutions.github.io/repmate-web/privacy.html")!) {
-                navRow(title: "Privacy & Terms", icon: "doc.text.fill", isExternal: true)
+            if let url = URL(string: "https://amundsensolutions.github.io/repmate-web/privacy.html") {
+                Link(destination: url) {
+                    navRow(title: "Privacy & Terms", icon: "doc.text.fill", isExternal: true)
+                }
             }
         }
     }

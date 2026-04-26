@@ -17,7 +17,20 @@ struct RepMateApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if hasSeenOnboarding {
+                if !store.isLoaded {
+                    // K4: Show splash until async disk load + migrations complete.
+                    // Prevents views from rendering against an empty store state.
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            Image(systemName: "dumbbell.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.white.opacity(0.8))
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    }
+                } else if hasSeenOnboarding {
                     AppTabView()
                         .fullScreenCover(isPresented: Binding(
                             get: { !hasSeenAIOnboarding },
@@ -61,13 +74,18 @@ struct RepMateApp: App {
             .alert("Import Workout", isPresented: $showImportAlert) {
                 Button("Import") {
                     if let shareable = pendingImport {
-                        let template = shareable.toWorkoutTemplate(
-                            exerciseLibrary: store.exerciseLibrary
-                        ) { name, category in
-                            store.addExercise(name: name, category: category)
+                        if let template = shareable.toWorkoutTemplate(
+                            exerciseLibrary: store.exerciseLibrary,
+                            addExercise: { name, category in
+                                store.addExercise(name: name, category: category)
+                            }
+                        ) {
+                            store.addWorkoutTemplate(template)
+                            HapticManager.shared.success()
+                        } else {
+                            store.lastErrorMessage = "Template contains too many exercises and could not be imported."
+                            HapticManager.shared.error()
                         }
-                        store.addWorkoutTemplate(template)
-                        HapticManager.shared.success()
                     }
                     pendingImport = nil
                 }

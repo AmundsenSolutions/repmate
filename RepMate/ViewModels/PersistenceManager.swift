@@ -6,104 +6,107 @@ enum PersistenceError: Error {
     case decodingFailed(Error)
     case encodingFailed(Error)
     case writingFailed(Error)
+    case verificationFailed  // .tmp byte-count mismatch after write
 }
 
-/// Thread-safe local file storage manager.
-class PersistenceManager {
+final class PersistenceManager: @unchecked Sendable {
     static let shared = PersistenceManager()
-    
-    private let fileManager = FileManager.default
+
     private let dispatchQueue = DispatchQueue(label: "com.repmate.persistence", qos: .background)
-    
+
     private init() {}
-    
+
     /// Resolves app documents directory.
-    private func documentsDirectory() -> URL {
-        do {
-            return try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        } catch {
-            return fileManager.temporaryDirectory
-        }
+    /// M5 Fix: Throws on failure instead of silently falling back to temporaryDirectory,
+    /// which iOS can purge at any time. A caught error will put the app in degraded mode.
+    private func documentsDirectory() throws -> URL {
+        try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
     }
-    
-    /// Safely writes an object to disk with automatic backups.
+
+    /// K2 Fix — Safe atomic write sequence:
+    ///   1. Encode data in memory.
+    ///   2. Write to a `.tmp` sidecar (atomic at OS level).
+    ///   3. Verify `.tmp` byte-count matches in-memory data.
+    ///   4. Only after verification: remove old `.bak`, move main → `.bak` (atomic rename).
+    ///   5. Move `.tmp` → main (atomic rename).
+    ///
+    /// The `.bak` file is NEVER deleted until the new `.tmp` is verified on disk.
+    /// If any step fails, at least one valid copy of the data survives.
     func save<T: Encodable>(_ object: T, to filename: String, completion: ((Result<Void, PersistenceError>) -> Void)? = nil) {
         dispatchQueue.async { [weak self] in
             guard let self = self else { return }
+
+            let dir: URL
             do {
-                let url = self.documentsDirectory().appendingPathComponent(filename)
-                let backupUrl = url.appendingPathExtension("bak")
-                
-                // 1. Create backup of current file if it exists
-                if self.fileManager.fileExists(atPath: url.path) {
-                    try? self.fileManager.removeItem(at: backupUrl) // Remove old backup
-                    try? self.fileManager.copyItem(at: url, to: backupUrl)
-                    // Use .completeUnlessOpen so the backup is hardware-encrypted at rest,
-                    // but still readable during an iCloud restore before the first unlock.
-                    try? self.fileManager.setAttributes(
-                        [.protectionKey: FileProtectionType.completeUnlessOpen],
-                        ofItemAtPath: backupUrl.path
-                    )
-                }
-                
-                // 2. Write new data atomically with hardware-level encryption.
-                // .completeFileProtectionUnlessOpen = encrypted at rest, but iOS can open
-                // the file even while locked — critical for iCloud restore to succeed.
-                let data = try JSONEncoder().encode(object)
-                try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
-                completion?(.success(()))
+                dir = try self.documentsDirectory()
             } catch {
                 completion?(.failure(.writingFailed(error)))
+                return
             }
-        }
-    }
-    
-    /// Loads a saved object from disk, falling back to backups if corrupted.
-    func load<T: Decodable>(_ type: T.Type, from filename: String) throws -> T {
-        let url = documentsDirectory().appendingPathComponent(filename)
-        let backupUrl = url.appendingPathExtension("bak")
-        
-        // Helper to load from a specific URL
-        func loadFrom(_ specificUrl: URL) throws -> T {
-            let data = try Data(contentsOf: specificUrl)
-            return try JSONDecoder().decode(T.self, from: data)
-        }
-        
-        // 1. Try primary file
-        if fileManager.fileExists(atPath: url.path) {
+
+            let mainURL = dir.appendingPathComponent(filename)
+            let tmpURL  = dir.appendingPathComponent(filename + ".tmp")
+            let bakURL  = dir.appendingPathComponent(filename + ".bak")
+
+            // Step 1: Encode
+            let data: Data
             do {
-                return try loadFrom(url)
+                data = try JSONEncoder().encode(object)
             } catch {
-                
-                // 2. Try backup file
-                if fileManager.fileExists(atPath: backupUrl.path) {
-                    do {
-                        let backupData = try loadFrom(backupUrl)
-                        return backupData
-                    } catch {
-                        throw PersistenceError.decodingFailed(error)
-                    }
-                } else {
-                    throw PersistenceError.decodingFailed(error)
-                }
+                completion?(.failure(.encodingFailed(error)))
+                return
             }
-        } else {
-            // No primary file, try backup just in case (e.g. accidental deletion)
-            if fileManager.fileExists(atPath: backupUrl.path) {
-                 return try loadFrom(backupUrl)
+
+            // Step 2: Write to .tmp (.atomic = OS-level crash-safe write)
+            do {
+                try data.write(to: tmpURL, options: [.atomic, .completeFileProtectionUnlessOpen])
+            } catch {
+                completion?(.failure(.writingFailed(error)))
+                return
             }
-            throw PersistenceError.fileNotFound
+
+            // Step 3: Verify .tmp — confirm it is readable and byte-count matches
+            guard let written = try? Data(contentsOf: tmpURL), written.count == data.count else {
+                try? FileManager.default.removeItem(at: tmpURL)
+                completion?(.failure(.verificationFailed))
+                return
+            }
+
+            // Step 4: Rotate .bak — .tmp is verified, so old .bak is now superseded.
+            // Remove old .bak first, then atomically move main → .bak.
+            try? FileManager.default.removeItem(at: bakURL)
+            if FileManager.default.fileExists(atPath: mainURL.path) {
+                try? FileManager.default.moveItem(at: mainURL, to: bakURL)
+            }
+
+            // Step 5: Promote .tmp → main (atomic rename on same filesystem)
+            do {
+                try FileManager.default.moveItem(at: tmpURL, to: mainURL)
+            } catch {
+                // Unlikely: .tmp is verified but rename failed (e.g. permissions).
+                // .bak still contains the previous save, so no data is lost.
+                completion?(.failure(.writingFailed(error)))
+                return
+            }
+
+            // Step 6: Apply hardware encryption to main file
+            try? FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUnlessOpen],
+                ofItemAtPath: mainURL.path
+            )
+
+            completion?(.success(()))
         }
     }
-    
-    /// Resolves absolute file URL.
-    func fileURL(for filename: String) -> URL? {
-        documentsDirectory().appendingPathComponent(filename)
+
+    /// Resolves absolute file URL. Throws if the documents directory is unavailable.
+    func fileURL(for filename: String) throws -> URL {
+        try documentsDirectory().appendingPathComponent(filename)
     }
-    
+
     /// Checks for file existence.
     func fileExists(_ filename: String) -> Bool {
-        let url = documentsDirectory().appendingPathComponent(filename)
-        return fileManager.fileExists(atPath: url.path)
+        guard let url = try? fileURL(for: filename) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
     }
 }

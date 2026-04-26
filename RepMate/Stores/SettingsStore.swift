@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class SettingsStore: ObservableObject {
-    private unowned let store: AppDataStore
+    private weak var store: AppDataStore?
     private var cancellable: AnyCancellable?
 
     init(store: AppDataStore) {
@@ -14,28 +14,31 @@ final class SettingsStore: ObservableObject {
     }
 
     var settings: AppSettings {
-        get { store.settings }
-        set { store.settings = newValue }
+        get { store?.settings ?? .default }
+        set {
+            store?.settings = newValue
+            store?.saveSettings()
+        }
     }
 
     func save() {
-        store.saveSettings()
+        store?.saveSettings()
     }
 
     func updateDailyProteinTarget(_ grams: Int) {
-        store.updateDailyProteinTarget(grams)
+        store?.updateDailyProteinTarget(grams)
     }
 
     func updateRestTime(_ seconds: Int) {
-        store.updateRestTime(seconds)
+        store?.updateRestTime(seconds)
     }
 
     func updateTargetRepRange(min: Int, max: Int) {
-        store.updateTargetRepRange(min: min, max: max)
+        store?.updateTargetRepRange(min: min, max: max)
     }
 
     func updateTrackedMuscles(_ muscles: [String]) {
-        store.updateTrackedMuscles(muscles)
+        store?.updateTrackedMuscles(muscles)
     }
 }
 

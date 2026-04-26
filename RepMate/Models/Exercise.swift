@@ -65,4 +65,32 @@ struct Exercise: Identifiable, Codable {
     var category: String
     var secondaryMuscle: String? // Optional secondary muscle group (counted at 50% in heatmap)
     var setupTime: SetupTime = .medium // How long the exercise takes to set up/perform
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, category, secondaryMuscle, setupTime
+    }
+    
+    init(id: UUID, name: String, category: String, secondaryMuscle: String? = nil, setupTime: SetupTime = .medium) {
+        self.id = id
+        self.name = name
+        self.category = category
+        self.secondaryMuscle = secondaryMuscle
+        self.setupTime = setupTime
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.category = try container.decode(String.self, forKey: .category)
+        self.secondaryMuscle = try container.decodeIfPresent(String.self, forKey: .secondaryMuscle)
+        
+        // Fail-safe for setupTime enum changes
+        if let setupStr = try container.decodeIfPresent(String.self, forKey: .setupTime),
+           let parsedSetup = SetupTime(rawValue: setupStr) {
+            self.setupTime = parsedSetup
+        } else {
+            self.setupTime = .medium
+        }
+    }
 }

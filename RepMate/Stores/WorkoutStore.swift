@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class WorkoutStore: ObservableObject {
-    private unowned let store: AppDataStore
+    private weak var store: AppDataStore?
     private var cancellable: AnyCancellable?
 
     init(store: AppDataStore) {
@@ -14,39 +14,36 @@ final class WorkoutStore: ObservableObject {
     }
 
     var workoutTemplates: [WorkoutTemplate] {
-        get { store.workoutTemplates }
-        set { store.workoutTemplates = newValue }
+        get { store?.workoutTemplates ?? [] }
     }
 
     var workoutSessions: [WorkoutSession] {
-        get { store.workoutSessions }
-        set { store.workoutSessions = newValue }
+        get { store?.workoutSessions ?? [] }
     }
 
     var exerciseLibrary: [Exercise] {
-        get { store.exerciseLibrary }
-        set { store.exerciseLibrary = newValue }
+        get { store?.exerciseLibrary ?? [] }
     }
 
     var activeWorkout: ActiveWorkout? {
-        get { store.activeWorkout }
-        set { store.activeWorkout = newValue }
+        get { store?.activeWorkout }
+        set { store?.activeWorkout = newValue }
     }
 
     func startWorkout(template: WorkoutTemplate, force: Bool = false) {
-        store.startWorkout(template: template, force: force)
+        store?.startWorkout(template: template, force: force)
     }
 
     func discardActiveWorkout() {
-        store.discardActiveWorkout()
+        store?.discardActiveWorkout()
     }
 
     func updateActiveWorkout(_ workout: ActiveWorkout) {
-        store.updateActiveWorkout(workout)
+        store?.updateActiveWorkout(workout)
     }
 
     func silentUpdateActiveWorkout(_ workout: ActiveWorkout) {
-        store.silentUpdateActiveWorkout(workout)
+        store?.silentUpdateActiveWorkout(workout)
     }
 }
 

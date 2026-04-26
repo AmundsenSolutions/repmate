@@ -13,6 +13,11 @@ struct WorkoutDetailView: View {
     
     // MARK: - Editable State
     
+    private enum TopLevelFocus {
+        case name, note
+    }
+    @FocusState private var topLevelFocus: TopLevelFocus?
+    
     @State private var templateName: String = ""
     @State private var templateCategory: String? = nil // Added category state
     @State private var exerciseIds: [UUID] = []
@@ -42,9 +47,16 @@ struct WorkoutDetailView: View {
                             VStack(spacing: 12) {
                                 // Editable Title
                                 TextField("Workout Name", text: $templateName)
+                                    .focused($topLevelFocus, equals: .name)
                                     .font(.system(size: 32, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                                     .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .onChange(of: templateName) { _, newValue in
+                                        if newValue.count > 200 {
+                                            templateName = String(newValue.prefix(200))
+                                        }
+                                    }
                                     .padding(.top, 20)
                                 
                                 // Category Chips
@@ -103,6 +115,7 @@ struct WorkoutDetailView: View {
                                 
                                 // Workout Note
                                 TextField("Notes...", text: $note)
+                                    .focused($topLevelFocus, equals: .note)
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
@@ -175,15 +188,18 @@ struct WorkoutDetailView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
-                        // Special char quick-tap buttons (only focused cell responds)
-                        Button("–") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "-") }
-                            .frame(minWidth: 36)
-                        Button("/") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "/") }
-                            .frame(minWidth: 36)
-                        Button("m") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "m") }
-                            .frame(minWidth: 36)
-                        Button("s") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "s") }
-                            .frame(minWidth: 36)
+                        // Special char quick-tap buttons (only focused target cell responds)
+                        // If topLevelFocus is set, we are editing Name or Notes, so hide them.
+                        if topLevelFocus == nil {
+                            Button("–") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "-") }
+                                .frame(minWidth: 36)
+                            Button("/") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "/") }
+                                .frame(minWidth: 36)
+                            Button("m") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "m") }
+                                .frame(minWidth: 36)
+                            Button("s") { NotificationCenter.default.post(name: .insertTargetFieldChar, object: "s") }
+                                .frame(minWidth: 36)
+                        }
                         Spacer()
                         Button("Done") {
                             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -477,7 +493,7 @@ struct WorkoutDetailView: View {
                  targetCell(
                     label: "REST",
                     value: Binding(
-                        get: { targets[exercise.id] != nil ? formatRest(targets[exercise.id]!.rest) : "" },
+                        get: { formatRest(targets[exercise.id]?.rest ?? 0) },
                         set: { newValue in
                             if let seconds = parseRestTime(newValue) {
                                 var t = targets[exercise.id] ?? defaultTarget

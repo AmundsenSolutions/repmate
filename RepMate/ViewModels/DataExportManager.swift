@@ -17,11 +17,13 @@ final class DataExportManager {
             let duration = session.endedAt?.timeIntervalSince(session.startedAt ?? session.date) ?? 0
             
             for set in session.sets {
-                let exerciseName = exerciseLibrary.first(where: { $0.id == set.exerciseId })?.name ?? "Unknown"
+                // H7 Fix: escape double-quotes inside the name (RFC 4180 CSV escaping)
+                let exerciseName = (exerciseLibrary.first(where: { $0.id == set.exerciseId })?.name ?? "Unknown")
+                    .replacingOccurrences(of: "\"", with: "\"\"")
                 let weight = set.weight ?? 0.0
                 let reps = set.reps
                 let rir = set.rir ?? "0"
-                
+
                 csv += "\(sessionDate),\(Int(duration)),\"\(exerciseName)\",\(set.setIndex),\(weight),\(reps),\(rir)\n"
             }
         }

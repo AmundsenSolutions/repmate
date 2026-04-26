@@ -324,13 +324,16 @@ struct ActiveExerciseListView: View {
     
     private func updateFieldCache() {
         guard let aw = store.activeWorkout else { cachedFields = []; return }
+        let includeRIR = store.settings.showRIR
         var fields: [WorkoutFieldFocus] = []
         for exId in aw.exerciseIds {
             if let rows = aw.rowsByExercise[exId] {
                 for row in rows {
                     fields.append(.weight(setId: row.id))
                     fields.append(.reps(setId: row.id))
-                    fields.append(.rir(setId: row.id))
+                    if includeRIR {
+                        fields.append(.rir(setId: row.id))
+                    }
                 }
             }
         }

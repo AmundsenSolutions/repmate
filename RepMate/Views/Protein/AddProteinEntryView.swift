@@ -71,6 +71,12 @@ struct AddProteinEntryView: View {
                                 cornerRadius: Theme.Spacing.cornerRadius
                             )
                             .frame(width: 100)
+                            .onChange(of: gramsText) { _, newValue in
+                                // Cap manual entry to 10,000g to prevent absurd values
+                                if let val = Int(newValue), val > 10000 {
+                                    gramsText = "10000"
+                                }
+                            }
                             
                             // Note field + sparkle AI button side-by-side
                             ZStack(alignment: .trailing) {
@@ -548,30 +554,39 @@ struct AddProteinEntryView: View {
         
         lookupTask?.cancel()
         lookupTask = Task {
-            if let product = await OpenFoodFactsService.fetchProduct(barcode: barcode) {
-                if Task.isCancelled { return }
-                await MainActor.run {
-                    // Prefer per-serving protein if available, otherwise use per-100g
-                    let protein: Int
-                    if let perServing = product.proteinPerServing, perServing > 0 {
-                        protein = Int(perServing.rounded())
-                    } else {
-                        protein = Int(product.proteinPer100g.rounded())
+            do {
+                if let product = try await OpenFoodFactsService.fetchProduct(barcode: barcode) {
+                    if Task.isCancelled { return }
+                    await MainActor.run {
+                        // Prefer per-serving protein if available, otherwise use per-100g
+                        let protein: Int
+                        if let perServing = product.proteinPerServing, perServing > 0 {
+                            protein = Int(perServing.rounded())
+                        } else {
+                            protein = Int(product.proteinPer100g.rounded())
+                        }
+                        
+                        gramsText = "\(protein)"
+                        note = product.name
+                        isLookingUp = false
                     }
-                    
-                    gramsText = "\(protein)"
-                    note = product.name
-                    isLookingUp = false
+                } else {
+                    if Task.isCancelled { return }
+                    await MainActor.run {
+                        isLookingUp = false
+                        unknownBarcode = barcode
+                        newProductName = ""
+                        newProductProtein = ""
+                        HapticManager.shared.lightImpact()
+                        showRegisterSheet = true
+                    }
                 }
-            } else {
+            } catch {
                 if Task.isCancelled { return }
                 await MainActor.run {
                     isLookingUp = false
-                    unknownBarcode = barcode
-                    newProductName = ""
-                    newProductProtein = ""
-                    HapticManager.shared.lightImpact()
-                    showRegisterSheet = true
+                    scanError = "Network error: Could not lookup product."
+                    HapticManager.shared.error()
                 }
             }
         }

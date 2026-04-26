@@ -306,12 +306,15 @@ struct WorkoutSessionDetailView: View {
     // MARK: - Keyboard Navigation
     
     private var allFields: [WorkoutFieldFocus] {
+        let includeRIR = store.settings.showRIR
         var fields: [WorkoutFieldFocus] = []
         for (_, sets) in exercisesWithSets {
             for set in sets {
                 fields.append(.weight(setId: set.id))
                 fields.append(.reps(setId: set.id))
-                fields.append(.rir(setId: set.id))
+                if includeRIR {
+                    fields.append(.rir(setId: set.id))
+                }
             }
         }
         return fields

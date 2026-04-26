@@ -200,7 +200,7 @@ struct WorkoutManager {
         var dailyMax: [Date: Double] = [:]
         for record in filtered {
             let day = calendar.startOfDay(for: record.date)
-            if dailyMax[day] == nil || record.estimated1RM > dailyMax[day]! {
+            if record.estimated1RM > (dailyMax[day] ?? -.infinity) {
                 dailyMax[day] = record.estimated1RM
             }
         }
@@ -252,7 +252,7 @@ struct WorkoutManager {
             
             let maxWeight = exerciseSets.compactMap { $0.weight }.max() ?? 0
             if maxWeight > 0 {
-                if dailyMax[day] == nil || maxWeight > dailyMax[day]! {
+                if maxWeight > (dailyMax[day] ?? -.infinity) {
                     dailyMax[day] = maxWeight
                 }
             }

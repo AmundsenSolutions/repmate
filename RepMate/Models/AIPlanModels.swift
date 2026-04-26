@@ -7,12 +7,25 @@ struct AIPlanResponse: Codable {
     let plan_name: String
     let rationale: String
     let workouts: [AIPlanWorkout]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.plan_name = (try? container.decode(String.self, forKey: .plan_name)) ?? "AI Plan"
+        self.rationale = (try? container.decode(String.self, forKey: .rationale)) ?? ""
+        self.workouts = (try? container.decode([AIPlanWorkout].self, forKey: .workouts)) ?? []
+    }
 }
 
 /// A single training day within an AI-generated plan.
 struct AIPlanWorkout: Codable {
     let day_name: String
     let exercises: [AIPlanExercise]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.day_name = (try? container.decode(String.self, forKey: .day_name)) ?? "Workout"
+        self.exercises = (try? container.decode([AIPlanExercise].self, forKey: .exercises)) ?? []
+    }
 }
 
 /// A single exercise prescription within a workout day.
@@ -22,6 +35,15 @@ struct AIPlanExercise: Codable {
     let reps: String   // String to support ranges like "8-12"
     let rir: Int
     let notes: String
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = (try? container.decode(String.self, forKey: .name)) ?? "Exercise"
+        self.sets = (try? container.decode(Int.self, forKey: .sets)) ?? 3
+        self.reps = (try? container.decode(String.self, forKey: .reps)) ?? "8-12"
+        self.rir = (try? container.decode(Int.self, forKey: .rir)) ?? 2
+        self.notes = (try? container.decode(String.self, forKey: .notes)) ?? ""
+    }
 }
 
 // MARK: - Onboarding Answer Model

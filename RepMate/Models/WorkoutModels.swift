@@ -20,17 +20,20 @@ struct TemplateTarget: Codable, Hashable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.reps = try container.decode(String.self, forKey: .reps)
-        self.rir = try container.decode(String.self, forKey: .rir)
-        self.rest = try container.decode(Int.self, forKey: .rest)
+        // Fail-safe: use decodeIfPresent with defaults so a single corrupt field
+        // doesn't nuke the entire targets dictionary.
+        self.reps = (try? container.decode(String.self, forKey: .reps)) ?? ""
+        self.rir = (try? container.decode(String.self, forKey: .rir)) ?? ""
+        self.rest = (try? container.decode(Int.self, forKey: .rest)) ?? 90
         
         // Try decoding 'sets' as String first.
         if let setsString = try? container.decode(String.self, forKey: .sets) {
             self.sets = setsString
-        } else {
+        } else if let setsInt = try? container.decode(Int.self, forKey: .sets) {
             // Fallback: decode as Int and convert to String to support old local saves
-            let setsInt = try container.decode(Int.self, forKey: .sets)
             self.sets = String(setsInt)
+        } else {
+            self.sets = "3"
         }
     }
     
@@ -43,12 +46,33 @@ struct TemplateTarget: Codable, Hashable {
     }
 }
 
-struct ActiveSetRow: Codable, Hashable, Identifiable {
+struct ActiveSetRow: Hashable, Identifiable, Codable {
     var id: UUID = UUID() // Unique ID for list stability
     var weight: String = ""
     var reps: String = ""
     var rir: String = ""
     var isCompleted: Bool = false
+    
+    enum CodingKeys: String, CodingKey {
+        case id, weight, reps, rir, isCompleted
+    }
+    
+    init(id: UUID = UUID(), weight: String = "", reps: String = "", rir: String = "", isCompleted: Bool = false) {
+        self.id = id
+        self.weight = weight
+        self.reps = reps
+        self.rir = rir
+        self.isCompleted = isCompleted
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = (try? container.decode(UUID.self, forKey: .id)) ?? UUID()
+        self.weight = (try? container.decode(String.self, forKey: .weight)) ?? ""
+        self.reps = (try? container.decode(String.self, forKey: .reps)) ?? ""
+        self.rir = (try? container.decode(String.self, forKey: .rir)) ?? ""
+        self.isCompleted = (try? container.decode(Bool.self, forKey: .isCompleted)) ?? false
+    }
 }
 
 enum WorkoutFieldFocus: Hashable {
@@ -179,6 +203,9 @@ struct ShareableTemplate: Codable {
               let base64 = components.queryItems?.first(where: { $0.name == "t" })?.value
         else { return nil }
         
+        // Security: Prevent malicious payload memory bloat
+        guard base64.count < 50_000 else { return nil }
+        
         // Restore standard base64 from URL-safe variant
         var restored = base64
             .replacingOccurrences(of: "-", with: "+")
@@ -192,15 +219,23 @@ struct ShareableTemplate: Codable {
     }
     
     /// Converts to a local WorkoutTemplate, creating missing exercises.
-    func toWorkoutTemplate(exerciseLibrary: [Exercise], addExercise: (String, String) -> Exercise) -> WorkoutTemplate {
+    func toWorkoutTemplate(exerciseLibrary: [Exercise], addExercise: (String, String) -> Exercise) -> WorkoutTemplate? {
+        guard exercises.count <= 50 else { return nil } // H5 Fix: limit to 50 exercises
+        
         var exerciseIds: [UUID] = []
         var targets: [UUID: TemplateTarget] = [:]
         // Take a mutable copy so we can track exercises we've already created
         var knownExercises = exerciseLibrary
         
+        // H5 Fix: Truncate template name to 100 characters
+        let safeTemplateName = String(name.prefix(100))
+        
         for shared in exercises {
+            // H5 Fix: Truncate exercise name to 100 characters
+            let safeName = String(shared.name.prefix(100))
+            
             // Try to find existing exercise by name (case-insensitive)
-            let existing = knownExercises.first { $0.name.lowercased() == shared.name.lowercased() }
+            let existing = knownExercises.first { $0.name.lowercased() == safeName.lowercased() }
             
             let exerciseId: UUID
             if let found = existing {
@@ -208,7 +243,7 @@ struct ShareableTemplate: Codable {
             } else {
                 // Create the exercise via the store and get the authoritative object
                 // If the QR/Deep Link didn't provide a category, default to "Other"
-                let newExercise = addExercise(shared.name, shared.category ?? "Other")
+                let newExercise = addExercise(safeName, shared.category ?? "Other")
                 knownExercises.append(newExercise)
                 exerciseId = newExercise.id
             }
@@ -227,7 +262,7 @@ struct ShareableTemplate: Codable {
         
         return WorkoutTemplate(
             id: UUID(),
-            name: name,
+            name: safeTemplateName,
             exerciseIds: exerciseIds,
             targets: targets.isEmpty ? nil : targets,
             note: note,

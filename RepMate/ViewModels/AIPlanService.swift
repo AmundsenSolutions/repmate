@@ -52,7 +52,7 @@ class AIPlanService {
             throw AIPlanError.noEndpoint
         }
 
-        let userId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let userId = KeychainManager.shared.getClientUUID()
         let body: [String: Any] = [
             "userId": userId,
             "answers": answers,

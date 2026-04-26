@@ -3,11 +3,23 @@ import Foundation
 /// Core logic for protein tracking and statistics.
 class ProteinManager {
     
-    // MARK: - Core Logic
-    
+    // M7 Fix: Cache to prevent O(N) recalculation on every UI render
+    private var cachedStreak: Int?
+    private var cachedStreakDate: Date?
+    private var cachedEntriesCount: Int?
+    private var cachedTarget: Int?
+
     func proteinStreak(entries: [ProteinEntry], target: Int) -> Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
+        
+        if let cached = cachedStreak,
+           cachedStreakDate == today,
+           cachedEntriesCount == entries.count,
+           cachedTarget == target {
+            return cached
+        }
+        
         var streak = 0
         var currentDate = today
         
@@ -21,10 +33,14 @@ class ProteinManager {
         if let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) {
             currentDate = calendar.startOfDay(for: previousDay)
             
-            while true {
+            var daysChecked = 0
+            let maxLookback = 365 // M7 Fix: Limit lookback to prevent unbounded performance degradation
+            
+            while daysChecked < maxLookback {
                 let total = totalProtein(for: currentDate, in: entries)
                 if total >= target {
                     streak += 1
+                    daysChecked += 1
                     guard let nextPrev = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
                     currentDate = calendar.startOfDay(for: nextPrev)
                 } else {
@@ -32,6 +48,11 @@ class ProteinManager {
                 }
             }
         }
+        
+        cachedStreak = streak
+        cachedStreakDate = today
+        cachedEntriesCount = entries.count
+        cachedTarget = target
         
         return streak
     }

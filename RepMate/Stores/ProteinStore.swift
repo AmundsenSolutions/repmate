@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class ProteinStore: ObservableObject {
-    private unowned let store: AppDataStore
+    private weak var store: AppDataStore?
     private var cancellable: AnyCancellable?
 
     init(store: AppDataStore) {
@@ -14,41 +14,39 @@ final class ProteinStore: ObservableObject {
     }
 
     var proteinEntries: [ProteinEntry] {
-        get { store.proteinEntries }
-        set { store.proteinEntries = newValue }
+        get { store?.proteinEntries ?? [] }
     }
 
     var favoriteProteinItems: [FavoriteProtein] {
-        get { store.favoriteProteinItems }
-        set { store.favoriteProteinItems = newValue }
+        get { store?.favoriteProteinItems ?? [] }
     }
 
     var dailyTarget: Int {
-        store.settings.dailyProteinTarget
+        store?.settings.dailyProteinTarget ?? 150
     }
 
     func addEntry(grams: Int, note: String?) {
-        store.addProteinEntry(grams: grams, note: note)
+        store?.addProteinEntry(grams: grams, note: note)
     }
 
     func deleteEntriesForToday(at offsets: IndexSet) {
-        store.deleteProteinEntriesForToday(at: offsets)
+        store?.deleteProteinEntriesForToday(at: offsets)
     }
 
     func totalProtein(for date: Date) -> Int {
-        store.totalProteinFor(date: date)
+        store?.totalProteinFor(date: date) ?? 0
     }
 
     func streak() -> Int {
-        store.proteinStreak()
+        store?.proteinStreak() ?? 0
     }
 
     func toggleFavorite(entry: ProteinEntry) {
-        store.toggleFavorite(entry: entry)
+        store?.toggleFavorite(entry: entry)
     }
 
     func isFavorite(entry: ProteinEntry) -> Bool {
-        store.isFavorite(entry: entry)
+        store?.isFavorite(entry: entry) ?? false
     }
 }
 

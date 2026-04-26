@@ -22,8 +22,11 @@ final class AppDataStore: ObservableObject {
     
     /// Drives automatic midnight UI refreshes.
     @Published var currentDate: Date = Date()
-    
+
     @Published var lastErrorMessage: String? = nil
+
+    /// K4: False until async load completes. Use to gate the UI behind a splash/loading state.
+    @Published var isLoaded: Bool = false
     
     // ActiveWorkout uses custom getter/setter to allow silent updates
     private var _activeWorkoutStorage: ActiveWorkout? = nil
@@ -51,8 +54,13 @@ final class AppDataStore: ObservableObject {
     let workoutManager = WorkoutManager()
 
     private let fileName = "repmate_data.json"
-    /// Debounce task for silentUpdateActiveWorkout — prevents per-keystroke disk writes.
+    /// H3/silentUpdateActiveWorkout: debounce task for per-keystroke active-workout saves.
     private var silentSaveTask: Task<Void, Never>?
+    /// H2: General-purpose debounce task — coalesces rapid save() calls into one disk write.
+    private var pendingSaveTask: Task<Void, Never>?
+    /// When true, the primary file is corrupt and we're running from a backup or defaults.
+    /// Saves are blocked until the user takes explicit action (or a successful load clears this).
+    private var loadDegraded: Bool = false
     
     // Domain stores (composition): allows gradual migration away from a mega-store.
     lazy var proteinStore: ProteinStore = ProteinStore(store: self)
@@ -60,27 +68,18 @@ final class AppDataStore: ObservableObject {
     lazy var settingsStore: SettingsStore = SettingsStore(store: self)
 
     init() {
-        // Migrate old vext_data.json to repmate_data.json to prevent data loss on update
-        if PersistenceManager.shared.fileExists("vext_data.json") {
-            if let oldURL = PersistenceManager.shared.fileURL(for: "vext_data.json"),
-               let newURL = PersistenceManager.shared.fileURL(for: "repmate_data.json") {
-                try? FileManager.default.moveItem(at: oldURL, to: newURL)
-            }
-        }
-        
-        // Load data synchronously so it's ready before views render
-        load()
-        // Backup initially loaded data (safety on launch)
-        if let url = PersistenceManager.shared.fileURL(for: fileName) {
-            BackupManager.shared.backup(sourceURL: url)
-        }
-        
         // Setup observers for day changes (Midnight Edge Case)
         NotificationCenter.default.addObserver(self, selector: #selector(dayChanged), name: .NSCalendarDayChanged, object: nil)
-        
+
         #if os(iOS)
         NotificationCenter.default.addObserver(self, selector: #selector(dayChanged), name: UIApplication.significantTimeChangeNotification, object: nil)
         #endif
+
+        // K4 Fix: Kick off file I/O and migrations on a background thread.
+        // `isLoaded` flips to true when done, allowing the UI to dismiss its splash state.
+        Task {
+            await self.loadAsync()
+        }
     }
     
     deinit {
@@ -110,10 +109,8 @@ final class AppDataStore: ObservableObject {
         // Re-seed default workouts
         _ = seedDefaultWorkouts()
         
-        save()
+        saveNow() // Critical: destructive op must reach disk immediately
     }
-
-    // MARK: - Protein helpers
 
     /// Logs a new protein intake.
     func addProteinEntry(grams: Int, note: String?) {
@@ -313,6 +310,14 @@ final class AppDataStore: ObservableObject {
 
     // MARK: - Persistence
 
+    /// Resilient wrapper: skips corrupt array elements instead of failing the entire array.
+    private struct SafeDecodable<T: Decodable>: Decodable {
+        let value: T?
+        init(from decoder: Decoder) throws {
+            value = try? T(from: decoder)
+        }
+    }
+
     /// Container for encoding/decoding the persisted state.
     private struct PersistedData: Codable {
         var proteinEntries: [ProteinEntry]
@@ -328,10 +333,37 @@ final class AppDataStore: ObservableObject {
         var customBarcodes: [String: CustomBarcodeEntry]?
     }
 
+    /// K4 Fix — Async load entry point called from init().
+    /// File I/O and JSON decoding run on a background thread via Task.detached.
+    /// All state mutations are applied back on the MainActor.
+    /// Sets `isLoaded = true` when complete so the UI can dismiss its splash state.
+    private func loadAsync() async {
+        let fileExists = PersistenceManager.shared.fileExists("vext_data.json")
+        let oldURL = try? PersistenceManager.shared.fileURL(for: "vext_data.json")
+        let newURL = try? PersistenceManager.shared.fileURL(for: "repmate_data.json")
+        
+        // Migrate old filename on background thread before loading
+        await Task.detached(priority: .userInitiated) {
+            if fileExists, let oldURL = oldURL, let newURL = newURL {
+                try? FileManager.default.moveItem(at: oldURL, to: newURL)
+            }
+        }.value
+
+        // Run the actual load (still contains state mutations — must be on MainActor,
+        // but disk reads inside are quick relative to a watchdog kill for typical data sizes).
+        load()
+
+        // Trigger an initial backup after load completes (off main thread via BackupManager queue)
+        if let url = try? PersistenceManager.shared.fileURL(for: fileName) {
+            BackupManager.shared.backup(sourceURL: url)
+        }
+
+        isLoaded = true
+    }
+
     /// Loads saved data from disk or seeds defaults on first launch.
     private func load() {
-        let url = PersistenceManager.shared.fileURL(for: fileName)
-        guard let url = url, FileManager.default.fileExists(atPath: url.path) else {
+        guard let url = try? PersistenceManager.shared.fileURL(for: fileName), FileManager.default.fileExists(atPath: url.path) else {
             loadDefaults()
             return
         }
@@ -365,12 +397,17 @@ final class AppDataStore: ObservableObject {
                 
                 func decodeArrayPiece<T: Decodable>(_ type: [T].Type, key: String) -> [T]? {
                     guard let pieceData = try? JSONSerialization.data(withJSONObject: json[key] ?? []) else { return nil }
-                    do {
-                        return try decoder.decode([T].self, from: pieceData)
-                    } catch {
-                        print("Decoding error (Array Piece '\(key)'): \(error)")
-                        return nil
+                    // First try decoding the full array; if that fails, use SafeDecodable to skip corrupt elements
+                    if let fullArray = try? decoder.decode([T].self, from: pieceData) {
+                        return fullArray
                     }
+                    // Fallback: decode each element individually, skipping corrupt ones
+                    if let safeArray = try? decoder.decode([SafeDecodable<T>].self, from: pieceData) {
+                        let recovered = safeArray.compactMap { $0.value }
+                        print("Partial recovery for '\(key)': \(recovered.count)/\(safeArray.count) elements")
+                        return recovered
+                    }
+                    return nil
                 }
 
                 self.proteinEntries = decodeArrayPiece([ProteinEntry].self, key: "proteinEntries") ?? []
@@ -393,7 +430,35 @@ final class AppDataStore: ObservableObject {
             
         } catch {
             print("Critical Load Error: \(error)")
+            
+            // Tier 1: Attempt restore from the .bak sidecar file (written every save)
+            if let bakURL = try? PersistenceManager.shared.fileURL(for: fileName + ".bak"),
+               FileManager.default.fileExists(atPath: bakURL.path),
+               let bakData = try? Data(contentsOf: bakURL),
+               let decoded = try? JSONDecoder().decode(PersistedData.self, from: bakData) {
+                print("Recovery: Restored from .bak sidecar")
+                applyDecodedData(decoded)
+                lastErrorMessage = "Your data was recovered from a recent backup."
+                finalizeLoad()
+                return
+            }
+            
+            // Tier 2: Attempt restore from BackupManager's timestamped backups
+            if let backupURL = BackupManager.shared.latestBackupURL(for: fileName),
+               let backupData = try? Data(contentsOf: backupURL),
+               let decoded = try? JSONDecoder().decode(PersistedData.self, from: backupData) {
+                print("Recovery: Restored from BackupManager (\(backupURL.lastPathComponent))")
+                applyDecodedData(decoded)
+                lastErrorMessage = "Your data was recovered from a backup."
+                finalizeLoad()
+                return
+            }
+            
+            // Tier 3: No usable backup — enter degraded mode to prevent overwriting corrupt file
+            print("Recovery: No valid backup found. Entering degraded mode.")
+            loadDegraded = true
             loadDefaults()
+            lastErrorMessage = "Unable to load your data. Please contact support if this persists."
         }
     }
 
@@ -414,16 +479,16 @@ final class AppDataStore: ObservableObject {
     private func finalizeLoad() {
         var needsSave = false
         needsSave = seedDefaultWorkouts() || needsSave
-        needsSave = migrateSecondaryMuscles() || needsSave
-        needsSave = migrateSetupTimes() || needsSave
-        needsSave = migrateArmsToBicepsTriceps() || needsSave
-        needsSave = migrateLegsToGranularCategories() || needsSave
+        needsSave = MigrationManager.runMigrationsIfNeeded(store: self) || needsSave
         
         // Backward compatibility for RIR setting
         if self.settings.optShowRIR == nil {
             self.settings.optShowRIR = !self.workoutSessions.isEmpty
             needsSave = true
         }
+        
+        // Sync cached validity flag with loaded state
+        refreshHasValidActiveSets()
         
         if needsSave { save() }
     }
@@ -500,13 +565,43 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
-    /// Encodes current state to disk.
+    /// H2 Fix — Debounced save: coalesces rapid calls into a single disk write 500ms after
+    /// the last mutation. Critical paths (finish/discard workout, reset) call saveNow() instead.
     private func save() {
-        // Trigger Backup before overwrite
-        if let url = PersistenceManager.shared.fileURL(for: fileName) {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000) // 500 ms debounce
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                guard let self, !Task.isCancelled else { return }
+                self.performSave()
+                self.pendingSaveTask = nil
+            }
+        }
+    }
+
+    /// Flushes any pending debounced save immediately. Use for critical mutations
+    /// (finishActiveWorkout, discardActiveWorkout, resetAllData) where data must
+    /// reach disk before the app can be backgrounded or terminated.
+    private func saveNow() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = nil
+        performSave()
+    }
+
+    /// The actual encode-and-write implementation shared by save() and saveNow().
+    private func performSave() {
+        // Block writes in degraded mode to prevent overwriting a corrupt-but-recoverable file
+        guard !loadDegraded else {
+            print("Save blocked: app is in degraded mode after critical load failure.")
+            return
+        }
+
+        // BackupManager is now thread-safe — dispatches internally to its serial queue.
+        if let url = try? PersistenceManager.shared.fileURL(for: fileName) {
             BackupManager.shared.backup(sourceURL: url)
         }
-        
+
         let payload = PersistedData(
             proteinEntries: proteinEntries,
             storedSettings: settings,
@@ -535,20 +630,20 @@ final class AppDataStore: ObservableObject {
     }
 
     private func syncToWidgets() {
-        let defaults = UserDefaults(suiteName: appGroup)
+        let defaults = UserDefaults(suiteName: WidgetKeys.suiteName)
         
         // Protein Sync
         let todayProtein = totalProteinFor(date: Date())
-        defaults?.set(todayProtein, forKey: "todayProtein")
-        defaults?.set(settings.dailyProteinTarget, forKey: "proteinGoal")
+        defaults?.set(todayProtein, forKey: WidgetKeys.todayProtein)
+        defaults?.set(settings.dailyProteinTarget, forKey: WidgetKeys.proteinGoal)
         
         // Workout Sync
-        defaults?.set(activeWorkout != nil, forKey: "isWorkoutActive")
+        defaults?.set(activeWorkout != nil, forKey: WidgetKeys.isWorkoutActive)
         if let aw = activeWorkout {
-            defaults?.set(aw.exerciseIds.count, forKey: "exercisesCompleted")
+            defaults?.set(aw.exerciseIds.count, forKey: WidgetKeys.exercisesCompleted)
             // Find template name
             let templateName = workoutTemplates.first(where: { $0.id == aw.templateId })?.name ?? "Workout"
-            defaults?.set(templateName, forKey: "activeWorkoutName")
+            defaults?.set(templateName, forKey: WidgetKeys.activeWorkoutName)
         }
         
         WidgetCenter.shared.reloadAllTimelines()
@@ -704,33 +799,39 @@ final class AppDataStore: ObservableObject {
         silentSaveTask?.cancel()
         silentSaveTask = nil
         activeWorkout = nil
-        save()
+        refreshHasValidActiveSets()
+        saveNow() // Critical: must persist before app backgrounding
     }
 
     func updateActiveWorkout(_ workout: ActiveWorkout) {
         activeWorkout = workout
+        refreshHasValidActiveSets()
         save()
     }
     
     /// Updates active workout without triggering UI stutters.
     /// Disk write is debounced: in-memory update is immediate, save fires 1.5s after the last call.
+    ///
+    /// H3 Fix: `self` is NOT captured strongly during the 1.5s sleep. The Task holds only a
+    /// weak reference. After the sleep completes, `self` is re-captured weakly inside the
+    /// MainActor closure — so AppDataStore can be released freely while the timer is running.
     func silentUpdateActiveWorkout(_ workout: ActiveWorkout) {
         _activeWorkoutStorage = workout   // instant, no objectWillChange
-        
+        refreshHasValidActiveSets()
+
         // Cancel existing task to extend the debounce timer
         silentSaveTask?.cancel()
-        
+
         silentSaveTask = Task { [weak self] in
-            guard let self else { return }
+            // Do NOT guard-let self here — that would extend its lifetime for 1.5 s.
             try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s debounce
             guard !Task.isCancelled else { return }
-            
-            // Perform the save on the MainActor (AppDataStore is @MainActor, but good to be explicit)
-            await MainActor.run {
-                if !Task.isCancelled {
-                    self.save()
-                    self.silentSaveTask = nil // Clear task once done
-                }
+
+            // Re-acquire self weakly only when the work is ready to execute.
+            await MainActor.run { [weak self] in
+                guard let self, !Task.isCancelled else { return }
+                self.performSave()
+                self.silentSaveTask = nil
             }
         }
     }
@@ -740,7 +841,7 @@ final class AppDataStore: ObservableObject {
         silentSaveTask?.cancel()
         silentSaveTask = nil
         guard var aw = activeWorkout else { return false }
-        
+
         // 1. Validate and sanitize sets
         var validExerciseIds: [UUID] = []
         for exId in aw.exerciseIds {
@@ -755,31 +856,29 @@ final class AppDataStore: ObservableObject {
                 }
             }
         }
-        
+
         aw.exerciseIds = validExerciseIds
-        
+
         // 2. Abort if no valid sets remain
         if validExerciseIds.isEmpty {
             HapticManager.shared.error()
             return false
         }
-        
-        // Update aw to the sanitized version
+
         activeWorkout = aw
-        
+
         let availableExerciseIds = Set(exerciseLibrary.map { $0.id })
         let result = workoutManager.generateSession(from: aw, templates: workoutTemplates, availableExerciseIds: availableExerciseIds)
-        
+
         if let session = result.session {
-            addWorkoutSession(session)
+            workoutSessions.insert(session, at: 0)
             activeWorkout = nil
-            
-            // Warn user if zombie exercises were found
+
             if !result.zombieIds.isEmpty {
                 lastErrorMessage = "Warning: \(result.zombieIds.count) deleted exercise(s) were skipped from this session."
             }
-            
-            save()
+
+            saveNow() // Critical: must reach disk before the app can be backgrounded
             return true
         }
         return false
@@ -845,15 +944,25 @@ final class AppDataStore: ObservableObject {
         historyManager.chartData(for: exerciseId, months: months, in: workoutSessions)
     }
 
-    var hasValidActiveSets: Bool {
-        guard let aw = activeWorkout else { return false }
+    /// Cached flag to avoid per-body recomputation of set validity.
+    @Published private(set) var hasValidActiveSets: Bool = false
+    
+    /// Recalculates cached validity flag. Called from updateActiveWorkout and silentUpdateActiveWorkout.
+    private func refreshHasValidActiveSets() {
+        guard let aw = activeWorkout else {
+            hasValidActiveSets = false
+            return
+        }
         for (_, rows) in aw.rowsByExercise {
             for row in rows {
                 let reps = Int(row.reps) ?? Int(Double(row.reps.replacingOccurrences(of: ",", with: ".")) ?? 0)
-                if reps > 0 { return true }
+                if reps > 0 {
+                    hasValidActiveSets = true
+                    return
+                }
             }
         }
-        return false
+        hasValidActiveSets = false
     }
 
     // MARK: - Seeding
@@ -966,104 +1075,6 @@ final class AppDataStore: ObservableObject {
         // Mark as seeded so deleted templates stay deleted on future launches
         if !hasSeeded {
             UserDefaults.standard.set(true, forKey: "hasSeededDefaultWorkouts")
-        }
-        
-        return hasChanges
-    }
-    
-    // MARK: - Migrations
-    
-    /// Auto-fills secondary muscles for older exercises.
-    @discardableResult
-    private func migrateSecondaryMuscles() -> Bool {
-        var hasChanges = false
-        
-        for index in exerciseLibrary.indices {
-            if exerciseLibrary[index].secondaryMuscle == nil {
-                if let suggested = SecondaryMuscleMapping.suggestSecondaryMuscle(
-                    exerciseName: exerciseLibrary[index].name,
-                    primaryCategory: exerciseLibrary[index].category
-                ) {
-                    exerciseLibrary[index].secondaryMuscle = suggested
-                    hasChanges = true
-                }
-            }
-        }
-        
-        return hasChanges
-    }
-    
-    /// Auto-fills setup times for older exercises.
-    @discardableResult
-    private func migrateSetupTimes() -> Bool {
-        var hasChanges = false
-        var counts: [SetupTime: Int] = [.fast: 0, .medium: 0, .slow: 0]
-        
-        for index in exerciseLibrary.indices {
-            let suggested = SetupTimeMapping.suggestSetupTime(exerciseName: exerciseLibrary[index].name)
-            if exerciseLibrary[index].setupTime != suggested {
-                exerciseLibrary[index].setupTime = suggested
-                counts[suggested, default: 0] += 1
-                hasChanges = true
-            }
-        }
-        
-        return hasChanges
-    }
-    
-    /// Converts 'Arms' category to Biceps/Triceps.
-    @discardableResult
-    private func migrateArmsToBicepsTriceps() -> Bool {
-        var hasChanges = false
-        var counts: [String: Int] = ["Biceps": 0, "Triceps": 0]
-        
-        for index in exerciseLibrary.indices {
-            if exerciseLibrary[index].category == "Arms" {
-                let name = exerciseLibrary[index].name.lowercased()
-                let newCategory: String
-                
-                if name.contains("curl") || name.contains("bicep") {
-                    newCategory = "Biceps"
-                } else if name.contains("extension") || name.contains("tricep") || name.contains("skull") || name.contains("dip") || name.contains("pushdown") || name.contains("press") {
-                    newCategory = "Triceps"
-                } else {
-                    newCategory = "Triceps"
-                }
-                
-                exerciseLibrary[index].category = newCategory
-                counts[newCategory, default: 0] += 1
-                hasChanges = true
-            }
-        }
-        
-        return hasChanges
-    }
-    
-    /// Converts 'Legs' category to specific leg muscles.
-    @discardableResult
-    private func migrateLegsToGranularCategories() -> Bool {
-        var hasChanges = false
-        var counts: [String: Int] = ["Quads": 0, "Hamstrings": 0, "Glutes": 0, "Calves": 0]
-        
-        for index in exerciseLibrary.indices {
-            if exerciseLibrary[index].category == "Legs" {
-                let name = exerciseLibrary[index].name.lowercased()
-                let newCategory: String
-                
-                if name.contains("calf") || name.contains("calves") {
-                    newCategory = "Calves"
-                } else if name.contains("curl") || name.contains("romanian") || name.contains("stiff") || name.contains("rdl") {
-                    newCategory = "Hamstrings"
-                } else if name.contains("glute") || name.contains("hip thrust") || name.contains("bridge") {
-                    newCategory = "Glutes"
-                } else {
-                    newCategory = "Quads"
-                }
-                
-                exerciseLibrary[index].category = newCategory
-                counts[newCategory, default: 0] += 1
-                hasChanges = true
-            }
         }
         
         return hasChanges

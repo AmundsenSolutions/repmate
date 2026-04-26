@@ -22,6 +22,10 @@ struct ActiveWorkout: Identifiable, Codable, Equatable {
     var note: String? // Session note copied from template
     var targets: [UUID: TemplateTarget]? = nil // Targets copied from template
 
+    /// Sentinel templateId used by startEmpty() to represent an ad-hoc workout
+    /// that has no backing template. Guaranteed to never match a real template UUID.
+    static let emptyTemplateID = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+
     static func start(from template: WorkoutTemplate) -> ActiveWorkout {
         // Start with 1 empty row per exercise
         var dict: [UUID: [ActiveSetRow]] = [:]
@@ -57,7 +61,7 @@ struct ActiveWorkout: Identifiable, Codable, Equatable {
     static func startEmpty() -> ActiveWorkout {
         return ActiveWorkout(
             id: UUID(),
-            templateId: UUID(), // Random ID as it's not based on a template
+            templateId: emptyTemplateID, // H4 Fix: sentinel, never matches a real template
             startedAt: Date(),
             exerciseIds: [],
             rowsByExercise: [:],

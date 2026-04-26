@@ -84,6 +84,7 @@ struct AppSettings: Codable {
         case optProteinReminderEnabled
         case optProteinReminderTime
         case statsOrder
+        case migrationVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -109,6 +110,7 @@ struct AppSettings: Codable {
         self.optProteinReminderTime = try? container.decodeIfPresent(Date.self, forKey: .optProteinReminderTime) ?? nil
         
         self.statsOrder = try? container.decodeIfPresent([StatCardType].self, forKey: .statsOrder) ?? nil
+        self.migrationVersion = try? container.decodeIfPresent(Int.self, forKey: .migrationVersion) ?? nil
     }
 
     // Default initializer for manual creation (e.g., .default)
@@ -126,7 +128,8 @@ struct AppSettings: Codable {
          optWorkoutReminderDays: [Int]? = nil,
          optProteinReminderEnabled: Bool? = nil,
          optProteinReminderTime: Date? = nil,
-         statsOrder: [StatCardType]? = nil) {
+         statsOrder: [StatCardType]? = nil,
+         migrationVersion: Int? = nil) {
         self.dailyProteinTarget = dailyProteinTarget
         self.defaultRestTime = defaultRestTime
         self.optShowRIR = optShowRIR
@@ -142,6 +145,7 @@ struct AppSettings: Codable {
         self.optProteinReminderEnabled = optProteinReminderEnabled
         self.optProteinReminderTime = optProteinReminderTime
         self.statsOrder = statsOrder
+        self.migrationVersion = migrationVersion
     }
 
     var restTime: Int {
@@ -233,6 +237,8 @@ struct AppSettings: Codable {
     var activeStatsOrder: [StatCardType] {
         statsOrder ?? StatCardType.allCases
     }
+
+    var migrationVersion: Int?
 
     /// Fallback settings for first launch.
     static let `default` = AppSettings(

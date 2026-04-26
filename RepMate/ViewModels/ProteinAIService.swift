@@ -5,6 +5,34 @@ struct ProteinResponse: Codable {
     let food_item: String
     let protein_grams: Int
     let description: String
+    
+    enum CodingKeys: String, CodingKey {
+        case food_item, protein_grams, description
+    }
+    
+    init(food_item: String, protein_grams: Int, description: String) {
+        self.food_item = food_item
+        self.protein_grams = protein_grams
+        self.description = description
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.food_item = (try? container.decode(String.self, forKey: .food_item)) ?? "Unknown food"
+        self.description = (try? container.decode(String.self, forKey: .description)) ?? ""
+        
+        // Handle protein_grams as either Int or String from backend
+        if let grams = try? container.decode(Int.self, forKey: .protein_grams) {
+            self.protein_grams = grams
+        } else if let gramsStr = try? container.decode(String.self, forKey: .protein_grams),
+                  let grams = Int(gramsStr) {
+            self.protein_grams = grams
+        } else if let gramsDouble = try? container.decode(Double.self, forKey: .protein_grams) {
+            self.protein_grams = Int(gramsDouble)
+        } else {
+            self.protein_grams = 0
+        }
+    }
 }
 
 struct AIErrorResponse: Codable {
@@ -52,7 +80,7 @@ class ProteinAIService {
     /// Sends either an image, free-text, or both to the Lambda endpoint.
     /// At least one of `image` or `text` must be non-nil.
     func analyzeInput(image: UIImage? = nil, text: String? = nil, isPro: Bool) async throws -> ProteinResponse {
-        guard image != nil || (text != nil && !text!.trimmingCharacters(in: .whitespaces).isEmpty) else {
+        guard image != nil || !(text?.trimmingCharacters(in: .whitespaces).isEmpty ?? true) else {
             throw AIError.noInput
         }
 
@@ -62,7 +90,7 @@ class ProteinAIService {
 
         // Build JSON body
         var bodyDict: [String: Any] = [
-            "userId": UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString,
+            "userId": KeychainManager.shared.getClientUUID(),
             "isPro": isPro
         ]
 
