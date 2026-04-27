@@ -259,6 +259,11 @@ struct ActiveWorkoutView: View {
                 triggerCelebration(exercise: details.0, weight: details.1)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StartAutoRestTimer"))) { notification in
+            if let duration = notification.object as? Int {
+                vm.startRestTimer(templateName: template?.name, exerciseLibrary: store.exerciseLibrary, customDuration: duration)
+            }
+        }
         // Menu Dialogs
         .alert("Save as Template", isPresented: $vm.showSaveTemplateAlert) {
             TextField("Template Name", text: $vm.newTemplateName)

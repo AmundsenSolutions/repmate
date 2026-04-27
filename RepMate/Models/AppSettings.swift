@@ -72,6 +72,7 @@ struct AppSettings: Codable {
         case dailyProteinTarget
         case defaultRestTime
         case optShowRIR
+        case optAutoTimerEnabled
         case optExperienceLevel
         case optEquipmentAccess
         case targetMinReps
@@ -97,6 +98,7 @@ struct AppSettings: Codable {
         // Optional/New fields - use decodeIfPresent and wrap in try? for total safety
         self.defaultRestTime = try? container.decodeIfPresent(Int.self, forKey: .defaultRestTime) ?? nil
         self.optShowRIR = try? container.decodeIfPresent(Bool.self, forKey: .optShowRIR) ?? nil
+        self.optAutoTimerEnabled = try? container.decodeIfPresent(Bool.self, forKey: .optAutoTimerEnabled) ?? nil
         self.optExperienceLevel = try? container.decodeIfPresent(ExperienceLevel.self, forKey: .optExperienceLevel) ?? nil
         self.optEquipmentAccess = try? container.decodeIfPresent(EquipmentAccess.self, forKey: .optEquipmentAccess) ?? nil
         self.targetMinReps = try? container.decodeIfPresent(Int.self, forKey: .targetMinReps) ?? nil
@@ -117,6 +119,7 @@ struct AppSettings: Codable {
     init(dailyProteinTarget: Int,
          defaultRestTime: Int? = nil,
          optShowRIR: Bool? = nil,
+         optAutoTimerEnabled: Bool? = nil,
          optExperienceLevel: ExperienceLevel? = nil,
          optEquipmentAccess: EquipmentAccess? = nil,
          targetMinReps: Int? = nil,
@@ -133,6 +136,7 @@ struct AppSettings: Codable {
         self.dailyProteinTarget = dailyProteinTarget
         self.defaultRestTime = defaultRestTime
         self.optShowRIR = optShowRIR
+        self.optAutoTimerEnabled = optAutoTimerEnabled
         self.optExperienceLevel = optExperienceLevel
         self.optEquipmentAccess = optEquipmentAccess
         self.targetMinReps = targetMinReps
@@ -155,6 +159,7 @@ struct AppSettings: Codable {
     
     // Feature Toggles
     var optShowRIR: Bool?
+    var optAutoTimerEnabled: Bool?
 
     // AI Coach Profile
     var optExperienceLevel: ExperienceLevel?
@@ -163,6 +168,11 @@ struct AppSettings: Codable {
     var showRIR: Bool {
         get { optShowRIR ?? false }
         set { optShowRIR = newValue }
+    }
+
+    var autoTimerEnabled: Bool {
+        get { optAutoTimerEnabled ?? false }
+        set { optAutoTimerEnabled = newValue }
     }
 
     var experienceLevel: ExperienceLevel {
@@ -245,6 +255,7 @@ struct AppSettings: Codable {
         dailyProteinTarget: 150,
         defaultRestTime: 90,
         optShowRIR: false,
+        optAutoTimerEnabled: false,
         optExperienceLevel: .beginner,
         optEquipmentAccess: .fullGym,
         targetMinReps: 4,

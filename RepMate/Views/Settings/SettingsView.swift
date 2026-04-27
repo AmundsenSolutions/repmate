@@ -238,6 +238,40 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.leading, 44) // Align with title text
+            .padding(.vertical, 8)
+            
+            divider
+            
+            // Auto Rest Timer Toggle
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(isOn: Binding(
+                    get: { store.settings.autoTimerEnabled },
+                    set: { newValue in
+                        store.settings.autoTimerEnabled = newValue
+                        store.saveSettings()
+                        HapticManager.shared.lightImpact()
+                    }
+                )) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "timer.circle.fill")
+                                .foregroundColor(themeManager.palette.accent)
+                                .font(.system(size: 16))
+                        }
+                        Text("Auto-start hviletimer")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                }
+                .tint(themeManager.palette.accent)
+                
+                Text("Starter timeren automatisk når et sett markeres som fullført.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 44)
             }
             .padding(.vertical, 8)
         }

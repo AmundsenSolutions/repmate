@@ -87,11 +87,11 @@ final class ActiveWorkoutViewModel: ObservableObject {
             }
     }
 
-    func startRestTimer(templateName: String?, exerciseLibrary: [Exercise]) {
+    func startRestTimer(templateName: String?, exerciseLibrary: [Exercise], customDuration: Int? = nil) {
         guard let store, let themeManager else { return }
         stopTimer()
 
-        let duration = store.settings.restTime
+        let duration = customDuration ?? store.settings.restTime
         initialTimerDuration = duration
         timeRemaining = duration
         isTimerActive = true

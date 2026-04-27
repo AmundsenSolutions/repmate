@@ -427,6 +427,22 @@ struct ActiveExerciseListView: View {
                      } else {
                          HapticManager.shared.success()
                      }
+                     
+                     // Auto Rest Timer
+                     if store.settings.autoTimerEnabled {
+                         let isLastExercise = aw.exerciseIds.last == exerciseId
+                         let isLastSet = isLastExercise && index == rows.count - 1
+                         
+                         if !isLastSet {
+                             let defaultRest = store.settings.restTime
+                             let template = store.workoutTemplates.first(where: { $0.id == aw.templateId })
+                             let exerciseRest = template?.targets?[exerciseId]?.rest ?? defaultRest
+                             let timeToUse = exerciseRest > 0 ? exerciseRest : defaultRest
+                             
+                             NotificationCenter.default.post(name: NSNotification.Name("StartAutoRestTimer"), object: timeToUse)
+                         }
+                     }
+                     
                      // Auto-jump to next weight field!
                      if let nextField = findNextWeightField(after: rowId) {
                          DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -537,6 +553,27 @@ struct ActiveExerciseListView: View {
             aw.rowsByExercise[exerciseId] = rows
             aw.isDirty = true
             store.updateActiveWorkout(aw)
+            
+            if prCache[rowId] == true {
+                HapticManager.shared.heavyImpact()
+            } else {
+                HapticManager.shared.success()
+            }
+            
+            // Auto Rest Timer
+            if store.settings.autoTimerEnabled {
+                let isLastExercise = aw.exerciseIds.last == exerciseId
+                let isLastSet = isLastExercise && index == rows.count - 1
+                
+                if !isLastSet {
+                    let defaultRest = store.settings.restTime
+                    let template = store.workoutTemplates.first(where: { $0.id == aw.templateId })
+                    let exerciseRest = template?.targets?[exerciseId]?.rest ?? defaultRest
+                    let timeToUse = exerciseRest > 0 ? exerciseRest : defaultRest
+                    
+                    NotificationCenter.default.post(name: NSNotification.Name("StartAutoRestTimer"), object: timeToUse)
+                }
+            }
         } else if !shouldBeComplete && row.isCompleted {
             rows[index].isCompleted = false
             aw.rowsByExercise[exerciseId] = rows
