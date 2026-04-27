@@ -238,6 +238,7 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.leading, 44) // Align with title text
+            }
             .padding(.vertical, 8)
             
             divider
