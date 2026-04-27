@@ -262,14 +262,14 @@ struct SettingsView: View {
                                 .foregroundColor(themeManager.palette.accent)
                                 .font(.system(size: 16))
                         }
-                        Text("Auto-start hviletimer")
+                        Text("Auto-start Rest Timer")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.white)
                     }
                 }
                 .tint(themeManager.palette.accent)
                 
-                Text("Starter timeren automatisk når et sett markeres som fullført.")
+                Text("Automatically starts the timer when a set is marked as completed.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.leading, 44)
