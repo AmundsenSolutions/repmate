@@ -319,9 +319,11 @@ final class AppDataStore: ObservableObject {
     }
 
     /// Container for encoding/decoding the persisted state.
+    /// `storedSettings` is Optional so legacy data files that lack the key
+    /// don't crash the full-struct decode path.
     private struct PersistedData: Codable {
         var proteinEntries: [ProteinEntry]
-        var storedSettings: AppSettings
+        var storedSettings: AppSettings?   // Optional: old users may not have this key
         var workoutTemplates: [WorkoutTemplate]
         var workoutSessions: [WorkoutSession]
         var exerciseLibrary: [Exercise]
@@ -384,11 +386,25 @@ final class AppDataStore: ObservableObject {
                 // We use a dictionary-based approach to pull out pieces individually.
                 let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
                 
-                // Decode components individually
+                // Decode components individually.
+                // IMPORTANT: NSJSONSerialization.data(withJSONObject:) requires a
+                // Dictionary or Array as the top-level object. Raw scalars (String,
+                // Int, Bool — e.g. enum rawValues like GhostDataSource) will crash.
+                // We wrap scalars in an array and decode element [0] instead.
                 func decodePiece<T: Decodable>(_ type: T.Type, key: String) -> T? {
-                    guard let pieceData = try? JSONSerialization.data(withJSONObject: json[key] ?? [:]) else { return nil }
+                    guard let rawValue = json[key] else { return nil }
                     do {
-                        return try decoder.decode(T.self, from: pieceData)
+                        let pieceData: Data
+                        if JSONSerialization.isValidJSONObject(rawValue) {
+                            // Value is already a Dictionary or Array — safe to serialize directly
+                            pieceData = try JSONSerialization.data(withJSONObject: rawValue)
+                            return try decoder.decode(T.self, from: pieceData)
+                        } else {
+                            // Scalar value (String, Number, Bool) — wrap in array to make valid JSON
+                            pieceData = try JSONSerialization.data(withJSONObject: [rawValue])
+                            let arr = try decoder.decode([T].self, from: pieceData)
+                            return arr.first
+                        }
                     } catch {
                         print("Decoding error (Piece '\(key)'): \(error)")
                         return nil
@@ -396,7 +412,13 @@ final class AppDataStore: ObservableObject {
                 }
                 
                 func decodeArrayPiece<T: Decodable>(_ type: [T].Type, key: String) -> [T]? {
-                    guard let pieceData = try? JSONSerialization.data(withJSONObject: json[key] ?? []) else { return nil }
+                    guard let rawValue = json[key] else { return nil }
+                    // Ensure we have a valid JSON object (must be Array for this path)
+                    guard JSONSerialization.isValidJSONObject(rawValue) else {
+                        print("Decoding error (ArrayPiece '\(key)'): value is not an Array")
+                        return nil
+                    }
+                    guard let pieceData = try? JSONSerialization.data(withJSONObject: rawValue) else { return nil }
                     // First try decoding the full array; if that fails, use SafeDecodable to skip corrupt elements
                     if let fullArray = try? decoder.decode([T].self, from: pieceData) {
                         return fullArray
@@ -464,7 +486,7 @@ final class AppDataStore: ObservableObject {
 
     private func applyDecodedData(_ decoded: PersistedData) {
         self.proteinEntries = decoded.proteinEntries
-        self.settings = decoded.storedSettings
+        self.settings = decoded.storedSettings ?? .default
         self.workoutTemplates = decoded.workoutTemplates
         self.workoutSessions = decoded.workoutSessions.sorted { $0.date > $1.date }
         self.exerciseLibrary = decoded.exerciseLibrary
