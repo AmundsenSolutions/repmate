@@ -138,13 +138,6 @@ struct SetRowView: View {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     showPRGlow = true
                 }
-                
-                // Notify parent view for celebration
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("NewPRDetected"),
-                    object: (exerciseName, Double(weight.replacingOccurrences(of: ",", with: ".")) ?? 0)
-                )
-
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     withAnimation(.easeOut(duration: 0.5)) {
                         showPRGlow = false
