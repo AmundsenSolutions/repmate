@@ -3,13 +3,18 @@ import Charts
 
 struct StrengthStatsSection: View {
     @EnvironmentObject var store: AppDataStore
+    @EnvironmentObject var weightStore: WeightStore // For Correlation Engine
     @EnvironmentObject var themeManager: ThemeManager // Theme reactivity
     @EnvironmentObject var storeManager: StoreManager
     let days: Int
     @Binding var showPaywall: Bool
     
-    @State private var selectedExerciseId: UUID?
+    @State private var selectedExerciseId: UUID? // nil = General Volume / All Exercises
     @State private var showingExercisePicker = false
+    
+    private var isGeneralVolume: Bool {
+        selectedExerciseId == nil
+    }
     
 
     
@@ -18,19 +23,28 @@ struct StrengthStatsSection: View {
         return store.exerciseLibrary.first(where: { $0.id == id })
     }
     
-    private var currentPR: WorkoutManager.PersonalRecord? {
-        guard let id = selectedExerciseId else { return nil }
-        return store.workoutManager.currentPR(sessions: store.workoutSessions, exerciseId: id)
+    private var strengthProgression: [(date: Date, value: Double)] {
+        if let id = selectedExerciseId {
+            return store.workoutManager.prProgression(sessions: store.workoutSessions, exerciseId: id, days: days)
+        } else {
+            return store.workoutManager.totalVolumeProgression(sessions: store.workoutSessions, days: days)
+        }
     }
     
-    private var prProgression: [(date: Date, est1RM: Double)] {
-        guard let id = selectedExerciseId else { return [] }
-        return store.workoutManager.prProgression(sessions: store.workoutSessions, exerciseId: id, days: days)
+    private var weightTrend: [WeightStore.TrendPoint] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let cutoff = calendar.date(byAdding: .day, value: -days, to: today) else { return weightStore.trendLine() }
+        return weightStore.trendLine().filter { $0.date >= cutoff }
     }
     
     private var topLift: Double {
-        let records = store.workoutManager.maxWeightProgression(sessions: store.workoutSessions, exerciseId: selectedExerciseId ?? UUID(), days: days)
-        return records.map { $0.maxWeight }.max() ?? 0
+        if let id = selectedExerciseId {
+            let records = store.workoutManager.maxWeightProgression(sessions: store.workoutSessions, exerciseId: id, days: days)
+            return records.map { $0.maxWeight }.max() ?? 0
+        } else {
+            return 0
+        }
     }
     
     private var newPRsCount: Int {
@@ -38,12 +52,27 @@ struct StrengthStatsSection: View {
         let today = calendar.startOfDay(for: Date())
         guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return 0 }
         
-        let allPRs = store.workoutManager.personalRecords(sessions: store.workoutSessions, exerciseId: selectedExerciseId ?? UUID())
-        return allPRs.filter { $0.date >= startDate }.count
+        if let id = selectedExerciseId {
+            let allPRs = store.workoutManager.personalRecords(sessions: store.workoutSessions, exerciseId: id)
+            return allPRs.filter { $0.date >= startDate }.count
+        } else {
+            // Count total PRs across all exercises in the period
+            var total = 0
+            for ex in store.exerciseLibrary {
+                let prs = store.workoutManager.personalRecords(sessions: store.workoutSessions, exerciseId: ex.id)
+                total += prs.filter { $0.date >= startDate }.count
+            }
+            return total
+        }
     }
     
     private var totalVolume: Double {
-        store.workoutManager.calculateTotalVolume(sessions: store.workoutSessions, days: days)
+        if let id = selectedExerciseId {
+            let progression = store.workoutManager.volumeProgression(sessions: store.workoutSessions, exerciseId: id, days: days)
+            return progression.reduce(0) { $0 + $1.volume }
+        } else {
+            return store.workoutManager.calculateTotalVolume(sessions: store.workoutSessions, days: days)
+        }
     }
     
     private var totalVolumeFormatted: String {
@@ -55,7 +84,7 @@ struct StrengthStatsSection: View {
     }
     
     var body: some View {
-        GlassSection(title: "Strength & PR") {
+        GlassSection(title: isGeneralVolume ? "General Progress" : "Strength & PR") {
             VStack(alignment: .leading, spacing: 16) {
                 // Exercise Selector
                 Button {
@@ -72,9 +101,14 @@ struct StrengthStatsSection: View {
                                     .foregroundColor(.white)
                             }
                         } else {
-                            Text("Select Exercise")
-                                .font(.headline)
-                                .foregroundColor(.white)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Mode")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Text("All Exercises / General Volume")
+                                    .font(.headline)
+                                    .foregroundColor(themeManager.palette.accent)
+                            }
                         }
                         
                         Spacer()
@@ -89,15 +123,24 @@ struct StrengthStatsSection: View {
                 
                 // PR Card Row
                 HStack(spacing: 8) {
-                    StatCard(
-                        title: "Top Lift (\(days)d)",
-                        value: topLift > 0 ? String(format: "%.1f kg", topLift) : "—",
-                        icon: "arrow.up.right.circle.fill",
-                        color: themeManager.palette.accent
-                    )
+                    if !isGeneralVolume {
+                        StatCard(
+                            title: "Top Lift (\(days)d)",
+                            value: topLift > 0 ? String(format: "%.1f kg", topLift) : "—",
+                            icon: "arrow.up.right.circle.fill",
+                            color: themeManager.palette.accent
+                        )
+                    } else {
+                        StatCard(
+                            title: "Total Workouts",
+                            value: "\(store.workoutManager.getWorkoutCount(sessions: store.workoutSessions, days: days))",
+                            icon: "figure.strengthtraining.traditional",
+                            color: themeManager.palette.accent
+                        )
+                    }
                     
                     StatCard(
-                        title: "New PRs",
+                        title: isGeneralVolume ? "Total PRs" : "New PRs",
                         value: "\(newPRsCount)",
                         icon: "medal.fill",
                         color: .yellow
@@ -111,10 +154,20 @@ struct StrengthStatsSection: View {
                     )
                 }
                 
-                // 1RM Trend Chart
+                // Correlation Chart
                 if storeManager.isPro {
-                    if !prProgression.isEmpty {
-                        buildLineChart(title: "Est. 1RM Trend (kg)", data: prProgression.map { ($0.date, $0.est1RM) }, yLabel: "Est. 1RM")
+                    if !strengthProgression.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            buildCorrelationChart(
+                                title: isGeneralVolume ? "Volume Correlation (kg)" : "Strength Correlation (kg)",
+                                strengthData: strengthProgression,
+                                weightData: weightTrend,
+                                yLabel: isGeneralVolume ? "Volume" : "Est. 1RM"
+                            )
+                            
+                            // Legend
+                            chartLegend
+                        }
                     } else {
                         emptyChartState
                     }
@@ -128,9 +181,37 @@ struct StrengthStatsSection: View {
         }
         .sheet(isPresented: $showingExercisePicker) {
             NavigationStack {
-                ExerciseLibraryView(onSelect: { exercise in
-                    selectedExerciseId = exercise.id
-                }, isForStats: true)
+                VStack(spacing: 0) {
+                    // Quick Action for General Volume
+                    Button {
+                        selectedExerciseId = nil
+                        showingExercisePicker = false
+                        HapticManager.shared.selection()
+                    } label: {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundColor(themeManager.palette.accent)
+                            Text("All Exercises / General Volume")
+                                .fontWeight(.semibold)
+                            Spacer()
+                            if isGeneralVolume {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(themeManager.palette.accent)
+                            }
+                        }
+                        .padding()
+                        .background(Theme.Colors.cardBackground.opacity(0.5))
+                        .cornerRadius(12)
+                        .padding()
+                    }
+                    
+                    ExerciseLibraryView(onSelect: { exercise in
+                        selectedExerciseId = exercise.id
+                        showingExercisePicker = false
+                    }, isForStats: true)
+                }
+                .navigationTitle("Select Exercise")
+                .navigationBarTitleDisplayMode(.inline)
             }
         }
         .onAppear {
@@ -185,43 +266,67 @@ struct StrengthStatsSection: View {
     
 
     
+    // MARK: - Correlation Engine
+    
     @ViewBuilder
-    private func buildLineChart(title: String, data: [(Date, Double)], yLabel: String) -> some View {
+    private func buildCorrelationChart(
+        title: String,
+        strengthData: [(Date, Double)],
+        weightData: [WeightStore.TrendPoint],
+        yLabel: String
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.subheadline)
                 .foregroundColor(.gray)
             
-            Chart(data, id: \.0) { item in
-                LineMark(
-                    x: .value("Date", item.0, unit: .day),
-                    y: .value(yLabel, item.1)
-                )
-                .symbol(Circle())
-                .symbolSize(30)
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(themeManager.palette.accent)
-                .lineStyle(StrokeStyle(lineWidth: 2))
-                
-                AreaMark(
-                    x: .value("Date", item.0, unit: .day),
-                    yStart: .value("Min", 0),
-                    yEnd: .value(yLabel, item.1)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [themeManager.palette.accent.opacity(0.3), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
+            Chart {
+                // 1. Strength / Volume Data (Primary Axis - Leading)
+                ForEach(strengthData, id: \.0) { item in
+                    LineMark(
+                        x: .value("Date", item.0, unit: .day),
+                        y: .value(yLabel, item.1)
                     )
-                )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(themeManager.palette.accent)
+                    .lineStyle(StrokeStyle(lineWidth: 3))
+                    
+                    AreaMark(
+                        x: .value("Date", item.0, unit: .day),
+                        yStart: .value("Min", 0),
+                        yEnd: .value(yLabel, item.1)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [themeManager.palette.accent.opacity(0.2), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                }
+                
+                // 2. Bodyweight Trend (Secondary Axis - Trailing)
+                ForEach(weightData) { point in
+                    LineMark(
+                        x: .value("Date", point.date, unit: .day),
+                        y: .value("Bodyweight", point.value)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(Theme.Colors.prGold)
+                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                }
             }
+            // Scales
             .chartYScale(domain: .automatic(includesZero: false))
             .chartYAxis {
                 AxisMarks(position: .leading) { _ in
                     AxisGridLine().foregroundStyle(Color.gray.opacity(0.15))
                     AxisValueLabel().foregroundStyle(Color.gray)
+                }
+                // Trailing axis for bodyweight
+                AxisMarks(position: .trailing, values: .automatic) { _ in
+                    AxisValueLabel().foregroundStyle(Theme.Colors.prGold.opacity(0.8))
                 }
             }
             .chartXAxis {
@@ -229,11 +334,32 @@ struct StrengthStatsSection: View {
                     AxisValueLabel(format: .dateTime.month().day()).foregroundStyle(Color.gray)
                 }
             }
-            .frame(height: 180)
+            .frame(height: 200)
             .padding(12)
             .background(Theme.Colors.cardBackground)
             .cornerRadius(Theme.Spacing.compact)
         }
+    }
+    
+    private var chartLegend: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 4) {
+                Circle().fill(themeManager.palette.accent).frame(width: 8, height: 8)
+                Text(isGeneralVolume ? "Total Volume" : "Est. 1RM")
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            
+            HStack(spacing: 4) {
+                Capsule()
+                    .stroke(Theme.Colors.prGold, style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                    .frame(width: 12, height: 4)
+                Text("Bodyweight Trend (SMA)")
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.horizontal, 4)
     }
     
 

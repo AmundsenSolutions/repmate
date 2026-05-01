@@ -18,12 +18,19 @@ enum StatsTimeFilter: String, CaseIterable, Identifiable {
     }
 }
 
+/// Top-level tab for the Stats screen (Strength vs Body).
+private enum StatsTab: String, CaseIterable {
+    case strength = "Strength"
+    case body = "Body"
+}
+
 struct StatsView: View {
     @EnvironmentObject var store: AppDataStore
     @EnvironmentObject var themeManager: ThemeManager // Use environment for reactivity
     @EnvironmentObject var storeManager: StoreManager
     
     @State private var selectedFilter: StatsTimeFilter = .month
+    @State private var selectedTab: StatsTab = .strength
     @State private var showPaywall = false
     @State private var showingEditDashboard = false
     
@@ -38,6 +45,9 @@ struct StatsView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
+                        // MARK: - Tab Picker (Strength / Body)
+                        tabPicker
+                        
                         // Time Filter Chips
                         HStack(spacing: Theme.Spacing.tight) {
                             ForEach(StatsTimeFilter.allCases) { filter in
@@ -61,28 +71,12 @@ struct StatsView: View {
                         }
                         .padding(.horizontal)
                         
-                        // Dynamic Section Order
-                        ForEach(store.settings.activeStatsOrder) { section in
-                            switch section {
-                            case .overview:
-                                StatsOverviewSection(days: selectedFilter.days)
-                            case .strength:
-                                StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
-                            case .activity:
-                                ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
-                            case .nutrition:
-                                NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
-                            case .muscleMap:
-                                MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
-                            case .insights:
-                                ProLockedOverlay(isPro: storeManager.isPro, paywallAction: { showPaywall = true }) {
-                                    SmartInsightsRow(days: selectedFilter.days)
-                                }
-                            case .oneRM:
-                                OneRMCalculatorCard()
-                            case .allTimePRs:
-                                AllTimePRSection()
-                            }
+                        // MARK: - Tab Content
+                        switch selectedTab {
+                        case .strength:
+                            strengthContent
+                        case .body:
+                            BodyWeightSection(days: selectedFilter.days)
                         }
                         
                         // Bottom Spacing
@@ -90,6 +84,7 @@ struct StatsView: View {
                     }
                     .padding(Theme.Spacing.standard)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: store.settings.activeStatsOrder)
+                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .toolbar {
@@ -121,6 +116,80 @@ struct StatsView: View {
             .sheet(isPresented: $showingEditDashboard) {
                 EditDashboardView()
                     .environmentObject(store)
+            }
+        }
+    }
+    
+    // MARK: - Tab Picker (Cyber-Glass Style)
+    
+    @ViewBuilder
+    private var tabPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(StatsTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        selectedTab = tab
+                    }
+                    HapticManager.shared.selection()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: tab == .strength ? "dumbbell.fill" : "scalemass.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(tab.rawValue)
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        Group {
+                            if selectedTab == tab {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(themeManager.palette.accent.opacity(0.2))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(themeManager.palette.accent.opacity(0.5), lineWidth: 1)
+                                    )
+                            }
+                        }
+                    )
+                    .foregroundColor(selectedTab == tab ? themeManager.palette.accent : .gray)
+                }
+            }
+        }
+        .padding(4)
+        .background(Theme.Colors.cardBackground)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Strength Content (Original Dashboard)
+    
+    @ViewBuilder
+    private var strengthContent: some View {
+        // Dynamic Section Order
+        ForEach(store.settings.activeStatsOrder) { section in
+            switch section {
+            case .overview:
+                StatsOverviewSection(days: selectedFilter.days)
+            case .strength:
+                StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
+            case .activity:
+                ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
+            case .nutrition:
+                NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
+            case .muscleMap:
+                MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
+            case .insights:
+                ProLockedOverlay(isPro: storeManager.isPro, paywallAction: { showPaywall = true }) {
+                    SmartInsightsRow(days: selectedFilter.days)
+                }
+            case .oneRM:
+                OneRMCalculatorCard()
+            case .allTimePRs:
+                AllTimePRSection()
             }
         }
     }

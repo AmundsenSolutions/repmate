@@ -237,6 +237,34 @@ struct WorkoutManager {
         return dailyVolume.map { (date: $0.key, volume: $0.value) }.sorted { $0.date < $1.date }
     }
     
+    /// Gets combined total volume progression for ALL exercises per day.
+    func totalVolumeProgression(sessions: [WorkoutSession], days: Int) -> [(date: Date, volume: Double)] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return [] }
+        
+        let filteredSessions = sessions.filter { $0.date >= startDate }
+        
+        // Group by day and calculate total volume (Weight * Reps) for all exercises combined
+        var dailyVolume: [Date: Double] = [:]
+        for session in filteredSessions {
+            let day = calendar.startOfDay(for: session.date)
+            
+            var sessionVolume = 0.0
+            for set in session.sets {
+                if let weight = set.weight, weight > 0, set.reps > 0 {
+                    sessionVolume += weight * Double(set.reps)
+                }
+            }
+            
+            if sessionVolume > 0 {
+                dailyVolume[day, default: 0] += sessionVolume
+            }
+        }
+        
+        return dailyVolume.map { (date: $0.key, volume: $0.value) }.sorted { $0.date < $1.date }
+    }
+    
     /// Gets maximum weight lifted per day for charting.
     func maxWeightProgression(sessions: [WorkoutSession], exerciseId: UUID, days: Int) -> [(date: Date, maxWeight: Double)] {
         let calendar = Calendar.current
