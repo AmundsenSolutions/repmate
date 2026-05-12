@@ -22,7 +22,7 @@ struct MuscleMapView: View {
     
     // Recovery Data
     private var recoveryStatus: [String: Int] {
-        store.workoutManager.muscleRecoveryStatus(sessions: store.workoutSessions, exerciseLibrary: store.exerciseLibrary)
+        store.workoutManager.muscleRecoveryStatus(sessions: store.workoutSessions, exerciseLibrary: store.exerciseLibrary, days: days)
     }
     
     private var mostTrained: String {

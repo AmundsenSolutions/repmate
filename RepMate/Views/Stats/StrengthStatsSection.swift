@@ -26,8 +26,10 @@ struct StrengthStatsSection: View {
     private var strengthProgression: [(date: Date, value: Double)] {
         if let id = selectedExerciseId {
             return store.workoutManager.prProgression(sessions: store.workoutSessions, exerciseId: id, days: days)
+                .map { (date: $0.date, value: $0.est1RM) }
         } else {
             return store.workoutManager.totalVolumeProgression(sessions: store.workoutSessions, days: days)
+                .map { (date: $0.date, value: $0.volume) }
         }
     }
     
@@ -154,19 +156,17 @@ struct StrengthStatsSection: View {
                     )
                 }
                 
-                // Correlation Chart
+                // Chart — mode-specific rendering
                 if storeManager.isPro {
                     if !strengthProgression.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            buildCorrelationChart(
-                                title: isGeneralVolume ? "Volume Correlation (kg)" : "Strength Correlation (kg)",
-                                strengthData: strengthProgression,
-                                weightData: weightTrend,
-                                yLabel: isGeneralVolume ? "Volume" : "Est. 1RM"
-                            )
-                            
-                            // Legend
-                            chartLegend
+                            if isGeneralVolume {
+                                buildVolumeChart(volumeData: strengthProgression)
+                            } else {
+                                buildStrengthChart(strengthData: strengthProgression, weightData: weightTrend)
+                                // Legend only in 1RM mode (bodyweight overlay)
+                                chartLegend
+                            }
                         }
                     } else {
                         emptyChartState
@@ -266,37 +266,50 @@ struct StrengthStatsSection: View {
     
 
     
-    // MARK: - Correlation Engine
+    // MARK: - Strength Chart (1RM Mode) — B2, D2
     
     @ViewBuilder
-    private func buildCorrelationChart(
-        title: String,
+    private func buildStrengthChart(
         strengthData: [(Date, Double)],
-        weightData: [WeightStore.TrendPoint],
-        yLabel: String
+        weightData: [WeightStore.TrendPoint]
     ) -> some View {
+        let sortedStrength = strengthData.sorted { $0.0 < $1.0 }
+        let sortedWeight = weightData.sorted { $0.date < $1.date }
+        let strengthMin = sortedStrength.map(\.1).min() ?? 0
+        let yFloor = max(0, strengthMin - 5)
+        
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
+            Text("Strength Progression (Est. 1RM)")
                 .font(.subheadline)
                 .foregroundColor(.gray)
             
             Chart {
-                // 1. Strength / Volume Data (Primary Axis - Leading)
-                ForEach(strengthData, id: \.0) { item in
+                // D2: 1RM data — linear interpolation + PointMark
+                ForEach(sortedStrength, id: \.0) { item in
                     LineMark(
                         x: .value("Date", item.0, unit: .day),
-                        y: .value(yLabel, item.1)
+                        y: .value("Est. 1RM", item.1),
+                        series: .value("Series", "Est. 1RM")
                     )
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.linear)
                     .foregroundStyle(themeManager.palette.accent)
-                    .lineStyle(StrokeStyle(lineWidth: 3))
+                    .lineStyle(StrokeStyle(lineWidth: 2))
                     
+                    PointMark(
+                        x: .value("Date", item.0, unit: .day),
+                        y: .value("Est. 1RM", item.1)
+                    )
+                    .symbol(Circle())
+                    .symbolSize(30)
+                    .foregroundStyle(themeManager.palette.accent)
+                    
+                    // B2: AreaMark with dynamic floor
                     AreaMark(
                         x: .value("Date", item.0, unit: .day),
-                        yStart: .value("Min", 0),
-                        yEnd: .value(yLabel, item.1)
+                        yStart: .value("Min", yFloor),
+                        yEnd: .value("Est. 1RM", item.1)
                     )
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.linear)
                     .foregroundStyle(
                         LinearGradient(
                             colors: [themeManager.palette.accent.opacity(0.2), .clear],
@@ -306,25 +319,24 @@ struct StrengthStatsSection: View {
                     )
                 }
                 
-                // 2. Bodyweight Trend (Secondary Axis - Trailing)
-                ForEach(weightData) { point in
+                // B3: Bodyweight overlay — only in 1RM mode where scales are compatible
+                ForEach(sortedWeight) { point in
                     LineMark(
                         x: .value("Date", point.date, unit: .day),
-                        y: .value("Bodyweight", point.value)
+                        y: .value("Bodyweight", point.value),
+                        series: .value("Series", "Bodyweight")
                     )
                     .interpolationMethod(.catmullRom)
                     .foregroundStyle(Theme.Colors.prGold)
                     .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
                 }
             }
-            // Scales
             .chartYScale(domain: .automatic(includesZero: false))
             .chartYAxis {
                 AxisMarks(position: .leading) { _ in
                     AxisGridLine().foregroundStyle(Color.gray.opacity(0.15))
                     AxisValueLabel().foregroundStyle(Color.gray)
                 }
-                // Trailing axis for bodyweight
                 AxisMarks(position: .trailing, values: .automatic) { _ in
                     AxisValueLabel().foregroundStyle(Theme.Colors.prGold.opacity(0.8))
                 }
@@ -341,11 +353,56 @@ struct StrengthStatsSection: View {
         }
     }
     
+    // MARK: - Volume Chart (General Volume Mode) — D2, B3
+    
+    @ViewBuilder
+    private func buildVolumeChart(
+        volumeData: [(Date, Double)]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Total Volume per Session (kg)")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            Chart {
+                // D2: BarMark for volume — rest days are naturally empty
+                ForEach(volumeData, id: \.0) { item in
+                    BarMark(
+                        x: .value("Date", item.0, unit: .day),
+                        y: .value("Volume", item.1)
+                    )
+                    .foregroundStyle(
+                        themeManager.palette.accent.gradient
+                    )
+                    .cornerRadius(4)
+                }
+            }
+            .chartYScale(domain: .automatic(includesZero: true))
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(Color.gray.opacity(0.15))
+                    AxisValueLabel().foregroundStyle(Color.gray)
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: .automatic) { _ in
+                    AxisValueLabel(format: .dateTime.month().day()).foregroundStyle(Color.gray)
+                }
+            }
+            .frame(height: 200)
+            .padding(12)
+            .background(Theme.Colors.cardBackground)
+            .cornerRadius(Theme.Spacing.compact)
+        }
+    }
+    
+    // MARK: - Chart Legend (1RM mode only)
+    
     private var chartLegend: some View {
         HStack(spacing: 16) {
             HStack(spacing: 4) {
                 Circle().fill(themeManager.palette.accent).frame(width: 8, height: 8)
-                Text(isGeneralVolume ? "Total Volume" : "Est. 1RM")
+                Text("Est. 1RM")
                     .font(.caption2)
                     .foregroundColor(.gray)
             }

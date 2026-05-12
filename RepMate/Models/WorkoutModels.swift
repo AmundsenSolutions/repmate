@@ -100,16 +100,38 @@ extension WorkoutTemplate {
     }
     
     /// Generates template deep-link URL.
+    ///
+    /// **Pipeline:** JSON (compact keys) → zlib compress → URL-safe Base64 → path-based URL.
+    /// Path-based format (`repmate://import/BASE64`) prevents iMessage from truncating
+    /// the link at query-parameter boundaries.
     func shareURL(exercises: [Exercise]) -> URL? {
         let shareable = ShareableTemplate(from: self, exercises: exercises)
-        guard let data = try? JSONEncoder().encode(shareable) else { return nil }
+        guard let jsonData = try? JSONEncoder().encode(shareable) else { return nil }
+        
+        // Compress with zlib for significantly shorter URLs
+        guard let compressed = try? (jsonData as NSData).compressed(using: .zlib) as Data else {
+            // Fallback to uncompressed if compression fails
+            return Self.buildPathURL(from: jsonData)
+        }
+        return Self.buildPathURL(from: compressed)
+    }
+    
+    /// Builds a path-based deep-link URL from raw data.
+    private static func buildPathURL(from data: Data) -> URL? {
         let base64 = data.base64EncodedString()
-        // URL-safe base64 (replace +/ with -_ and remove padding)
         let urlSafe = base64
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
-        return URL(string: "repmate://import?t=\(urlSafe)")
+        // Path-based URL: no query params → iMessage treats entire string as one link
+        return URL(string: "repmate://import/\(urlSafe)")
+    }
+    
+    /// Formatted share message for a polished sharing experience.
+    func shareMessage(exercises: [Exercise]) -> String? {
+        guard let url = shareURL(exercises: exercises) else { return nil }
+        let exerciseCount = exerciseIds.count
+        return "Try this workout on RepMate: \(name) 💪\n\(exerciseCount) exercises\n\n\(url.absoluteString)"
     }
 }
 
@@ -126,39 +148,69 @@ enum GhostDataSource: String, Codable, CaseIterable {
 // MARK: - Shareable Template (for deep-link sharing)
 
 /// Portable workout template model for deep-link sharing.
+///
+/// **Encoding pipeline:** Compact JSON keys → zlib → URL-safe Base64 → path-based URL.
+/// **Key mapping (encode → decode):**
+/// - `n` = name, `c` = category, `s` = sets, `r` = reps
+/// - `i` = rir, `t` = rest (time), `e` = exercises, `o` = note
 struct ShareableTemplate: Codable {
     struct ShareableExercise: Codable {
         var name: String
-        var category: String? // Changed to optional for backwards compatibility
+        var category: String?
         var sets: String?
         var reps: String?
         var rir: String?
+        var rest: Int?
         
+        // Compact keys for minimal URL size
         enum CodingKeys: String, CodingKey {
-            case name, category, sets, reps, rir
+            case name = "n", category = "c", sets = "s", reps = "r", rir = "i", rest = "t"
         }
         
-        init(name: String, category: String? = nil, sets: String? = nil, reps: String? = nil, rir: String? = nil) {
+        // Legacy keys for backward compatibility with old shared links
+        private enum LegacyKeys: String, CodingKey {
+            case name, category, sets, reps, rir, rest
+        }
+        
+        init(name: String, category: String? = nil, sets: String? = nil, reps: String? = nil, rir: String? = nil, rest: Int? = nil) {
             self.name = name
             self.category = category
             self.sets = sets
             self.reps = reps
             self.rir = rir
+            self.rest = rest
         }
         
         init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.name = try container.decode(String.self, forKey: .name)
-            self.category = try container.decodeIfPresent(String.self, forKey: .category)
-            self.reps = try container.decodeIfPresent(String.self, forKey: .reps)
-            self.rir = try container.decodeIfPresent(String.self, forKey: .rir)
-            
-            if let setsString = try? container.decodeIfPresent(String.self, forKey: .sets) {
-                self.sets = setsString
-            } else if let setsInt = try? container.decodeIfPresent(Int.self, forKey: .sets) {
-                self.sets = String(setsInt)
+            // Try compact keys first (new links)
+            if let c = try? decoder.container(keyedBy: CodingKeys.self), c.contains(.name) {
+                self.name = try c.decode(String.self, forKey: .name)
+                self.category = try c.decodeIfPresent(String.self, forKey: .category)
+                self.reps = try c.decodeIfPresent(String.self, forKey: .reps)
+                self.rir = try c.decodeIfPresent(String.self, forKey: .rir)
+                self.rest = try c.decodeIfPresent(Int.self, forKey: .rest)
+                if let s = try? c.decode(String.self, forKey: .sets) {
+                    self.sets = s
+                } else if let si = try? c.decode(Int.self, forKey: .sets) {
+                    self.sets = String(si)
+                } else {
+                    self.sets = nil
+                }
             } else {
-                self.sets = nil
+                // Fall back to legacy keys (old links)
+                let c = try decoder.container(keyedBy: LegacyKeys.self)
+                self.name = try c.decode(String.self, forKey: .name)
+                self.category = try c.decodeIfPresent(String.self, forKey: .category)
+                self.reps = try c.decodeIfPresent(String.self, forKey: .reps)
+                self.rir = try c.decodeIfPresent(String.self, forKey: .rir)
+                self.rest = try c.decodeIfPresent(Int.self, forKey: .rest)
+                if let s = try? c.decode(String.self, forKey: .sets) {
+                    self.sets = s
+                } else if let si = try? c.decode(Int.self, forKey: .sets) {
+                    self.sets = String(si)
+                } else {
+                    self.sets = nil
+                }
             }
         }
         
@@ -169,6 +221,7 @@ struct ShareableTemplate: Codable {
             try container.encodeIfPresent(sets, forKey: .sets)
             try container.encodeIfPresent(reps, forKey: .reps)
             try container.encodeIfPresent(rir, forKey: .rir)
+            try container.encodeIfPresent(rest, forKey: .rest)
         }
     }
     
@@ -176,6 +229,16 @@ struct ShareableTemplate: Codable {
     var category: String?
     var note: String?
     var exercises: [ShareableExercise]
+    
+    // Compact keys for minimal URL size
+    enum CodingKeys: String, CodingKey {
+        case name = "n", category = "c", note = "o", exercises = "e"
+    }
+    
+    // Legacy keys for backward compatibility with old shared links
+    private enum LegacyKeys: String, CodingKey {
+        case name, category, note, exercises
+    }
     
     /// Creates from local template.
     init(from template: WorkoutTemplate, exercises: [Exercise]) {
@@ -190,32 +253,82 @@ struct ShareableTemplate: Codable {
                 category: exercise.category,
                 sets: target?.sets,
                 reps: target?.reps,
-                rir: target?.rir
+                rir: target?.rir,
+                rest: target?.rest
             )
         }
     }
     
+    init(from decoder: Decoder) throws {
+        // Try compact keys first (new links)
+        if let c = try? decoder.container(keyedBy: CodingKeys.self), c.contains(.name) {
+            self.name = try c.decode(String.self, forKey: .name)
+            self.category = try c.decodeIfPresent(String.self, forKey: .category)
+            self.note = try c.decodeIfPresent(String.self, forKey: .note)
+            self.exercises = try c.decode([ShareableExercise].self, forKey: .exercises)
+        } else {
+            // Fall back to legacy keys (old links)
+            let c = try decoder.container(keyedBy: LegacyKeys.self)
+            self.name = try c.decode(String.self, forKey: .name)
+            self.category = try c.decodeIfPresent(String.self, forKey: .category)
+            self.note = try c.decodeIfPresent(String.self, forKey: .note)
+            self.exercises = try c.decode([ShareableExercise].self, forKey: .exercises)
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(category, forKey: .category)
+        try container.encodeIfPresent(note, forKey: .note)
+        try container.encode(exercises, forKey: .exercises)
+    }
+    
+    // MARK: - Deep-Link Decoding (supports both new and legacy formats)
+    
     /// Decodes from deep-link URL.
+    ///
+    /// Supports two URL formats:
+    /// - **New (v2):** `repmate://import/COMPRESSED_BASE64` — path-based, zlib-compressed, compact keys.
+    /// - **Legacy (v1):** `repmate://import?t=BASE64` — query-param, uncompressed, full keys.
     static func fromURL(_ url: URL) -> ShareableTemplate? {
-        guard url.scheme == "repmate",
-              url.host == "import",
-              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let base64 = components.queryItems?.first(where: { $0.name == "t" })?.value
-        else { return nil }
+        guard url.scheme == "repmate", url.host == "import" else { return nil }
+        
+        // 1. Extract Base64 payload from path (new) or query (legacy)
+        let base64: String
+        let pathPayload = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        
+        if !pathPayload.isEmpty {
+            // New path-based format: repmate://import/BASE64
+            base64 = pathPayload
+        } else if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                  let queryValue = components.queryItems?.first(where: { $0.name == "t" })?.value {
+            // Legacy query-param format: repmate://import?t=BASE64
+            base64 = queryValue
+        } else {
+            return nil
+        }
         
         // Security: Prevent malicious payload memory bloat
         guard base64.count < 50_000 else { return nil }
         
-        // Restore standard base64 from URL-safe variant
+        // 2. Restore standard Base64 from URL-safe variant
         var restored = base64
             .replacingOccurrences(of: "-", with: "+")
             .replacingOccurrences(of: "_", with: "/")
-        // Restore padding
         let remainder = restored.count % 4
         if remainder > 0 { restored += String(repeating: "=", count: 4 - remainder) }
         
-        guard let data = Data(base64Encoded: restored) else { return nil }
-        return try? JSONDecoder().decode(ShareableTemplate.self, from: data)
+        guard let rawData = Data(base64Encoded: restored) else { return nil }
+        
+        // 3. Try zlib-decompressed decode first (new v2 format)
+        if let decompressed = try? (rawData as NSData).decompressed(using: .zlib) as Data,
+           let template = try? JSONDecoder().decode(ShareableTemplate.self, from: decompressed) {
+            return template
+        }
+        
+        // 4. Fall back to direct decode (legacy v1 uncompressed format)
+        return try? JSONDecoder().decode(ShareableTemplate.self, from: rawData)
     }
     
     /// Converts to a local WorkoutTemplate, creating missing exercises.
@@ -250,12 +363,14 @@ struct ShareableTemplate: Codable {
             
             exerciseIds.append(exerciseId)
             
-            if let sets = shared.sets {
+            // Create target if ANY field has data (not just sets)
+            let hasTargetData = shared.sets != nil || shared.reps != nil || shared.rir != nil || (shared.rest != nil && shared.rest != 0)
+            if hasTargetData {
                 targets[exerciseId] = TemplateTarget(
-                    sets: sets,
+                    sets: shared.sets ?? "",
                     reps: shared.reps ?? "",
                     rir: shared.rir ?? "",
-                    rest: 0
+                    rest: shared.rest ?? 120
                 )
             }
         }

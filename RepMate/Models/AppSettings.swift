@@ -12,7 +12,6 @@ enum StatCardType: String, CaseIterable, Identifiable, Codable {
     case overview
     case strength
     case activity
-    case nutrition
     case muscleMap
     case insights
     case oneRM
@@ -25,7 +24,6 @@ enum StatCardType: String, CaseIterable, Identifiable, Codable {
         case .overview:   return "Overview"
         case .strength:   return "Strength & PR"
         case .activity:   return "Activity & Habits"
-        case .nutrition:  return "Nutrition"
         case .muscleMap:  return "Muscle Map"
         case .insights:   return "Smart Insights"
         case .oneRM:      return "1RM Calculator"
@@ -38,7 +36,6 @@ enum StatCardType: String, CaseIterable, Identifiable, Codable {
         case .overview:   return "square.grid.2x2"
         case .strength:   return "dumbbell.fill"
         case .activity:   return "flame.fill"
-        case .nutrition:  return "fork.knife"
         case .muscleMap:  return "figure.arms.open"
         case .insights:   return "brain.head.profile"
         case .oneRM:      return "scalemass.fill"
@@ -66,10 +63,12 @@ enum EquipmentAccess: String, CaseIterable, Codable {
 /// Persistent user settings for the app.
 struct AppSettings: Codable {
     var dailyProteinTarget: Int
+    var optDailyCalorieTarget: Int?
     var defaultRestTime: Int? // Optional for backward compatibility with existing JSON
 
     enum CodingKeys: String, CodingKey {
         case dailyProteinTarget
+        case optDailyCalorieTarget
         case defaultRestTime
         case optShowRIR
         case optAutoTimerEnabled
@@ -96,6 +95,7 @@ struct AppSettings: Codable {
         self.hasSeededDefaults = (try? container.decode(Bool.self, forKey: .hasSeededDefaults)) ?? false
         
         // Optional/New fields - use decodeIfPresent and wrap in try? for total safety
+        self.optDailyCalorieTarget = try? container.decodeIfPresent(Int.self, forKey: .optDailyCalorieTarget) ?? nil
         self.defaultRestTime = try? container.decodeIfPresent(Int.self, forKey: .defaultRestTime) ?? nil
         self.optShowRIR = try? container.decodeIfPresent(Bool.self, forKey: .optShowRIR) ?? nil
         self.optAutoTimerEnabled = try? container.decodeIfPresent(Bool.self, forKey: .optAutoTimerEnabled) ?? nil
@@ -117,6 +117,7 @@ struct AppSettings: Codable {
 
     // Default initializer for manual creation (e.g., .default)
     init(dailyProteinTarget: Int,
+         optDailyCalorieTarget: Int? = nil,
          defaultRestTime: Int? = nil,
          optShowRIR: Bool? = nil,
          optAutoTimerEnabled: Bool? = nil,
@@ -134,6 +135,7 @@ struct AppSettings: Codable {
          statsOrder: [StatCardType]? = nil,
          migrationVersion: Int? = nil) {
         self.dailyProteinTarget = dailyProteinTarget
+        self.optDailyCalorieTarget = optDailyCalorieTarget
         self.defaultRestTime = defaultRestTime
         self.optShowRIR = optShowRIR
         self.optAutoTimerEnabled = optAutoTimerEnabled
@@ -150,6 +152,11 @@ struct AppSettings: Codable {
         self.optProteinReminderTime = optProteinReminderTime
         self.statsOrder = statsOrder
         self.migrationVersion = migrationVersion
+    }
+
+    var dailyCalorieTarget: Int {
+        get { optDailyCalorieTarget ?? 2500 }
+        set { optDailyCalorieTarget = newValue }
     }
 
     var restTime: Int {

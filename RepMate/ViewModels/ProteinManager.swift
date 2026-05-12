@@ -114,6 +114,39 @@ class ProteinManager {
         return days > 0 ? Double(totalGrams) / Double(days) : 0
     }
     
+    /// Calculates daily average calories.
+    func dailyAverageCalories(entries: [ProteinEntry], days: Int) -> Double {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return 0 }
+        
+        let filteredEntries = entries.filter { $0.date >= startDate }
+        let totalCalories = filteredEntries.reduce(0) { $0 + ($1.calories ?? 0) }
+        
+        return days > 0 ? Double(totalCalories) / Double(days) : 0
+    }
+    
+    /// Calculates Estimated TDEE based on caloric intake and smoothed weight delta.
+    /// Requires at least a week of data to be somewhat accurate.
+    func calculateTDEE(entries: [ProteinEntry], weeklyWeightDelta: Double?) -> Double? {
+        // Average calories over the last 14 days for a stable intake baseline
+        let avgCalories = dailyAverageCalories(entries: entries, days: 14)
+        
+        // If they haven't logged any calories, we can't calculate TDEE
+        guard avgCalories > 0, let delta = weeklyWeightDelta else { return nil }
+        
+        // 1 kg of body tissue is roughly 7700 kcal.
+        // Weekly Surplus/Deficit = delta * 7700.
+        // Daily Surplus/Deficit = Weekly / 7.
+        let dailySurplus = (delta * 7700.0) / 7.0
+        
+        // Estimated TDEE = What they ate - What they stored (or + What they lost)
+        let tdee = avgCalories - dailySurplus
+        
+        // Sanity bound check (between 1000 and 5000)
+        return max(1000, min(5000, tdee))
+    }
+    
     /// Calculates target success rate.
     func targetSuccessRate(entries: [ProteinEntry], target: Int, days: Int) -> Double {
         let calendar = Calendar.current

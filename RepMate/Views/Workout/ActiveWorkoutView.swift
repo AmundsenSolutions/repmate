@@ -176,8 +176,14 @@ struct ActiveWorkoutView: View {
                         
                         // Share Workout
                         if let t = template,
-                           let shareURL = t.shareURL(exercises: store.exerciseLibrary) {
-                            ShareLink(item: shareURL) {
+                           let message = t.shareMessage(exercises: store.exerciseLibrary) {
+                            ShareLink(
+                                item: message,
+                                preview: SharePreview(
+                                    t.name,
+                                    image: Image(systemName: "dumbbell.fill")
+                                )
+                            ) {
                                 Label("Share Workout", systemImage: "square.and.arrow.up")
                             }
                         }

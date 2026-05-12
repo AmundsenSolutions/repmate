@@ -130,12 +130,29 @@ final class WeightStore: ObservableObject {
         return latest.weight - baseline.weight
     }
 
+    /// Returns the difference between today's SMA trend and the SMA trend 7 days ago.
+    /// This is more stable than `delta(days:)` because it uses smoothed data.
+    func weeklyTrendDelta() -> Double? {
+        let trend = trendLine()
+        guard trend.count >= 2, let latest = trend.last else { return nil }
+        let calendar = Calendar.current
+        guard let cutoff = calendar.date(byAdding: .day, value: -7, to: latest.date) else { return nil }
+
+        // Find the trend point closest to 7 days ago
+        let older = trend
+            .filter { $0.date <= cutoff }
+            .max(by: { $0.date < $1.date })
+
+        guard let baseline = older else { return nil }
+        return latest.value - baseline.value
+    }
+
     // MARK: - Persistence
 
     private func loadAsync() async {
         // Disk read on a detached task to avoid blocking the main thread
         let data: Data? = await Task.detached(priority: .userInitiated) { [fileName] in
-            guard let url = try? PersistenceManager.shared.fileURL(for: fileName),
+            guard let url = try? await PersistenceManager.shared.fileURL(for: fileName),
                   FileManager.default.fileExists(atPath: url.path) else {
                 return nil as Data?
             }

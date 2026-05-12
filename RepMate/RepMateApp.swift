@@ -5,6 +5,7 @@ import SwiftUI
 struct RepMateApp: App {
     @StateObject private var store = AppDataStore()
     @StateObject private var weightStore = WeightStore()
+    @StateObject private var galleryStore = GalleryStore()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("hasSeenAIOnboarding") private var hasSeenAIOnboarding = false
     
@@ -54,6 +55,7 @@ struct RepMateApp: App {
             .environmentObject(storeManager)
             .environmentObject(NotificationManager.shared)
             .environmentObject(weightStore)
+            .environmentObject(galleryStore)
             .environmentObject(ThemeManager.shared) // Global Theme Injection
             .preferredColorScheme(.dark) // Force dark mode globally (keyboard, alerts, etc.)
             .alert("Error", isPresented: Binding<Bool>(

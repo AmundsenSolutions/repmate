@@ -18,10 +18,10 @@ enum StatsTimeFilter: String, CaseIterable, Identifiable {
     }
 }
 
-/// Top-level tab for the Stats screen (Strength vs Body).
+/// Top-level tab for the Stats screen (Strength vs Physique).
 private enum StatsTab: String, CaseIterable {
-    case strength = "Strength"
-    case body = "Body"
+    case strength = "Performance"
+    case body = "Physique & Fuel"
 }
 
 struct StatsView: View {
@@ -76,7 +76,7 @@ struct StatsView: View {
                         case .strength:
                             strengthContent
                         case .body:
-                            BodyWeightSection(days: selectedFilter.days)
+                            PhysiqueDashboardView(days: selectedFilter.days, showPaywall: $showPaywall)
                         }
                         
                         // Bottom Spacing
@@ -133,10 +133,12 @@ struct StatsView: View {
                     HapticManager.shared.selection()
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: tab == .strength ? "dumbbell.fill" : "scalemass.fill")
+                        Image(systemName: tab == .strength ? "chart.bar.fill" : "figure")
                             .font(.system(size: 12, weight: .semibold))
                         Text(tab.rawValue)
                             .font(.system(size: 14, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
@@ -178,8 +180,6 @@ struct StatsView: View {
                 StrengthStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
             case .activity:
                 ActivityHeatmapView(days: selectedFilter.days, showPaywall: $showPaywall)
-            case .nutrition:
-                NutritionStatsSection(days: selectedFilter.days, showPaywall: $showPaywall)
             case .muscleMap:
                 MuscleMapView(days: selectedFilter.days, showPaywall: $showPaywall)
             case .insights:

@@ -30,8 +30,9 @@ struct OnboardingView: View {
     @State private var isLoading = false
     @State private var generatedPlan: AIPlanResponse?
     @State private var errorMessage: String?
-    @State private var showError = false
+    @State private var showRateLimitAlert = false
     @State private var isRateLimitFreeError = false
+    @State private var rateLimitAlertMessage = ""
     @State private var showPaywall = false
     private let service = AIPlanService()
 
@@ -84,15 +85,41 @@ struct OnboardingView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: isLoading)
         .animation(.easeInOut(duration: 0.5), value: generatedPlan != nil)
-        .alert(isRateLimitFreeError ? "Daily Limit Reached" : "Couldn't Generate Plan", isPresented: $showError) {
+        .overlay(alignment: .bottom) {
+            if let message = errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(message)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .padding(.bottom, 40)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .onAppear {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        await MainActor.run {
+                            withAnimation { errorMessage = nil }
+                        }
+                    }
+                }
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: errorMessage)
+        .alert(isRateLimitFreeError ? "Daily Limit Reached" : "Pro Limit Reached", isPresented: $showRateLimitAlert) {
             if isRateLimitFreeError {
                 Button("Upgrade to Pro") { showPaywall = true }
+                Button("Skip", role: .cancel) { skipFromAISection() }
             } else {
-                Button("Try Again") { runGeneration() }
+                Button("Got it", role: .cancel) { skipFromAISection() }
             }
-            Button("Skip", role: .cancel) { skipFromAISection() }
         } message: {
-            Text(errorMessage ?? "An unknown error occurred. Please try again.")
+            Text(rateLimitAlertMessage)
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -481,17 +508,15 @@ struct OnboardingView: View {
             } catch AIPlanService.AIPlanError.rateLimitReached(let isPro) {
                 await MainActor.run {
                     withAnimation { isLoading = false }
-                    errorMessage = AIPlanService.AIPlanError.rateLimitReached(isPro: isPro).localizedDescription
+                    rateLimitAlertMessage = AIPlanService.AIPlanError.rateLimitReached(isPro: isPro).localizedDescription
                     isRateLimitFreeError = !isPro
-                    showError = true
+                    showRateLimitAlert = true
                     HapticManager.shared.error()
                 }
             } catch {
                 await MainActor.run {
                     withAnimation { isLoading = false }
                     errorMessage = error.localizedDescription
-                    isRateLimitFreeError = false
-                    showError = true
                     HapticManager.shared.error()
                 }
             }

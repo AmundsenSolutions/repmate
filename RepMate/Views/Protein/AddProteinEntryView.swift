@@ -70,45 +70,40 @@ struct AddProteinEntryView: View {
                                 backgroundColor: Theme.Colors.cardBackground,
                                 cornerRadius: Theme.Spacing.cornerRadius
                             )
-                            .frame(width: 100)
+                            .frame(width: 80)
                             .onChange(of: gramsText) { _, newValue in
-                                // Cap manual entry to 10,000g to prevent absurd values
                                 if let val = Int(newValue), val > 10000 {
                                     gramsText = "10000"
                                 }
                             }
                             
-                            // Note field + sparkle AI button side-by-side
-                            ZStack(alignment: .trailing) {
-                                BufferedInputView(
-                                    value: $note,
-                                    placeholder: "Note (optional)",
-                                    keyboardType: .default,
-                                    color: .white,
-                                    alignment: .leading,
-                                    font: .body,
-                                    backgroundColor: Theme.Colors.cardBackground,
-                                    cornerRadius: Theme.Spacing.cornerRadius
-                                )
-                                .padding(.trailing, note.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : 48)
-                                // Sparkle button — visible only when note has text
-                                if !note.trimmingCharacters(in: .whitespaces).isEmpty {
-                                    Button {
-                                        processNotesWithAI()
-                                        HapticManager.shared.lightImpact()
-                                    } label: {
-                                        Image(systemName: "sparkles")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(themeManager.palette.accent)
-                                            .frame(width: 36, height: 36)
-                                            .background(themeManager.palette.accent.opacity(0.12))
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    }
-                                    .padding(.trailing, 6)
-                                    .transition(.scale.combined(with: .opacity))
+                            // Note field — full width now that kcal is removed
+                            BufferedInputView(
+                                value: $note,
+                                placeholder: "Note (optional)",
+                                keyboardType: .default,
+                                color: .white,
+                                alignment: .leading,
+                                font: .body,
+                                backgroundColor: Theme.Colors.cardBackground,
+                                cornerRadius: Theme.Spacing.cornerRadius
+                            )
+                            
+                            // AI Sparkle button — separate from text field, visible when note has text
+                            if !note.trimmingCharacters(in: .whitespaces).isEmpty {
+                                Button {
+                                    processNotesWithAI()
+                                    HapticManager.shared.lightImpact()
+                                } label: {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(themeManager.palette.accent)
+                                        .frame(width: 44, height: 44)
+                                        .background(themeManager.palette.accent.opacity(0.12))
+                                        .clipShape(RoundedRectangle(cornerRadius: Theme.Spacing.cornerRadius))
                                 }
+                                .transition(.scale.combined(with: .opacity))
                             }
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: note.isEmpty)
 
                             // AI Camera Button
                             Button {
@@ -135,6 +130,7 @@ struct AddProteinEntryView: View {
                                     .cornerRadius(Theme.Spacing.cornerRadius)
                             }
                         }
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: note.isEmpty)
                         .padding(.horizontal)
                         
                         // Main Log Button (Moved from bottom)
@@ -222,16 +218,16 @@ struct AddProteinEntryView: View {
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                         if selectedFilter == .favorites {
-                                             if let index = store.favoriteProteinItems.firstIndex(where: { $0.grams == entry.grams && $0.note == entry.note }) {
-                                                 store.favoriteProteinItems.remove(at: index)
-                                             }
-                                         }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                                    if selectedFilter == .favorites {
+                                        Button(role: .destructive) {
+                                            if let index = store.favoriteProteinItems.firstIndex(where: { $0.grams == entry.grams && $0.note == entry.note }) {
+                                                store.favoriteProteinItems.remove(at: index)
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .tint(.red)
                                     }
-                                    .tint(.red)
                                 }
                                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                     Button {

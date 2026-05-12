@@ -10,17 +10,19 @@ class AIPlanService {
         case networkError(Error)
         case serverError(statusCode: Int, message: String? = nil)
         case rateLimitReached(isPro: Bool)
+        case apiOverloaded
         case decodingError
         case noEndpoint
 
         var errorDescription: String? {
             switch self {
             case .networkError(let e):    return "Network error: \(e.localizedDescription)"
-            case .serverError(let code, let msg):
-                return msg ?? "Server returned status \(code). Please try again."
+            case .serverError(_, let msg):
+                return msg ?? "The server is taking too long to respond. This usually happens during heavy load. Please try again in a moment."
             case .rateLimitReached(let isPro):
-                return isPro ? "You've reached your 50 daily Pro sessions. Take some rest and come back tomorrow!"
-                             : "You've used your 5 free AI sessions for today. Upgrade to RepMate Pro for 50 daily sessions!"
+                return isPro ? "You've reached your 30 daily Pro sessions. Take some rest and come back tomorrow!"
+                             : "You've used your 3 free AI sessions for today. Upgrade to RepMate Pro for 30 daily sessions!"
+            case .apiOverloaded:          return "Google's AI is currently at max capacity. Please wait a minute and try again!"
             case .decodingError:          return "Could not read the plan response. Please try again."
             case .noEndpoint:             return "Service endpoint not yet configured."
             }
@@ -100,12 +102,13 @@ class AIPlanService {
             }
             #endif
 
-            // Priority check: API Gateway Throttling or Lambda Rate Limit
             if http.statusCode == 429 {
                 throw AIPlanError.rateLimitReached(isPro: isPro)
             }
+            if http.statusCode == 503 {
+                throw AIPlanError.apiOverloaded
+            }
 
-            // Try to decode the Lambda error body for user-friendly messages
             if let errorBody = try? JSONDecoder().decode([String: String].self, from: data),
                let code = errorBody["error"] {
                 switch code {
@@ -115,7 +118,8 @@ class AIPlanService {
                     throw AIPlanError.serverError(statusCode: http.statusCode,
                         message: "App authentication failed. Please update the app.")
                 default:
-                    break
+                    let msg = errorBody["message"]
+                    throw AIPlanError.serverError(statusCode: http.statusCode, message: msg)
                 }
             }
             throw AIPlanError.serverError(statusCode: http.statusCode)

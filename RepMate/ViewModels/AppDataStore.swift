@@ -113,8 +113,8 @@ final class AppDataStore: ObservableObject {
     }
 
     /// Logs a new protein intake.
-    func addProteinEntry(grams: Int, note: String?) {
-        let entry = ProteinEntry(grams: grams, note: note)
+    func addProteinEntry(grams: Int, calories: Int? = nil, note: String?) {
+        let entry = ProteinEntry(grams: grams, calories: calories, note: note)
         proteinEntries.append(entry)
         save()
     }

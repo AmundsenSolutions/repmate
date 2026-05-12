@@ -192,46 +192,55 @@ struct BodyWeightSection: View {
         }
     }
 
+    // B1: Dynamic floor for AreaMark — 2 kg below minimum trend value
+    private var trendYFloor: Double {
+        let minValue = trend.map(\.value).min() ?? 0
+        return max(0, minValue - 2)
+    }
+
     @ViewBuilder
     private var chartView: some View {
         Chart {
-            // Background: actual data points (semi-transparent)
+            // Data points — prominent when sparse, subtle when trend is available
             ForEach(filteredEntries) { entry in
                 PointMark(
                     x: .value("Date", entry.date, unit: .day),
                     y: .value("Weight", entry.weight)
                 )
                 .symbol(Circle())
-                .symbolSize(40)
-                .foregroundStyle(themeManager.palette.accent.opacity(0.35))
+                .symbolSize(trend.count >= 2 ? 40 : 60)
+                .foregroundStyle(themeManager.palette.accent.opacity(trend.count >= 2 ? 0.35 : 1.0))
             }
 
-            // Foreground: smooth SMA trend line
-            ForEach(trend) { point in
-                LineMark(
-                    x: .value("Date", point.date, unit: .day),
-                    y: .value("Trend", point.value)
-                )
-                .interpolationMethod(.catmullRom)
-                .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
-                .foregroundStyle(themeManager.palette.accent)
-            }
-
-            // Gradient area under the trend line
-            ForEach(trend) { point in
-                AreaMark(
-                    x: .value("Date", point.date, unit: .day),
-                    yStart: .value("Min", 0),
-                    yEnd: .value("Trend", point.value)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [themeManager.palette.accent.opacity(0.25), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
+            // D1: Only render trend line + area when we have ≥ 2 points
+            if trend.count >= 2 {
+                // Smooth SMA trend line
+                ForEach(trend) { point in
+                    LineMark(
+                        x: .value("Date", point.date, unit: .day),
+                        y: .value("Trend", point.value)
                     )
-                )
+                    .interpolationMethod(.catmullRom)
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .foregroundStyle(themeManager.palette.accent)
+                }
+
+                // B1: Gradient area with dynamic floor instead of 0
+                ForEach(trend) { point in
+                    AreaMark(
+                        x: .value("Date", point.date, unit: .day),
+                        yStart: .value("Min", trendYFloor),
+                        yEnd: .value("Trend", point.value)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [themeManager.palette.accent.opacity(0.25), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                }
             }
         }
         .chartYScale(domain: .automatic(includesZero: false))

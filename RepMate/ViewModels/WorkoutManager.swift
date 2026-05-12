@@ -451,9 +451,12 @@ struct WorkoutManager {
     
     // MARK: - Recovery Analytics
     
-    func muscleRecoveryStatus(sessions: [WorkoutSession], exerciseLibrary: [Exercise]) -> [String: Int] {
+    func muscleRecoveryStatus(sessions: [WorkoutSession], exerciseLibrary: [Exercise], days: Int) -> [String: Int] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
+        // D3: Only consider sessions within the selected time window
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: today) else { return [:] }
+        let filteredSessions = sessions.filter { $0.date >= startDate }
         
         var categoryMap: [UUID: [String]] = [:]
         for ex in exerciseLibrary {
@@ -466,12 +469,13 @@ struct WorkoutManager {
         
         var lastTrained: [String: Date] = [:]
         
-        for session in sessions {
+        for session in filteredSessions {
             let day = calendar.startOfDay(for: session.date)
             for set in session.sets {
                 if let cats = categoryMap[set.exerciseId] {
                     for cat in cats {
-                        if lastTrained[cat] == nil {
+                        // Always keep the most recent training date
+                        if day > (lastTrained[cat] ?? .distantPast) {
                             lastTrained[cat] = day
                         }
                     }
