@@ -43,12 +43,15 @@ struct WorkoutSession: Identifiable, Codable, Hashable {
     
     // Per-exercise notes (exerciseId -> note)
     var exerciseNotes: [UUID: String]?
+    
+    // Fallback name if template is deleted
+    var templateName: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, templateId, date, notes, sets, startedAt, endedAt, exerciseNotes
+        case id, templateId, date, notes, sets, startedAt, endedAt, exerciseNotes, templateName
     }
     
-    init(id: UUID, templateId: UUID, date: Date, notes: String?, sets: [SetLog], startedAt: Date?, endedAt: Date?, exerciseNotes: [UUID: String]?) {
+    init(id: UUID, templateId: UUID, date: Date, notes: String?, sets: [SetLog], startedAt: Date?, endedAt: Date?, exerciseNotes: [UUID: String]?, templateName: String? = nil) {
         self.id = id
         self.templateId = templateId
         self.date = date
@@ -57,6 +60,7 @@ struct WorkoutSession: Identifiable, Codable, Hashable {
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.exerciseNotes = exerciseNotes
+        self.templateName = templateName
     }
 
     init(from decoder: Decoder) throws {
@@ -69,5 +73,6 @@ struct WorkoutSession: Identifiable, Codable, Hashable {
         self.startedAt = try? container.decodeIfPresent(Date.self, forKey: .startedAt)
         self.endedAt = try? container.decodeIfPresent(Date.self, forKey: .endedAt)
         self.exerciseNotes = try? container.decodeIfPresent([UUID: String].self, forKey: .exerciseNotes)
+        self.templateName = try? container.decodeIfPresent(String.self, forKey: .templateName)
     }
 }

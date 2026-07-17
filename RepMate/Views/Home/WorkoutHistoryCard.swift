@@ -99,7 +99,7 @@ struct WorkoutHistoryRow: View {
             
             // Content
             VStack(alignment: .leading, spacing: 4) {
-                Text(store.workoutTemplates.first(where: { $0.id == session.templateId })?.name ?? "Workout")
+                Text(store.workoutTemplates.first(where: { $0.id == session.templateId })?.name ?? session.templateName ?? "Workout")
                     .font(.headline)
                     .foregroundColor(.white)
                 

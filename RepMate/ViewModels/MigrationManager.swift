@@ -3,7 +3,7 @@ import Foundation
 /// H1, M9 Fix: Encapsulates all data migrations to avoid bloating AppDataStore.
 /// Uses a version flag to avoid running heavy O(N) migrations on every launch.
 final class MigrationManager {
-    static let currentMigrationVersion = 1
+    static let currentMigrationVersion = 2
 
     /// Runs all pending migrations. Returns true if any changes were made.
     @MainActor
@@ -19,6 +19,11 @@ final class MigrationManager {
             hasChanges = migrateSetupTimes(store: store) || hasChanges
             hasChanges = migrateArmsToBicepsTriceps(store: store) || hasChanges
             hasChanges = migrateLegsToGranularCategories(store: store) || hasChanges
+        }
+        
+        // Version 2 migrations
+        if savedVersion < 2 {
+            hasChanges = migrateTemplateNamesToSessions(store: store) || hasChanges
         }
         
         // Mark migration as complete
@@ -103,6 +108,21 @@ final class MigrationManager {
                 
                 store.exerciseLibrary[index].category = newCategory
                 hasChanges = true
+            }
+        }
+        return hasChanges
+    }
+    
+    @MainActor
+    private static func migrateTemplateNamesToSessions(store: AppDataStore) -> Bool {
+        var hasChanges = false
+        for index in store.workoutSessions.indices {
+            let session = store.workoutSessions[index]
+            if session.templateName == nil {
+                if let template = store.workoutTemplates.first(where: { $0.id == session.templateId }) {
+                    store.workoutSessions[index].templateName = template.name
+                    hasChanges = true
+                }
             }
         }
         return hasChanges

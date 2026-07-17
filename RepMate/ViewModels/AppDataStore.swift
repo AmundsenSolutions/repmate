@@ -226,14 +226,11 @@ final class AppDataStore: ObservableObject {
         save()
     }
 
-    /// Deletes templates (blocked if active or in history).
+    /// Deletes templates (blocked if active).
     func deleteWorkoutTemplate(at offsets: IndexSet) {
         let indicesToRemove = offsets.sorted(by: >)
         var blockedCount = 0
         var blockedReason: String?
-        
-        // Collect all template IDs used in saved sessions
-        let sessionUsedTemplateIds = Set(workoutSessions.map { $0.templateId })
         
         for index in indicesToRemove {
             guard index < workoutTemplates.count else { continue }
@@ -243,13 +240,6 @@ final class AppDataStore: ObservableObject {
             if let aw = activeWorkout, aw.templateId == template.id {
                 blockedCount += 1
                 blockedReason = "Cannot delete a workout template while it is active."
-                continue
-            }
-            
-            // Safety Check 2: Is this template used in any saved workout session?
-            if sessionUsedTemplateIds.contains(template.id) {
-                blockedCount += 1
-                blockedReason = "Cannot delete a workout template that has saved sessions in history."
                 continue
             }
             

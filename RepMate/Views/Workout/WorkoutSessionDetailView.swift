@@ -269,7 +269,7 @@ struct WorkoutSessionDetailView: View {
             }
         } // End of ZStack
 
-        .navigationTitle(template?.name ?? "Workout")
+        .navigationTitle(template?.name ?? originalSession.templateName ?? "Workout")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingAddExercise) {
             NavigationView {

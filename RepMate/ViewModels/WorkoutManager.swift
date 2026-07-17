@@ -136,7 +136,8 @@ struct WorkoutManager {
             sets: setLogs,
             startedAt: activeWorkout.startedAt,
             endedAt: endedAt,
-            exerciseNotes: activeWorkout.notesByExercise
+            exerciseNotes: activeWorkout.notesByExercise,
+            templateName: template.name
         )
         
         return (session, zombieExerciseIds)
