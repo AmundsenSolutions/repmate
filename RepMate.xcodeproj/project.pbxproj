@@ -412,7 +412,7 @@
 				INFOPLIST_FILE = RepMate/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RepMate;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "RepMate uses the camera to scan food barcodes for quick protein logging.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RepMate uses the camera to scan food barcodes and analyze meals for protein tracking.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Securely unlocking your workout log.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Reading workout data to sync progress.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Saving completed workouts to your Activity Rings.";
@@ -458,7 +458,7 @@
 				INFOPLIST_FILE = RepMate/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RepMate;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "RepMate uses the camera to scan food barcodes for quick protein logging.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RepMate uses the camera to scan food barcodes and analyze meals for protein tracking.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Securely unlocking your workout log.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Reading workout data to sync progress.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Saving completed workouts to your Activity Rings.";
