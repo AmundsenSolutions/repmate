@@ -10,6 +10,7 @@
 		2A8A2F242F42950C007B7E0B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A8A2F232F42950C007B7E0B /* WidgetKit.framework */; };
 		2A8A2F262F42950C007B7E0B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A8A2F252F42950C007B7E0B /* SwiftUI.framework */; };
 		2A8A2F372F42950D007B7E0B /* RepMateWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2A8A2F212F42950C007B7E0B /* RepMateWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2AEE4257301A76DE00D5254E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2AEE4256301A76DE00D5254E /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +43,7 @@
 		2A8A2F212F42950C007B7E0B /* RepMateWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RepMateWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A8A2F232F42950C007B7E0B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		2A8A2F252F42950C007B7E0B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		2AEE4256301A76DE00D5254E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -101,6 +103,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2AEE4257301A76DE00D5254E /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +142,7 @@
 		2A8A2F222F42950C007B7E0B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				2AEE4256301A76DE00D5254E /* StoreKit.framework */,
 				2A8A2F232F42950C007B7E0B /* WidgetKit.framework */,
 				2A8A2F252F42950C007B7E0B /* SwiftUI.framework */,
 			);

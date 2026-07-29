@@ -79,7 +79,7 @@ struct PaywallView: View {
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
                                 .padding(.top, 4)
-                        } else {
+                        } else if !storeManager.hasLoadedProducts {
                             // Product not loaded yet — show loading state
                             ProgressView()
                                 .tint(Theme.Colors.accent)
@@ -88,6 +88,13 @@ struct PaywallView: View {
                             Text("Loading product info...")
                                 .font(.subheadline)
                                 .foregroundColor(Theme.Colors.textSecondary)
+                        } else {
+                            // Loaded but product not found
+                            Text("In-App Purchases are currently unavailable.")
+                                .font(.subheadline)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
                         }
                     } else {
                         Text("You have unlocked RepMate Pro!")

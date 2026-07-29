@@ -10,6 +10,7 @@ class StoreManager: ObservableObject {
     @Published var purchasedProductIDs: Set<String> = []
     @Published var errorMessage: String? = nil
     @Published var restoreMessage: String? = nil
+    @Published var hasLoadedProducts: Bool = false
     
     private let legacyProProductID = "repmate_pro_lifetime"
     private let activeProProductID = "repmate_pro_monthly"
@@ -35,6 +36,7 @@ class StoreManager: ObservableObject {
         } catch {
             self.errorMessage = "Failed to load store products."
         }
+        self.hasLoadedProducts = true
     }
     
     func purchase(_ product: Product) async throws {
